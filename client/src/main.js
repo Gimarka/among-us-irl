@@ -5,24 +5,97 @@ import './style.css';
 const app = document.querySelector('#app');
 app.innerHTML = `
   <div class="home">
-    <h1 class="home-title">${texts.homeTitle}</h1>
+    <div id="home-screen">
+      <h1 class="home-title">${texts.homeTitle}</h1>
 
-    <button id="test-button" class="test-button">${texts.testButton}</button>
-    <p class="test-result hidden" id="test-result">${texts.testButtonClicked}</p>
+      <button id="test-button" class="test-button">${texts.testButton}</button>
 
-    <button id="scan-button" class="test-button">${texts.scanButton}</button>
-    <div id="qr-reader" class="qr-reader hidden"></div>
-    <p class="test-result hidden" id="scan-result"></p>
-    <button id="scan-again-button" class="test-button hidden">${texts.scanAgainButton}</button>
+      <button id="scan-button" class="test-button">${texts.scanButton}</button>
+      <div id="qr-reader" class="qr-reader hidden"></div>
+      <p class="test-result hidden" id="scan-result"></p>
+      <button id="scan-again-button" class="test-button hidden">${texts.scanAgainButton}</button>
+    </div>
+
+    <div id="minigame-screen" class="minigame hidden">
+      <p class="minigame-instruction">${texts.miniGameInstruction}</p>
+      <p class="minigame-code" id="minigame-code"></p>
+      <div class="keypad" id="keypad"></div>
+      <p class="minigame-message hidden" id="minigame-message"></p>
+    </div>
   </div>
 `;
 
+const homeScreen = document.querySelector('#home-screen');
 const testButton = document.querySelector('#test-button');
-const testResult = document.querySelector('#test-result');
 
-testButton.addEventListener('click', () => {
-  testResult.classList.remove('hidden');
-});
+const minigameScreen = document.querySelector('#minigame-screen');
+const minigameCode = document.querySelector('#minigame-code');
+const minigameMessage = document.querySelector('#minigame-message');
+const keypad = document.querySelector('#keypad');
+
+const CODE_LENGTH = 4;
+let code = [];
+let position = 0;
+let inputLocked = false;
+
+for (let digit = 1; digit <= 9; digit += 1) {
+  keypad.appendChild(createKeypadButton(digit));
+}
+keypad.appendChild(createKeypadButton(0));
+
+function createKeypadButton(digit) {
+  const button = document.createElement('button');
+  button.className = 'keypad-button';
+  button.textContent = String(digit);
+  button.addEventListener('click', () => handleDigitTap(digit));
+  return button;
+}
+
+function randomCode(length) {
+  return Array.from({ length }, () => Math.floor(Math.random() * 10));
+}
+
+function newRound() {
+  code = randomCode(CODE_LENGTH);
+  position = 0;
+  inputLocked = false;
+  minigameMessage.classList.add('hidden');
+  minigameCode.textContent = code.join(' ');
+}
+
+function openMiniGame() {
+  homeScreen.classList.add('hidden');
+  minigameScreen.classList.remove('hidden');
+  newRound();
+}
+
+function closeMiniGame() {
+  minigameScreen.classList.add('hidden');
+  homeScreen.classList.remove('hidden');
+}
+
+function handleDigitTap(digit) {
+  if (inputLocked) return;
+
+  if (digit === code[position]) {
+    position += 1;
+    if (position === code.length) {
+      inputLocked = true;
+      minigameMessage.textContent = texts.miniGameSuccess;
+      minigameMessage.classList.remove('hidden', 'error');
+      minigameMessage.classList.add('success');
+      setTimeout(closeMiniGame, 700);
+    }
+  } else {
+    inputLocked = true;
+    minigameMessage.textContent = texts.miniGameFail;
+    minigameMessage.classList.remove('hidden', 'success');
+    minigameMessage.classList.add('error');
+    setTimeout(newRound, 900);
+  }
+}
+
+testButton.addEventListener('click', openMiniGame);
 
 const scanButton = document.querySelector('#scan-button');
 const scanAgainButton = document.querySelector('#scan-again-button');

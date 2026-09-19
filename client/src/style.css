@@ -66,6 +66,68 @@ body {
   overflow: hidden;
 }
 
+.minigame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.minigame-instruction {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.minigame-code {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 2.6rem;
+  font-weight: 800;
+  letter-spacing: 12px;
+  color: #fff;
+  margin: 0;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 72px);
+  gap: 14px;
+}
+
+.keypad-button {
+  width: 72px;
+  height: 72px;
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  border-radius: 14px;
+  border: 3px solid #fff;
+  background: #000;
+  color: #fff;
+  cursor: pointer;
+}
+
+.keypad-button:active {
+  background: #222;
+}
+
+.minigame-message {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.minigame-message.success {
+  color: #4ade80;
+}
+
+.minigame-message.error {
+  color: #f87171;
+}
+
 #app {
   width: 100%;
   max-width: 420px;

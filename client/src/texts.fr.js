@@ -2,7 +2,9 @@
 export const texts = {
   homeTitle: "Among Hugo's House",
   testButton: 'Bouton test',
-  testButtonClicked: 'Ça fonctionne !',
+  miniGameInstruction: 'Tape le code',
+  miniGameSuccess: 'Réussi !',
+  miniGameFail: 'Raté ! Nouveau code…',
   scanButton: 'Scanner un QR code',
   scanAgainButton: 'Scanner à nouveau',
   scanResultLabel: 'QR lu :',
