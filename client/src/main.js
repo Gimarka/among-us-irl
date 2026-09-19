@@ -43,6 +43,8 @@ const CODE_LENGTH = 4;
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const ERROR_POPUP_DURATION_MS = 1000;
 
+const errorSound = new Audio('/sounds/error.wav');
+
 let code = [];
 let position = 0;
 let inputLocked = false;
@@ -96,6 +98,8 @@ function closeMiniGame() {
 function showErrorPopup() {
   minigamePopupText.textContent = texts.miniGameFail;
   minigamePopup.classList.remove('hidden');
+  errorSound.currentTime = 0;
+  errorSound.play().catch(() => {}); // browser may block autoplay in edge cases; sound is non-essential
 }
 
 function hideErrorPopup() {
