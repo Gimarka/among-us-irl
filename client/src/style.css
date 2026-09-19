@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap');
+
 :root {
   color-scheme: dark;
   font-family: system-ui, sans-serif;
@@ -6,10 +8,57 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: #0f1220;
+  background: radial-gradient(circle at 50% 0%, #1b1e45 0%, #0f1220 60%);
   color: #f2f2f2;
   display: flex;
   justify-content: center;
+}
+
+.home {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  text-align: center;
+}
+
+.home-title {
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, #ff5c5c, #6c5ce7 50%, #22d3ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.test-button {
+  width: auto;
+  padding: 16px 40px;
+  font-family: 'Fredoka', system-ui, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 500;
+  border-radius: 999px;
+  border: none;
+  background: linear-gradient(90deg, #6c5ce7, #22d3ee);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(108, 92, 231, 0.35);
+}
+
+.test-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.35);
+}
+
+.test-result {
+  color: #22d3ee;
+  font-weight: 600;
+  margin: 0;
 }
 
 #app {

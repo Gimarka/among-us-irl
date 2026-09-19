@@ -1,5 +1,8 @@
 // All player-facing text lives here, never hardcoded in components.
 export const texts = {
+  homeTitle: "Among Hugo's House",
+  testButton: 'Bouton test',
+  testButtonClicked: 'Ça fonctionne !',
   title: 'Among Us IRL',
   namePrompt: 'Ton prénom',
   namePlaceholder: 'Ex : Marie',
