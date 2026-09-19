@@ -30,8 +30,15 @@ const qrReader = document.querySelector('#qr-reader');
 const scanResult = document.querySelector('#scan-result');
 
 const html5QrCode = new Html5Qrcode('qr-reader');
+let isScanning = false;
+
+function stopScan() {
+  isScanning = false;
+  qrReader.classList.add('hidden');
+}
 
 function startScan() {
+  isScanning = true;
   scanButton.classList.add('hidden');
   scanAgainButton.classList.add('hidden');
   scanResult.classList.add('hidden');
@@ -42,8 +49,8 @@ function startScan() {
       { facingMode: 'environment' },
       { fps: 10, qrbox: 250 },
       (decodedText) => {
+        stopScan();
         html5QrCode.stop().then(() => {
-          qrReader.classList.add('hidden');
           scanResult.textContent = `${texts.scanResultLabel} ${decodedText}`;
           scanResult.classList.remove('hidden');
           scanAgainButton.classList.remove('hidden');
@@ -52,7 +59,7 @@ function startScan() {
       () => {} // fires every frame with no QR in view; nothing to do
     )
     .catch(() => {
-      qrReader.classList.add('hidden');
+      stopScan();
       scanResult.textContent = texts.cameraError;
       scanResult.classList.remove('hidden');
       scanButton.classList.remove('hidden');
@@ -61,3 +68,15 @@ function startScan() {
 
 scanButton.addEventListener('click', startScan);
 scanAgainButton.addEventListener('click', startScan);
+
+// The phone's OS suspends the camera when the screen locks or the tab
+// is backgrounded; the video feed stays frozen on the last frame when
+// the page comes back unless we restart the camera stream ourselves.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isScanning) {
+    html5QrCode
+      .stop()
+      .catch(() => {}) // the browser may have already released the camera
+      .then(startScan);
+  }
+});
