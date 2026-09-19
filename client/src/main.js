@@ -20,7 +20,11 @@ app.innerHTML = `
       <p class="minigame-instruction">${texts.miniGameInstruction}</p>
       <p class="minigame-code" id="minigame-code"></p>
       <div class="keypad" id="keypad"></div>
-      <p class="minigame-message hidden" id="minigame-message"></p>
+      <p class="minigame-message hidden success" id="minigame-message"></p>
+    </div>
+
+    <div class="minigame-popup hidden" id="minigame-popup">
+      <p id="minigame-popup-text"></p>
     </div>
   </div>
 `;
@@ -32,16 +36,25 @@ const minigameScreen = document.querySelector('#minigame-screen');
 const minigameCode = document.querySelector('#minigame-code');
 const minigameMessage = document.querySelector('#minigame-message');
 const keypad = document.querySelector('#keypad');
+const minigamePopup = document.querySelector('#minigame-popup');
+const minigamePopupText = document.querySelector('#minigame-popup-text');
 
 const CODE_LENGTH = 4;
+const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+const ERROR_POPUP_DURATION_MS = 1000;
+
 let code = [];
 let position = 0;
 let inputLocked = false;
 
-for (let digit = 1; digit <= 9; digit += 1) {
-  keypad.appendChild(createKeypadButton(digit));
+function shuffled(array) {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }
-keypad.appendChild(createKeypadButton(0));
 
 function createKeypadButton(digit) {
   const button = document.createElement('button');
@@ -49,6 +62,11 @@ function createKeypadButton(digit) {
   button.textContent = String(digit);
   button.addEventListener('click', () => handleDigitTap(digit));
   return button;
+}
+
+function renderKeypad() {
+  keypad.innerHTML = '';
+  shuffled(DIGITS).forEach((digit) => keypad.appendChild(createKeypadButton(digit)));
 }
 
 function randomCode(length) {
@@ -61,6 +79,7 @@ function newRound() {
   inputLocked = false;
   minigameMessage.classList.add('hidden');
   minigameCode.textContent = code.join(' ');
+  renderKeypad();
 }
 
 function openMiniGame() {
@@ -74,6 +93,15 @@ function closeMiniGame() {
   homeScreen.classList.remove('hidden');
 }
 
+function showErrorPopup() {
+  minigamePopupText.textContent = texts.miniGameFail;
+  minigamePopup.classList.remove('hidden');
+}
+
+function hideErrorPopup() {
+  minigamePopup.classList.add('hidden');
+}
+
 function handleDigitTap(digit) {
   if (inputLocked) return;
 
@@ -82,16 +110,16 @@ function handleDigitTap(digit) {
     if (position === code.length) {
       inputLocked = true;
       minigameMessage.textContent = texts.miniGameSuccess;
-      minigameMessage.classList.remove('hidden', 'error');
-      minigameMessage.classList.add('success');
+      minigameMessage.classList.remove('hidden');
       setTimeout(closeMiniGame, 700);
     }
   } else {
     inputLocked = true;
-    minigameMessage.textContent = texts.miniGameFail;
-    minigameMessage.classList.remove('hidden', 'success');
-    minigameMessage.classList.add('error');
-    setTimeout(newRound, 900);
+    showErrorPopup();
+    setTimeout(() => {
+      hideErrorPopup();
+      newRound();
+    }, ERROR_POPUP_DURATION_MS);
   }
 }
 
