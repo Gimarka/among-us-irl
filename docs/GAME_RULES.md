@@ -1,0 +1,95 @@
+# Game rules (Game Design Document)
+
+Source: claude.ai design project. Status: design complete.
+
+## Concept
+Real-life Among Us in one house. Each player's phone is their game device.
+Crewmates scan room QR codes to play mini-game tasks; hidden imposters kill by touch
+and sabotage through the app.
+
+## Players and platform
+- 4–6 players, no game master. Everyone plays; the app runs the game.
+- Imposters: 1 or 2, drawn at random each game; only imposters know the count.
+  Imposters know each other. Odds of 2 imposters: 0% at 4 players, 30% at 5, 50% at 6.
+- Web app in the phone browser (no install). Join by lobby QR code or short game code.
+- The victim reports their own death by tapping "I'm dead" right after being touched.
+
+## Roles
+| Role | Goal | Can do |
+| --- | --- | --- |
+| Crewmate | Finish all tasks or vote out every imposter | Scan room codes to play tasks, scan door codes, report bodies, call meetings, vote |
+| Imposter | Kill all crewmates | Kill by touch, lock doors, disrupt phones, trigger emergency events, fake tasks (same mini-games, no progress), vote |
+| Dead player | — | Lies down until found; after the meeting sits silently in the living room. No ghost tasks (a walking ghost looks like a living player) |
+
+## Game loop
+Free roam (tasks, kills, sabotages) → meeting (body found or emergency meeting) →
+discussion → vote → result → back to free roam, until a win condition.
+Target game length: 15–30 minutes.
+
+## Tasks, rooms and doors
+- 6 task rooms: Kitchen, Bathroom, Bedroom 1, Bedroom 2, Garage, Garden. Details in HOUSE_MAP.md.
+- Meeting room: living room (no tasks).
+- Each crewmate gets a task list (default 6). Scanning the right room's QR opens a 30–60 s mini-game.
+- Players see only their own tasks. A shared task progress bar is shown to everyone,
+  updated only at meetings.
+- Gated doors (Bathroom, Bedroom 1, Bedroom 2): real doors, kept closed; scan the door QR before opening.
+
+## Imposter abilities
+| Ability | Effect |
+| --- | --- |
+| Kill | Touch a crewmate; they tap "I'm dead" and lie down. Cooldown 60 s |
+| Lock door | A gated door cannot be opened for 30 s; scanning it shows "Locked". An unlock mini-game (~10 s) opens it early |
+| Phone disruption | All phones (imposters' too, to avoid tells) scramble and cannot scan for 20 s |
+| Emergency event | Crewmates must fix it in a given room within 90 s or imposters win. 1 fixer at 4 players; at 5–6 players 2 fixers in two rooms at the same time |
+
+- Lock door, disruption and emergency event share one 90 s cooldown (shared by both imposters).
+- No sabotages during meetings.
+
+## Death, meetings and voting
+- Silent death: after "I'm dead" the phone shows a dark screen with a personal body QR code, no sound.
+- Body report: the finder scans the body QR on the dead player's phone.
+- Emergency meeting: any living player, 1 per player per game.
+- Meeting: all phones alert with sound, naming who found the body / called the meeting.
+  Everyone goes to the living room. Dead players attend silently and do not vote.
+- Discussion 2 min, then 45 s secret vote in the app. Skip option exists.
+  A tie, or Skip getting the most votes, ejects nobody.
+- The ejected player's role is NOT revealed.
+
+## Win conditions
+| Winner | Condition |
+| --- | --- |
+| Crewmates | All tasks completed |
+| Crewmates | Every imposter voted out |
+| Imposters | All crewmates killed (no "imposters = crewmates" parity rule: it would reveal the count) |
+| Imposters | An emergency event timer runs out |
+
+## Game settings (adjustable in the lobby by the game creator)
+| Setting | Default | Range |
+| --- | --- | --- |
+| Tasks per crewmate | 6 | 3–10 |
+| Discussion time | 2 min | 1–5 min |
+| Voting time | 45 s | 20–90 s |
+| Emergency meetings per player | 1 | 0–3 |
+| Kill cooldown | 60 s | 30–120 s |
+| Sabotage cooldown (shared) | 90 s | 45–180 s |
+| Emergency event timer | 90 s | 60–180 s |
+| Phone disruption length | 20 s | 10–40 s |
+| Door lock length | 30 s | 15–60 s |
+| Chance of 2 imposters (5 / 6 players) | 30% / 50% | 0–100% |
+
+## Version 1 extras
+Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
+
+## Decision log (newest first)
+- UI in French; docs, code, discussion in English.
+- Screens: identical main screen for all roles; imposter panel opens by long-pressing the title;
+  imposters see a no-op "I'm dead" button; meeting alerts name who found/called.
+- Built by the owner (beginner) and Claude; web app + online game server.
+- 2-player emergency fix in Garden + Bedroom 2. Steady hand uses finger drag.
+- Settings adjustable in lobby; defaults validated.
+- Progress bar shared, updated at meetings. Dead players wait in the living room.
+- No ghost tasks. Imposters get fake tasks.
+- Gated doors: Bathroom, Bedroom 1, Bedroom 2. Stairs have no special rules.
+- Random hidden imposter count (1–2). Skip votes; ties eject nobody; roles hidden.
+- Meetings in the living room. Doors are physically closed. Victim taps "I'm dead".
+- 4–6 players, no game master, web app, 15–30 min games.

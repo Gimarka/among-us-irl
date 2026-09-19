@@ -1,0 +1,93 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #0f1220;
+  color: #f2f2f2;
+  display: flex;
+  justify-content: center;
+}
+
+#app {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px 20px;
+  box-sizing: border-box;
+}
+
+h1 {
+  font-size: 1.5rem;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.status {
+  text-align: center;
+  color: #a0a4c0;
+  margin-bottom: 16px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 1rem;
+}
+
+input[type='text'] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px;
+  font-size: 1.1rem;
+  border-radius: 10px;
+  border: 1px solid #444;
+  background: #1b1e33;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+button {
+  width: 100%;
+  padding: 16px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  background: #6c5ce7;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:active {
+  background: #5849c4;
+}
+
+.players {
+  margin-top: 32px;
+}
+
+.players h2 {
+  font-size: 1.1rem;
+  color: #a0a4c0;
+}
+
+.players ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.players li {
+  padding: 12px 14px;
+  background: #1b1e33;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+}
+
+.hidden {
+  display: none;
+}

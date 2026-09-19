@@ -1,0 +1,20 @@
+{
+  "name": "among-us-irl-server",
+  "version": "1.0.0",
+  "description": "Game server for Among Us IRL. Owns all game state.",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "node --test"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.3"
+  }
+}
