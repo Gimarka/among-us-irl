@@ -1,6 +1,9 @@
 import { Html5Qrcode } from 'html5-qrcode';
 import { texts } from './texts.fr.js';
+import { sounds, preloadAssets } from './assets.js';
 import './style.css';
+
+preloadAssets();
 
 const app = document.querySelector('#app');
 app.innerHTML = `
@@ -49,9 +52,6 @@ const CODE_LENGTH = 4;
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const ERROR_POPUP_DURATION_MS = 1000;
 
-const errorSound = new Audio('/sounds/error.wav');
-errorSound.preload = 'auto';
-
 let code = [];
 let position = 0;
 let inputLocked = false;
@@ -94,7 +94,6 @@ function newRound() {
 function openMiniGame() {
   homeScreen.classList.add('hidden');
   minigameScreen.classList.remove('hidden');
-  errorSound.load(); // start buffering now so the first error has no playback delay
   newRound();
 }
 
@@ -106,8 +105,8 @@ function closeMiniGame() {
 function showErrorPopup() {
   minigamePopupText.textContent = texts.miniGameFail;
   minigamePopup.classList.remove('hidden');
-  errorSound.currentTime = 0;
-  errorSound.play().catch(() => {}); // browser may block autoplay in edge cases; sound is non-essential
+  sounds.error.currentTime = 0;
+  sounds.error.play().catch(() => {}); // browser may block autoplay in edge cases; sound is non-essential
 }
 
 function hideErrorPopup() {
