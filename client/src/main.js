@@ -9,7 +9,9 @@ const app = document.querySelector('#app');
 app.innerHTML = `
   <div class="home">
     <div id="home-screen">
-      <h1 class="home-title">${texts.homeTitle}</h1>
+      <div class="title-panel">
+        <h1 class="home-title hud-panel hud-cyan">${texts.homeTitle}</h1>
+      </div>
 
       <button id="test-button" class="test-button">${texts.testButton}</button>
 
@@ -23,7 +25,7 @@ app.innerHTML = `
     </div>
 
     <div class="minigame-popup hidden" id="minigame-popup">
-      <p id="minigame-popup-text"></p>
+      <p id="minigame-popup-text" class="hud-panel"></p>
     </div>
 
     <div class="scan-popup hidden" id="scan-popup">
@@ -114,8 +116,9 @@ function closeMiniGame() {
 
 function showPopup(type, text) {
   minigamePopupText.textContent = text;
-  minigamePopup.classList.remove('hidden', 'popup-error', 'popup-success');
-  minigamePopup.classList.add(`popup-${type}`);
+  minigamePopupText.classList.remove('hud-error', 'hud-success');
+  minigamePopupText.classList.add(`hud-${type}`);
+  minigamePopup.classList.remove('hidden');
 }
 
 function hidePopup() {

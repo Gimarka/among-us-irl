@@ -12,6 +12,7 @@ const IMAGE_PATHS = {
   keypadButton: '/images/keypad-button.svg',
   popupError: '/images/popup-panel-red.svg',
   popupSuccess: '/images/popup-panel-green.svg',
+  titlePanel: '/images/popup-panel-cyan.svg',
   backgroundPanel: '/images/background-panel.svg',
 };
 
