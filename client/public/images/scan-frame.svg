@@ -1,6 +1,15 @@
-<svg width="300" height="300" viewBox="0 0 300 300" xmlns="http://www.w3.org/2000/svg">
+<svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <filter id="scanFrameGlow" x="-20%" y="-20%" width="140%" height="140%">
+    <!-- Cyan Outer Glow -->
+    <filter id="camGlow1" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="redGlow">
       <feGaussianBlur stdDeviation="3" result="blur" />
       <feMerge>
         <feMergeNode in="blur" />
@@ -8,34 +17,26 @@
       </feMerge>
     </filter>
 
-    <linearGradient id="scanFrameBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0a192f" stop-opacity="0.95"/>
-      <stop offset="100%" stop-color="#020c1b" stop-opacity="0.98"/>
+    <!-- Translucent Dark Monitor Feed Background -->
+    <linearGradient id="feedBg1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#02111a" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#00060a" stop-opacity="0.95"/>
     </linearGradient>
   </defs>
 
-  <!-- Winged Outer Frame Layer -->
-  <path d="M 25 8 L 275 8 L 292 25 L 292 275 L 275 292 L 25 292 L 8 275 L 8 25 Z"
-        fill="none"
-        stroke="#00f0ff"
-        stroke-width="1.5"
-        stroke-opacity="0.4" />
+  <!-- Monitor Background Plate -->
+  <rect x="10" y="10" width="300" height="300" rx="4" fill="url(#feedBg1)" stroke="#00f0ff" stroke-width="1.5" stroke-opacity="0.6"/>
 
-  <!-- Main Frame Plate -->
-  <polygon points="20,18 280,18 280,282 20,282"
-           fill="url(#scanFrameBg)"
-           stroke="#00f0ff"
-           stroke-width="2.5"
-           filter="url(#scanFrameGlow)" />
+  <!-- Viewfinder Corner Brackets -->
+  <path d="M 25 45 L 25 25 L 45 25" fill="none" stroke="#00f0ff" stroke-width="3" filter="url(#camGlow1)"/>
+  <path d="M 295 45 L 295 25 L 275 25" fill="none" stroke="#00f0ff" stroke-width="3" filter="url(#camGlow1)"/>
+  <path d="M 25 275 L 25 295 L 45 295" fill="none" stroke="#00f0ff" stroke-width="3" filter="url(#camGlow1)"/>
+  <path d="M 295 275 L 295 295 L 275 295" fill="none" stroke="#00f0ff" stroke-width="3" filter="url(#camGlow1)"/>
 
-  <!-- Shield Crest Brackets (top and bottom) -->
-  <polygon points="110,0 190,0 180,8 120,8" fill="#00f0ff" filter="url(#scanFrameGlow)"/>
-  <polygon points="120,292 180,292 170,300 130,300" fill="#00f0ff" filter="url(#scanFrameGlow)"/>
+  <!-- REC Indicator -->
+  <circle cx="35" cy="40" r="5" fill="#ff0055" filter="url(#redGlow)"/>
 
-  <!-- Tactical Reticle Side Accents (left and right) -->
-  <path d="M 12 100 L 12 120 L 0 130 L 12 140 L 12 160" fill="none" stroke="#7be5ff" stroke-width="2"/>
-  <path d="M 288 100 L 288 120 L 300 130 L 288 140 L 288 160" fill="none" stroke="#7be5ff" stroke-width="2"/>
-
-  <!-- Inner Chamfer Highlight -->
-  <line x1="25" y1="14" x2="275" y2="14" stroke="#ffffff" stroke-width="1" stroke-opacity="0.2"/>
+  <!-- Top/Bottom Data Lines -->
+  <line x1="105" y1="18" x2="215" y2="18" stroke="#00f0ff" stroke-width="2" filter="url(#camGlow1)"/>
+  <line x1="120" y1="302" x2="200" y2="302" stroke="#00f0ff" stroke-width="2" filter="url(#camGlow1)"/>
 </svg>

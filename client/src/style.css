@@ -97,10 +97,11 @@ body {
 }
 
 .qr-reader-frame {
-  width: 300px;
-  max-width: 85vw;
+  position: relative;
+  width: 340px;
+  max-width: 90vw;
   aspect-ratio: 1 / 1;
-  padding: 22px;
+  padding: 46px;
   box-sizing: border-box;
   overflow: hidden;
   background: url('/images/scan-frame.svg') no-repeat center / contain;
@@ -117,6 +118,18 @@ body {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
+}
+
+.scan-reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 45%;
+  height: 45%;
+  transform: translate(-50%, -50%);
+  background: url('/images/scan-reticle.svg') no-repeat center / contain;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .minigame {

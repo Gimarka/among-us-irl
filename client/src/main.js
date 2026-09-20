@@ -33,6 +33,7 @@ app.innerHTML = `
         <button id="scan-close-button" class="scan-close-button" aria-label="${texts.closeButtonLabel}">×</button>
         <div class="qr-reader-frame">
           <div id="qr-reader" class="qr-reader"></div>
+          <div class="scan-reticle"></div>
         </div>
         <p class="test-result hidden" id="scan-result"></p>
         <button id="scan-again-button" class="test-button hidden">${texts.scanAgainButton}</button>
