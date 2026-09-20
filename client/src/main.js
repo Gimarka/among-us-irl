@@ -127,9 +127,8 @@ function hideErrorPopup() {
 function handleDigitTap(digit) {
   if (inputLocked) return;
 
-  playDigitTone(digit);
-
   if (digit === code[position]) {
+    playDigitTone(digit);
     position += 1;
     if (position === code.length) {
       inputLocked = true;
