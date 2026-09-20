@@ -31,7 +31,9 @@ app.innerHTML = `
     <div class="scan-popup hidden" id="scan-popup">
       <div class="scan-popup-content">
         <button id="scan-close-button" class="scan-close-button" aria-label="${texts.closeButtonLabel}">×</button>
-        <div id="qr-reader" class="qr-reader"></div>
+        <div class="qr-reader-frame">
+          <div id="qr-reader" class="qr-reader"></div>
+        </div>
         <p class="test-result hidden" id="scan-result"></p>
         <button id="scan-again-button" class="test-button hidden">${texts.scanAgainButton}</button>
       </div>
@@ -169,7 +171,7 @@ const scanButton = document.querySelector('#scan-button');
 const scanPopup = document.querySelector('#scan-popup');
 const scanCloseButton = document.querySelector('#scan-close-button');
 const scanAgainButton = document.querySelector('#scan-again-button');
-const qrReader = document.querySelector('#qr-reader');
+const qrReaderFrame = document.querySelector('.qr-reader-frame');
 const scanResult = document.querySelector('#scan-result');
 
 const html5QrCode = new Html5Qrcode('qr-reader');
@@ -177,14 +179,14 @@ let isScanning = false;
 
 function stopScan() {
   isScanning = false;
-  qrReader.classList.add('hidden');
+  qrReaderFrame.classList.add('hidden');
 }
 
 function startScan() {
   isScanning = true;
   scanAgainButton.classList.add('hidden');
   scanResult.classList.add('hidden');
-  qrReader.classList.remove('hidden');
+  qrReaderFrame.classList.remove('hidden');
 
   html5QrCode
     .start(
