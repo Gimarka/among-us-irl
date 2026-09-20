@@ -163,15 +163,29 @@ export function initBackground() {
   container.innerHTML = TILE_MARKUP;
   const grid = container.querySelector('#tile-grid');
 
+  function pickVariant(excluded) {
+    const options = TILE_VARIANT_IDS.filter((id) => !excluded.includes(id));
+    return options[Math.floor(Math.random() * options.length)];
+  }
+
   function buildGrid() {
     const size = Math.round(window.innerWidth / 2);
     const cols = Math.ceil(window.innerWidth / size);
     const rows = Math.ceil(window.innerHeight / size);
 
     grid.innerHTML = '';
+    const placedVariants = [];
     for (let row = 0; row < rows; row += 1) {
+      placedVariants[row] = [];
       for (let col = 0; col < cols; col += 1) {
-        const variantId = TILE_VARIANT_IDS[Math.floor(Math.random() * TILE_VARIANT_IDS.length)];
+        // Never repeat the tile directly to the left or above, so
+        // neighboring tiles are always visibly different from each other.
+        const excluded = [];
+        if (col > 0) excluded.push(placedVariants[row][col - 1]);
+        if (row > 0) excluded.push(placedVariants[row - 1][col]);
+        const variantId = pickVariant(excluded);
+        placedVariants[row][col] = variantId;
+
         const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
         use.setAttribute('href', `#${variantId}`);
         use.setAttribute('xlink:href', `#${variantId}`);
