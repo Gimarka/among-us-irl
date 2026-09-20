@@ -19,8 +19,10 @@ app.innerHTML = `
     </div>
 
     <div id="minigame-screen" class="minigame hidden">
-      <p class="minigame-instruction">${texts.miniGameInstruction}</p>
-      <p class="minigame-code" id="minigame-code"></p>
+      <div class="minigame-instruction">
+        <p class="minigame-instruction-label">${texts.miniGameInstruction}</p>
+        <p class="minigame-code" id="minigame-code"></p>
+      </div>
       <div class="keypad" id="keypad"></div>
     </div>
 
