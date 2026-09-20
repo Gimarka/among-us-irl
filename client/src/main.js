@@ -105,6 +105,7 @@ function newRound() {
 function openMiniGame() {
   homeScreen.classList.add('hidden');
   minigameScreen.classList.remove('hidden');
+  pushOverlayState();
   newRound();
 }
 
@@ -112,6 +113,7 @@ function closeMiniGame() {
   hidePopup();
   minigameScreen.classList.add('hidden');
   homeScreen.classList.remove('hidden');
+  closeOverlayState();
 }
 
 function showPopup(type, text) {
@@ -207,6 +209,7 @@ function startScan() {
 
 function openScanPopup() {
   scanPopup.classList.remove('hidden');
+  pushOverlayState();
   startScan();
 }
 
@@ -216,6 +219,7 @@ function closeScanPopup() {
     html5QrCode.stop().catch(() => {}); // may already be released by the OS
   }
   stopScan();
+  closeOverlayState();
 }
 
 scanButton.addEventListener('click', openScanPopup);
@@ -232,4 +236,30 @@ document.addEventListener('visibilitychange', () => {
       .catch(() => {}) // the browser may have already released the camera
       .then(startScan);
   }
+});
+
+// Makes the phone's back button return to the home screen instead of
+// leaving the site. Opening a screen pushes one history entry; closing
+// it (by any means) consumes that entry too, so back never needs more
+// than one press and history never accumulates stale entries.
+let closingFromPopState = false;
+
+function pushOverlayState() {
+  history.pushState({ overlay: true }, '', '');
+}
+
+function closeOverlayState() {
+  if (!closingFromPopState) {
+    history.back();
+  }
+}
+
+window.addEventListener('popstate', () => {
+  closingFromPopState = true;
+  if (!minigameScreen.classList.contains('hidden')) {
+    closeMiniGame();
+  } else if (!scanPopup.classList.contains('hidden')) {
+    closeScanPopup();
+  }
+  closingFromPopState = false;
 });

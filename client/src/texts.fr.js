@@ -1,7 +1,7 @@
 // All player-facing text lives here, never hardcoded in components.
 export const texts = {
   homeTitle: "Among Hugo's House",
-  testButton: 'Bouton test',
+  testButton: 'TEST PORTE',
   miniGameInstruction: "CODE D'ACCÈS",
   miniGameSuccess: 'OUVERTURE PORTE',
   miniGameFail: 'CODE ERRONÉ',

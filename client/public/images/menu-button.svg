@@ -1,0 +1,43 @@
+<svg width="340" height="80" viewBox="0 0 340 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Cyan Outer Glow -->
+    <filter id="epicGlow1" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Dark Metal Background Gradient -->
+    <linearGradient id="titleBg1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0a192f" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#020c1b" stop-opacity="0.98"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Winged Outer Frame Layer -->
+  <path d="M 10 25 L 30 10 L 310 10 L 330 25 L 340 40 L 330 55 L 310 70 L 30 70 L 10 55 L 0 40 Z"
+        fill="none"
+        stroke="#00f0ff"
+        stroke-width="1.5"
+        stroke-opacity="0.4" />
+
+  <!-- Main Center Plate -->
+  <polygon points="20,15 320,15 330,40 320,65 20,65 10,40"
+           fill="url(#titleBg1)"
+           stroke="#00f0ff"
+           stroke-width="2.5"
+           filter="url(#epicGlow1)" />
+
+  <!-- Top & Bottom Shield Crest Brackets -->
+  <polygon points="120,8 220,8 210,15 130,15" fill="#00f0ff" filter="url(#epicGlow1)"/>
+  <polygon points="140,65 200,65 190,72 150,72" fill="#00f0ff" filter="url(#epicGlow1)"/>
+
+  <!-- Tactical Reticle Side Accents -->
+  <path d="M 25 25 L 25 35 L 15 40 L 25 45 L 25 55" fill="none" stroke="#7be5ff" stroke-width="2"/>
+  <path d="M 315 25 L 315 35 L 325 40 L 315 45 L 315 55" fill="none" stroke="#7be5ff" stroke-width="2"/>
+
+  <!-- Inner Chamfer Corner Highlights -->
+  <line x1="25" y1="20" x2="315" y2="20" stroke="#ffffff" stroke-width="1" stroke-opacity="0.2"/>
+</svg>
