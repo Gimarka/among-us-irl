@@ -1,8 +1,11 @@
+import { io } from 'socket.io-client';
 import { Html5Qrcode } from 'html5-qrcode';
 import { texts } from './texts.fr.js';
 import { sounds, preloadAssets } from './assets.js';
 import { initBackground } from './background.js';
 import './style.css';
+
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
 preloadAssets();
 initBackground();
@@ -10,11 +13,16 @@ initBackground();
 const app = document.querySelector('#app');
 app.innerHTML = `
   <div class="home">
-    <div id="home-screen" class="home-buttons">
-      <div class="title-panel">
-        <h1 class="home-title">${texts.homeTitle}</h1>
-      </div>
+    <div class="title-panel">
+      <h1 class="home-title">${texts.homeTitle}</h1>
+    </div>
 
+    <div id="join-screen" class="home-buttons">
+      <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="20" />
+      <button id="join-button" class="test-button">${texts.joinButton}</button>
+    </div>
+
+    <div id="home-screen" class="home-buttons hidden">
       <button id="test-button" class="test-button">${texts.testButton}</button>
 
       <button id="scan-button" class="test-button">${texts.scanButton}</button>
@@ -452,4 +460,47 @@ window.addEventListener('popstate', () => {
     closeColorGame();
   }
   closingFromPopState = false;
+});
+
+const joinScreen = document.querySelector('#join-screen');
+const joinNameInput = document.querySelector('#join-name-input');
+const joinButton = document.querySelector('#join-button');
+
+let socket = null;
+
+function handleJoinClick() {
+  const name = joinNameInput.value.trim();
+  if (!name) return;
+
+  joinButton.disabled = true;
+  if (!socket) {
+    socket = io(SERVER_URL);
+  }
+
+  function cleanup() {
+    socket.off('connect', onConnect);
+    socket.off('connect_error', onConnectError);
+  }
+
+  function onConnect() {
+    cleanup();
+    socket.emit('join', name);
+    joinScreen.classList.add('hidden');
+    homeScreen.classList.remove('hidden');
+  }
+
+  function onConnectError() {
+    cleanup();
+    joinButton.disabled = false;
+    showPopup('error', texts.joinError);
+    setTimeout(hidePopup, ERROR_POPUP_DURATION_MS);
+  }
+
+  socket.on('connect', onConnect);
+  socket.on('connect_error', onConnectError);
+}
+
+joinButton.addEventListener('click', handleJoinClick);
+joinNameInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') handleJoinClick();
 });
