@@ -1,31 +1,43 @@
 // The wall is built as an explicit grid of <use> elements (rather than a
 // single repeating <pattern>) so neighboring tiles can be slightly
 // different from each other while still lining up seamlessly: every
-// variant below shares the exact same seam/wire/node geometry (so edges
-// always connect across tiles), and only the decorative vents, the pulse
-// timing/routes and the base tint differ between variants.
+// variant's wires start/end at the exact same tile-boundary points (top
+// edge x=60/140, left edge y=80, right edge y=80, center node at 100,80),
+// so edges always connect across tiles, but the routing in between, the
+// decorative vents, the pulse timing/routes and the base tint all differ
+// between variants.
 //
 // It has to be an inline SVG rather than a CSS background-image because
 // animations inside an SVG don't run when the browser only uses it as a
 // static background image.
 const TILE_VARIANT_IDS = ['tile-a', 'tile-b', 'tile-c'];
 
-// Shared geometry every variant must reuse unchanged so tile edges connect.
-const SHARED_SEAMS_AND_WIRES = `
+// Shared tile-boundary seams every variant must reuse unchanged.
+const SHARED_OUTER_SEAMS = `
   <g stroke="#181a1d" stroke-width="6" fill="none" stroke-linecap="square">
     <line x1="0" y1="0" x2="200" y2="0"/>
     <line x1="0" y1="200" x2="200" y2="200"/>
     <line x1="0" y1="0" x2="0" y2="200"/>
     <line x1="200" y1="0" x2="200" y2="200"/>
-    <path id="{ID}-wire-1" d="M 60 0 L 60 60 L 140 140 L 140 200"/>
-    <path id="{ID}-wire-2" d="M 140 0 L 140 40 L 100 80 L 0 80"/>
-    <path id="{ID}-wire-3" d="M 200 80 L 160 80 L 100 80"/>
-  </g>
-  <g stroke="#525c66" stroke-width="1" fill="none">
-    <path d="M 61 0 L 61 59 L 141 139 L 141 200"/>
-    <path d="M 141 0 L 141 39 L 101 79 L 0 79"/>
   </g>
 `;
+
+function wireGroup(id, wires) {
+  // The 1px highlight lines reuse the wire paths themselves (offset by a
+  // pixel) instead of duplicating their coordinates, so they always match
+  // whatever route each variant's wires take.
+  return `
+    <g stroke="#181a1d" stroke-width="6" fill="none" stroke-linecap="square">
+      <path id="${id}-wire-1" d="${wires.wire1}"/>
+      <path id="${id}-wire-2" d="${wires.wire2}"/>
+      <path id="${id}-wire-3" d="${wires.wire3}"/>
+    </g>
+    <g stroke="#525c66" stroke-width="1" fill="none" transform="translate(1,-1)">
+      <use href="#${id}-wire-1" xlink:href="#${id}-wire-1"/>
+      <use href="#${id}-wire-2" xlink:href="#${id}-wire-2"/>
+    </g>
+  `;
+}
 
 const SHARED_NODES = `
   <g fill="#00f0ff" filter="url(#nodeGlow)">
@@ -59,6 +71,14 @@ const VARIANTS = [
   {
     id: 'tile-a',
     gradient: 'tileBaseA',
+    // wire1: top edge (60,0) -> bottom edge (140,200)
+    // wire2: top edge (140,0) -> left edge (0,80)
+    // wire3: right edge (200,80) -> center node (100,80)
+    wires: {
+      wire1: 'M 60 0 L 60 60 L 140 140 L 140 200',
+      wire2: 'M 140 0 L 140 40 L 100 80 L 0 80',
+      wire3: 'M 200 80 L 160 80 L 100 80',
+    },
     vents: `
       <g fill="none" stroke="#22262b" stroke-width="1.5" opacity="0.6">
         <line x1="25" y1="20" x2="65" y2="20"/>
@@ -74,6 +94,11 @@ const VARIANTS = [
   {
     id: 'tile-b',
     gradient: 'tileBaseB',
+    wires: {
+      wire1: 'M 60 0 L 60 140 L 140 140 L 140 200',
+      wire2: 'M 140 0 L 140 100 L 40 100 L 40 80 L 0 80',
+      wire3: 'M 200 80 L 180 40 L 140 40 L 100 80',
+    },
     vents: `
       <g fill="none" stroke="#22262b" stroke-width="1.5" opacity="0.6">
         <line x1="135" y1="20" x2="175" y2="20"/>
@@ -89,6 +114,11 @@ const VARIANTS = [
   {
     id: 'tile-c',
     gradient: 'tileBaseC',
+    wires: {
+      wire1: 'M 60 0 L 100 40 L 100 160 L 140 200',
+      wire2: 'M 140 0 L 140 60 L 40 60 L 40 80 L 0 80',
+      wire3: 'M 200 80 L 180 120 L 140 120 L 100 80',
+    },
     vents: `
       <g fill="none" stroke="#22262b" stroke-width="1.5" opacity="0.6">
         <line x1="10" y1="95" x2="50" y2="95"/>
@@ -103,13 +133,13 @@ const VARIANTS = [
   },
 ];
 
-function buildSymbol({ id, gradient, vents, pulses }) {
-  const seamsAndWires = SHARED_SEAMS_AND_WIRES.replace(/\{ID\}/g, id);
+function buildSymbol({ id, gradient, wires, vents, pulses }) {
   return `
     <symbol id="${id}" viewBox="0 0 200 200">
       <rect width="200" height="200" fill="url(#${gradient})"/>
       ${vents}
-      ${seamsAndWires}
+      ${SHARED_OUTER_SEAMS}
+      ${wireGroup(id, wires)}
       ${pulses(id)}
       ${SHARED_NODES}
     </symbol>
