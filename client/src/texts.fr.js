@@ -6,6 +6,8 @@ export const texts = {
   miniGameInstruction: "CODE D'ACCÈS",
   miniGameSuccess: 'OUVERTURE PORTE',
   miniGameFail: 'CODE ERRONÉ',
+  taskSuccess: 'TÂCHE COMPLÈTE',
+  colorGameInstruction: 'RANGE LES BOÎTES',
   scanButton: 'Scanner un QR code',
   closeButtonLabel: 'Fermer',
   scanAgainButton: 'Scanner à nouveau',

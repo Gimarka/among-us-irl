@@ -199,17 +199,64 @@ body {
 
 .colorgame {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 24px;
   height: 100%;
+}
+
+.colorgame-instruction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 320px;
+  max-width: 88vw;
+  height: 80px;
+  padding: 0 50px;
+  box-sizing: border-box;
+  text-align: center;
+  margin: 0;
+  background: url('/images/instruction-panel.svg') no-repeat center / 100% 100%;
 }
 
 .colorgame-board {
   position: relative;
   width: 300px;
   max-width: 85vw;
-  height: 420px;
-  max-height: 65vh;
+  height: 380px;
+  max-height: 52vh;
+}
+
+.colorgame-counter {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 220px;
+  max-width: 75vw;
+  aspect-ratio: 240 / 80;
+  background: url('/images/counter-panel.svg') no-repeat center / 100% 100%;
+  z-index: 5;
+}
+
+.counter-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #444;
+  border: 2px solid #666;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.counter-dot.filled {
+  background: #22ff88;
+  border-color: #22ff88;
+  box-shadow: 0 0 8px rgba(34, 255, 136, 0.8);
 }
 
 .color-circle {

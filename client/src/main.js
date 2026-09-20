@@ -29,7 +29,15 @@ app.innerHTML = `
     </div>
 
     <div id="colorgame-screen" class="colorgame hidden">
+      <div class="colorgame-instruction">
+        <p class="minigame-instruction-label">${texts.colorGameInstruction}</p>
+      </div>
       <div class="colorgame-board" id="colorgame-board"></div>
+      <div class="colorgame-counter" id="colorgame-counter">
+        <div class="counter-dot"></div>
+        <div class="counter-dot"></div>
+        <div class="counter-dot"></div>
+      </div>
     </div>
 
     <div class="minigame-popup hidden" id="minigame-popup">
@@ -183,14 +191,28 @@ testButton.addEventListener('click', openMiniGame);
 const testMinigame1Button = document.querySelector('#test-minigame1-button');
 const colorGameScreen = document.querySelector('#colorgame-screen');
 const colorGameBoard = document.querySelector('#colorgame-board');
+const counterDots = document.querySelectorAll('#colorgame-counter .counter-dot');
 
 const COLOR_PALETTE = ['#ff4d4d', '#4da6ff', '#ffd24d', '#4dff88', '#ff66cc', '#b366ff', '#ff9933', '#33ffee'];
 const SHAPE_COUNT = 4;
 const SQUARE_SIZE = 50;
 const CIRCLE_SIZE = 60;
 const MATCH_THRESHOLD = 40;
+const TOTAL_ROUNDS = 3;
+const ROUND_RESET_DELAY_MS = 500;
 
 let matchedCount = 0;
+let roundsCompleted = 0;
+
+function resetCounter() {
+  roundsCompleted = 0;
+  counterDots.forEach((dot) => dot.classList.remove('filled'));
+}
+
+function markRoundComplete() {
+  counterDots[roundsCompleted].classList.add('filled');
+  roundsCompleted += 1;
+}
 
 function randomPosition(boardRect, size) {
   return {
@@ -256,9 +278,15 @@ function checkMatch(square) {
   square.classList.add('matched');
   matchedCount += 1;
 
-  if (matchedCount === SHAPE_COUNT) {
+  if (matchedCount !== SHAPE_COUNT) return;
+
+  markRoundComplete();
+  if (roundsCompleted < TOTAL_ROUNDS) {
+    setTimeout(newColorRound, ROUND_RESET_DELAY_MS);
+  } else {
     setTimeout(() => {
-      showPopup('success', texts.miniGameSuccess);
+      // TODO: swap sounds.success for a dedicated general-task sound once provided.
+      showPopup('success', texts.taskSuccess);
       playSuccessSoundThenClose();
     }, SUCCESS_SOUND_DELAY_MS);
   }
@@ -289,6 +317,7 @@ function openColorGame() {
   colorGameScreen.classList.remove('hidden');
   pushOverlayState();
   activeGameClose = closeColorGame;
+  resetCounter();
   newColorRound();
 }
 
