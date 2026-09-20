@@ -56,6 +56,17 @@ let code = [];
 let position = 0;
 let inputLocked = false;
 
+function playDigitTone(digit) {
+  // Same beep sample, pitched up one semitone per digit (0 = recorded
+  // pitch, 9 = nine semitones higher) so each number has its own tone.
+  const tone = sounds.beep.cloneNode();
+  tone.preservesPitch = false;
+  tone.mozPreservesPitch = false;
+  tone.webkitPreservesPitch = false;
+  tone.playbackRate = 2 ** (digit / 12);
+  tone.play().catch(() => {}); // sound is non-essential, ignore playback errors
+}
+
 function shuffled(array) {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i -= 1) {
@@ -115,6 +126,8 @@ function hideErrorPopup() {
 
 function handleDigitTap(digit) {
   if (inputLocked) return;
+
+  playDigitTone(digit);
 
   if (digit === code[position]) {
     position += 1;

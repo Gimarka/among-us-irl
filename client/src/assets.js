@@ -4,6 +4,7 @@
 
 const SOUND_PATHS = {
   error: '/sounds/error.wav',
+  beep: '/sounds/beep.mp3',
 };
 
 const IMAGE_PATHS = {
