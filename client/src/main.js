@@ -8,7 +8,7 @@ preloadAssets();
 const app = document.querySelector('#app');
 app.innerHTML = `
   <div class="home">
-    <div id="home-screen">
+    <div id="home-screen" class="home-buttons">
       <div class="title-panel">
         <h1 class="home-title">${texts.homeTitle}</h1>
       </div>

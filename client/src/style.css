@@ -37,7 +37,7 @@ body {
   z-index: 5;
 }
 
-#home-screen {
+.home-buttons {
   display: flex;
   flex-direction: column;
   align-items: center;
