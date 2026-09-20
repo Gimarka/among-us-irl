@@ -11,9 +11,6 @@ app.innerHTML = `
       <button id="test-button" class="test-button">${texts.testButton}</button>
 
       <button id="scan-button" class="test-button">${texts.scanButton}</button>
-      <div id="qr-reader" class="qr-reader hidden"></div>
-      <p class="test-result hidden" id="scan-result"></p>
-      <button id="scan-again-button" class="test-button hidden">${texts.scanAgainButton}</button>
     </div>
 
     <div id="minigame-screen" class="minigame hidden">
@@ -25,6 +22,15 @@ app.innerHTML = `
 
     <div class="minigame-popup hidden" id="minigame-popup">
       <p id="minigame-popup-text"></p>
+    </div>
+
+    <div class="scan-popup hidden" id="scan-popup">
+      <div class="scan-popup-content">
+        <button id="scan-close-button" class="scan-close-button" aria-label="${texts.closeButtonLabel}">×</button>
+        <div id="qr-reader" class="qr-reader"></div>
+        <p class="test-result hidden" id="scan-result"></p>
+        <button id="scan-again-button" class="test-button hidden">${texts.scanAgainButton}</button>
+      </div>
     </div>
   </div>
 `;
@@ -130,6 +136,8 @@ function handleDigitTap(digit) {
 testButton.addEventListener('click', openMiniGame);
 
 const scanButton = document.querySelector('#scan-button');
+const scanPopup = document.querySelector('#scan-popup');
+const scanCloseButton = document.querySelector('#scan-close-button');
 const scanAgainButton = document.querySelector('#scan-again-button');
 const qrReader = document.querySelector('#qr-reader');
 const scanResult = document.querySelector('#scan-result');
@@ -144,7 +152,6 @@ function stopScan() {
 
 function startScan() {
   isScanning = true;
-  scanButton.classList.add('hidden');
   scanAgainButton.classList.add('hidden');
   scanResult.classList.add('hidden');
   qrReader.classList.remove('hidden');
@@ -167,11 +174,24 @@ function startScan() {
       stopScan();
       scanResult.textContent = texts.cameraError;
       scanResult.classList.remove('hidden');
-      scanButton.classList.remove('hidden');
     });
 }
 
-scanButton.addEventListener('click', startScan);
+function openScanPopup() {
+  scanPopup.classList.remove('hidden');
+  startScan();
+}
+
+function closeScanPopup() {
+  scanPopup.classList.add('hidden');
+  if (isScanning) {
+    html5QrCode.stop().catch(() => {}); // may already be released by the OS
+  }
+  stopScan();
+}
+
+scanButton.addEventListener('click', openScanPopup);
+scanCloseButton.addEventListener('click', closeScanPopup);
 scanAgainButton.addEventListener('click', startScan);
 
 // The phone's OS suspends the camera when the screen locks or the tab

@@ -6,6 +6,7 @@ export const texts = {
   miniGameSuccess: 'Réussi !',
   miniGameFail: 'Raté ! Nouveau code…',
   scanButton: 'Scanner un QR code',
+  closeButtonLabel: 'Fermer',
   scanAgainButton: 'Scanner à nouveau',
   scanResultLabel: 'QR lu :',
   cameraError: "Impossible d'accéder à la caméra.",
