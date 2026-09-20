@@ -5,6 +5,7 @@
 const SOUND_PATHS = {
   error: '/sounds/error.wav',
   beep: '/sounds/beep.mp3',
+  success: '/sounds/success.mp3',
 };
 
 const IMAGE_PATHS = {

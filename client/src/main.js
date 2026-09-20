@@ -51,6 +51,7 @@ const minigamePopupText = document.querySelector('#minigame-popup-text');
 const CODE_LENGTH = 4;
 const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const ERROR_POPUP_DURATION_MS = 1000;
+const SUCCESS_SOUND_DELAY_MS = 500;
 
 let code = [];
 let position = 0;
@@ -124,6 +125,17 @@ function hideErrorPopup() {
   minigamePopup.classList.add('hidden');
 }
 
+function playSuccessSoundThenClose() {
+  const sound = sounds.success;
+  const finish = () => {
+    sound.removeEventListener('ended', finish);
+    closeMiniGame();
+  };
+  sound.currentTime = 0;
+  sound.addEventListener('ended', finish, { once: true });
+  sound.play().catch(finish); // if playback is blocked, don't get stuck on this screen
+}
+
 function handleDigitTap(digit) {
   if (inputLocked) return;
 
@@ -134,7 +146,7 @@ function handleDigitTap(digit) {
       inputLocked = true;
       minigameMessage.textContent = texts.miniGameSuccess;
       minigameMessage.classList.remove('hidden');
-      setTimeout(closeMiniGame, 700);
+      setTimeout(playSuccessSoundThenClose, SUCCESS_SOUND_DELAY_MS);
     }
   } else {
     inputLocked = true;
