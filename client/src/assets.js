@@ -9,7 +9,7 @@ const SOUND_PATHS = {
 };
 
 const IMAGE_PATHS = {
-  // add future image paths here, e.g. avatarRed: '/images/avatar-red.svg'
+  keypadButton: '/images/keypad-button.svg',
 };
 
 export const sounds = {};
