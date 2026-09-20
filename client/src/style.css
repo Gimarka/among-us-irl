@@ -113,17 +113,6 @@ body {
   filter: brightness(1.4);
 }
 
-.minigame-message {
-  font-family: 'Baloo 2', system-ui, sans-serif;
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-.minigame-message.success {
-  color: #4ade80;
-}
-
 .minigame-popup {
   position: fixed;
   inset: 0;
@@ -137,18 +126,34 @@ body {
 }
 
 .minigame-popup p {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 300px;
+  height: 75px;
   font-family: 'Baloo 2', system-ui, sans-serif;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 800;
-  color: #fff;
-  background: #dc2626;
-  border: 3px solid #fff;
-  border-radius: 18px;
-  padding: 24px 28px;
+  letter-spacing: 1px;
   margin: 0;
-  max-width: 300px;
+  padding: 0 30px;
+  box-sizing: border-box;
   text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.minigame-popup.popup-error p {
+  background-image: url('/images/popup-panel-red.svg');
+  color: #ff5555;
+  text-shadow: 0 0 6px rgba(179, 0, 0, 0.9);
+}
+
+.minigame-popup.popup-success p {
+  background-image: url('/images/popup-panel-green.svg');
+  color: #22ff88;
+  text-shadow: 0 0 6px rgba(34, 255, 136, 0.8);
 }
 
 .scan-popup {

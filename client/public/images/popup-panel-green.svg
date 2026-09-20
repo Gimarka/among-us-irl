@@ -1,0 +1,39 @@
+<svg width="320" height="80" viewBox="0 0 320 80" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Screen Gradient -->
+    <linearGradient id="dispBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00230f" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#000d05" stop-opacity="0.95"/>
+    </linearGradient>
+
+    <!-- Scanline Pattern -->
+    <pattern id="scanlines" width="100" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="100" y2="0" stroke="#22ff88" stroke-width="1" stroke-opacity="0.1" />
+    </pattern>
+
+    <filter id="dispGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Base Panel -->
+  <path d="M 15 5 L 305 5 L 315 15 L 315 65 L 305 75 L 15 75 L 5 65 L 5 15 Z"
+        fill="url(#dispBg)"
+        stroke="#22ff88"
+        stroke-width="1.5"
+        filter="url(#dispGlow)"/>
+
+  <!-- Overlay Scanlines -->
+  <path d="M 15 5 L 305 5 L 315 15 L 315 65 L 305 75 L 15 75 L 5 65 L 5 15 Z"
+        fill="url(#scanlines)"/>
+
+  <!-- Sci-Fi Reticle Corner Brackets -->
+  <path d="M 0 20 L 0 0 L 20 0" stroke="#22ff88" stroke-width="3" fill="none" transform="translate(8,8)"/>
+  <path d="M 0 0 L 20 0 L 20 20" stroke="#22ff88" stroke-width="3" fill="none" transform="translate(292,8)"/>
+  <path d="M 0 0 L 0 20 L 20 20" stroke="#22ff88" stroke-width="3" fill="none" transform="translate(8,52)"/>
+  <path d="M 20 0 L 20 20 L 0 20" stroke="#22ff88" stroke-width="3" fill="none" transform="translate(292,52)"/>
+</svg>

@@ -10,6 +10,8 @@ const SOUND_PATHS = {
 
 const IMAGE_PATHS = {
   keypadButton: '/images/keypad-button.svg',
+  popupError: '/images/popup-panel-red.svg',
+  popupSuccess: '/images/popup-panel-green.svg',
 };
 
 export const sounds = {};

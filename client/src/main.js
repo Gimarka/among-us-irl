@@ -20,7 +20,6 @@ app.innerHTML = `
       <p class="minigame-instruction">${texts.miniGameInstruction}</p>
       <p class="minigame-code" id="minigame-code"></p>
       <div class="keypad" id="keypad"></div>
-      <p class="minigame-message hidden success" id="minigame-message"></p>
     </div>
 
     <div class="minigame-popup hidden" id="minigame-popup">
@@ -43,7 +42,6 @@ const testButton = document.querySelector('#test-button');
 
 const minigameScreen = document.querySelector('#minigame-screen');
 const minigameCode = document.querySelector('#minigame-code');
-const minigameMessage = document.querySelector('#minigame-message');
 const keypad = document.querySelector('#keypad');
 const minigamePopup = document.querySelector('#minigame-popup');
 const minigamePopupText = document.querySelector('#minigame-popup-text');
@@ -98,7 +96,6 @@ function newRound() {
   code = randomCode(CODE_LENGTH);
   position = 0;
   inputLocked = false;
-  minigameMessage.classList.add('hidden');
   minigameCode.textContent = code.join(' ');
   renderKeypad();
 }
@@ -110,18 +107,18 @@ function openMiniGame() {
 }
 
 function closeMiniGame() {
+  hidePopup();
   minigameScreen.classList.add('hidden');
   homeScreen.classList.remove('hidden');
 }
 
-function showErrorPopup() {
-  minigamePopupText.textContent = texts.miniGameFail;
-  minigamePopup.classList.remove('hidden');
-  sounds.error.currentTime = 0;
-  sounds.error.play().catch(() => {}); // browser may block autoplay in edge cases; sound is non-essential
+function showPopup(type, text) {
+  minigamePopupText.textContent = text;
+  minigamePopup.classList.remove('hidden', 'popup-error', 'popup-success');
+  minigamePopup.classList.add(`popup-${type}`);
 }
 
-function hideErrorPopup() {
+function hidePopup() {
   minigamePopup.classList.add('hidden');
 }
 
@@ -144,15 +141,18 @@ function handleDigitTap(digit) {
     position += 1;
     if (position === code.length) {
       inputLocked = true;
-      minigameMessage.textContent = texts.miniGameSuccess;
-      minigameMessage.classList.remove('hidden');
-      setTimeout(playSuccessSoundThenClose, SUCCESS_SOUND_DELAY_MS);
+      setTimeout(() => {
+        showPopup('success', texts.miniGameSuccess);
+        playSuccessSoundThenClose();
+      }, SUCCESS_SOUND_DELAY_MS);
     }
   } else {
     inputLocked = true;
-    showErrorPopup();
+    showPopup('error', texts.miniGameFail);
+    sounds.error.currentTime = 0;
+    sounds.error.play().catch(() => {}); // browser may block autoplay in edge cases; sound is non-essential
     setTimeout(() => {
-      hideErrorPopup();
+      hidePopup();
       newRound();
     }, ERROR_POPUP_DURATION_MS);
   }
