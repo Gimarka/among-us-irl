@@ -10,7 +10,7 @@ app.innerHTML = `
   <div class="home">
     <div id="home-screen">
       <div class="title-panel">
-        <h1 class="home-title hud-panel hud-cyan">${texts.homeTitle}</h1>
+        <h1 class="home-title">${texts.homeTitle}</h1>
       </div>
 
       <button id="test-button" class="test-button">${texts.testButton}</button>
