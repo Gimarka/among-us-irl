@@ -50,6 +50,7 @@ const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 const ERROR_POPUP_DURATION_MS = 1000;
 
 const errorSound = new Audio('/sounds/error.wav');
+errorSound.preload = 'auto';
 
 let code = [];
 let position = 0;
@@ -93,6 +94,7 @@ function newRound() {
 function openMiniGame() {
   homeScreen.classList.add('hidden');
   minigameScreen.classList.remove('hidden');
+  errorSound.load(); // start buffering now so the first error has no playback delay
   newRound();
 }
 
