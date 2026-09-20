@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&display=swap');
 
 :root {
   color-scheme: dark;
@@ -51,7 +51,7 @@ body {
   width: 320px;
   max-width: 88vw;
   height: 75px;
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Orbitron', system-ui, sans-serif;
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 1px;
@@ -60,7 +60,7 @@ body {
   padding: 0 55px;
   box-sizing: border-box;
   text-align: center;
-  color: #7be5ff;
+  color: #fff;
   text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
   background: url('/images/title-panel.svg') no-repeat center / contain;
 }
@@ -72,7 +72,7 @@ body {
   width: 300px;
   max-width: 85vw;
   height: 70px;
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Orbitron', system-ui, sans-serif;
   font-size: 1.1rem;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -90,7 +90,7 @@ body {
 }
 
 .test-result {
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Orbitron', system-ui, sans-serif;
   color: #fff;
   font-weight: 600;
   margin: 0;
@@ -126,7 +126,7 @@ body {
 }
 
 .minigame-instruction {
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Orbitron', system-ui, sans-serif;
   font-size: 1.4rem;
   font-weight: 700;
   color: #fff;
@@ -134,7 +134,7 @@ body {
 }
 
 .minigame-code {
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Orbitron', system-ui, sans-serif;
   font-size: 2.6rem;
   font-weight: 800;
   letter-spacing: 12px;
@@ -151,7 +151,7 @@ body {
 .keypad-button {
   width: 72px;
   height: 72px;
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Orbitron', system-ui, sans-serif;
   font-size: 1.6rem;
   font-weight: 700;
   border: none;
@@ -184,7 +184,7 @@ body {
   width: 300px;
   max-width: 85vw;
   height: 75px;
-  font-family: 'Baloo 2', system-ui, sans-serif;
+  font-family: 'Orbitron', system-ui, sans-serif;
   font-size: 1.1rem;
   font-weight: 800;
   letter-spacing: 1px;
@@ -239,9 +239,11 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  border: 3px solid #fff;
-  background: #dc2626;
-  color: #fff;
+  border: 2px solid #00f0ff;
+  background: #050a0f;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  color: #00f0ff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
   font-size: 1.4rem;
   font-weight: 800;
   line-height: 1;
@@ -250,7 +252,7 @@ body {
 }
 
 .scan-close-button:active {
-  background: #b91c1c;
+  filter: brightness(1.4);
 }
 
 #app {
