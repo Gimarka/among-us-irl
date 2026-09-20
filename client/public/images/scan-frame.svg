@@ -9,14 +9,6 @@
       </feMerge>
     </filter>
 
-    <filter id="redGlow">
-      <feGaussianBlur stdDeviation="3" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
-
     <!-- Translucent Dark Monitor Feed Background -->
     <linearGradient id="feedBg1" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#02111a" stop-opacity="0.9"/>
@@ -32,9 +24,6 @@
   <path d="M 295 45 L 295 25 L 275 25" fill="none" stroke="#00f0ff" stroke-width="3" filter="url(#camGlow1)"/>
   <path d="M 25 275 L 25 295 L 45 295" fill="none" stroke="#00f0ff" stroke-width="3" filter="url(#camGlow1)"/>
   <path d="M 295 275 L 295 295 L 275 295" fill="none" stroke="#00f0ff" stroke-width="3" filter="url(#camGlow1)"/>
-
-  <!-- REC Indicator -->
-  <circle cx="35" cy="40" r="5" fill="#ff0055" filter="url(#redGlow)"/>
 
   <!-- Top/Bottom Data Lines -->
   <line x1="105" y1="18" x2="215" y2="18" stroke="#00f0ff" stroke-width="2" filter="url(#camGlow1)"/>

@@ -1,0 +1,22 @@
+<svg width="360" height="90" viewBox="0 0 360 90" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="stealthGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Octagonal Stealth Plate -->
+  <polygon points="40,10 320,10 350,40 350,50 320,80 40,80 10,50 10,40"
+           fill="#0d151d" stroke="#00f0ff" stroke-width="2" filter="url(#stealthGlow)"/>
+  <!-- Inset Accent Border -->
+  <polygon points="45,16 315,16 342,43 342,47 315,74 45,74 18,47 18,43"
+           fill="none" stroke="#00f0ff" stroke-width="1" stroke-opacity="0.4"/>
+  <!-- Cyan Corner Notch Marks -->
+  <polygon points="40,10 55,10 40,25" fill="#00f0ff" filter="url(#stealthGlow)"/>
+  <polygon points="320,10 305,10 320,25" fill="#00f0ff" filter="url(#stealthGlow)"/>
+  <polygon points="40,80 55,80 40,65" fill="#00f0ff" filter="url(#stealthGlow)"/>
+  <polygon points="320,80 305,80 320,65" fill="#00f0ff" filter="url(#stealthGlow)"/>
+</svg>

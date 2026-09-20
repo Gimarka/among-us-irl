@@ -16,6 +16,7 @@ const IMAGE_PATHS = {
   popupError: '/images/popup-panel-red.svg',
   popupSuccess: '/images/popup-panel-green.svg',
   titlePanel: '/images/title-panel.svg',
+  instructionPanel: '/images/instruction-panel.svg',
   backgroundPanel: '/images/background-panel.svg',
 };
 
