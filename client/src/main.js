@@ -16,6 +16,8 @@ app.innerHTML = `
       <button id="test-button" class="test-button">${texts.testButton}</button>
 
       <button id="scan-button" class="test-button">${texts.scanButton}</button>
+
+      <button id="test-minigame1-button" class="test-button">${texts.testMinigame1Button}</button>
     </div>
 
     <div id="minigame-screen" class="minigame hidden">
@@ -24,6 +26,10 @@ app.innerHTML = `
         <p class="minigame-code" id="minigame-code"></p>
       </div>
       <div class="keypad" id="keypad"></div>
+    </div>
+
+    <div id="colorgame-screen" class="colorgame hidden">
+      <div class="colorgame-board" id="colorgame-board"></div>
     </div>
 
     <div class="minigame-popup hidden" id="minigame-popup">
@@ -108,10 +114,13 @@ function newRound() {
   renderKeypad();
 }
 
+let activeGameClose = closeMiniGame;
+
 function openMiniGame() {
   homeScreen.classList.add('hidden');
   minigameScreen.classList.remove('hidden');
   pushOverlayState();
+  activeGameClose = closeMiniGame;
   newRound();
 }
 
@@ -137,7 +146,7 @@ function playSuccessSoundThenClose() {
   const sound = sounds.success;
   const finish = () => {
     sound.removeEventListener('ended', finish);
-    closeMiniGame();
+    activeGameClose();
   };
   sound.currentTime = 0;
   sound.addEventListener('ended', finish, { once: true });
@@ -170,6 +179,127 @@ function handleDigitTap(digit) {
 }
 
 testButton.addEventListener('click', openMiniGame);
+
+const testMinigame1Button = document.querySelector('#test-minigame1-button');
+const colorGameScreen = document.querySelector('#colorgame-screen');
+const colorGameBoard = document.querySelector('#colorgame-board');
+
+const COLOR_PALETTE = ['#ff4d4d', '#4da6ff', '#ffd24d', '#4dff88', '#ff66cc', '#b366ff', '#ff9933', '#33ffee'];
+const SHAPE_COUNT = 4;
+const SQUARE_SIZE = 50;
+const CIRCLE_SIZE = 60;
+const MATCH_THRESHOLD = 40;
+
+let matchedCount = 0;
+
+function randomPosition(boardRect, size) {
+  return {
+    x: Math.random() * Math.max(boardRect.width - size, 0),
+    y: Math.random() * Math.max(boardRect.height - size, 0),
+  };
+}
+
+function createShape(className, size, color, boardRect) {
+  const shape = document.createElement('div');
+  shape.className = className;
+  shape.dataset.color = color;
+  const pos = randomPosition(boardRect, size);
+  shape.style.left = `${pos.x}px`;
+  shape.style.top = `${pos.y}px`;
+  return shape;
+}
+
+function makeDraggable(square) {
+  let offsetX = 0;
+  let offsetY = 0;
+
+  function onPointerMove(event) {
+    const boardRect = colorGameBoard.getBoundingClientRect();
+    const x = Math.max(0, Math.min(event.clientX - boardRect.left - offsetX, boardRect.width - SQUARE_SIZE));
+    const y = Math.max(0, Math.min(event.clientY - boardRect.top - offsetY, boardRect.height - SQUARE_SIZE));
+    square.style.left = `${x}px`;
+    square.style.top = `${y}px`;
+  }
+
+  function onPointerUp(event) {
+    square.releasePointerCapture(event.pointerId);
+    square.classList.remove('dragging');
+    square.removeEventListener('pointermove', onPointerMove);
+    square.removeEventListener('pointerup', onPointerUp);
+    square.removeEventListener('pointercancel', onPointerUp);
+    checkMatch(square);
+  }
+
+  square.addEventListener('pointerdown', (event) => {
+    if (square.classList.contains('matched')) return;
+    square.setPointerCapture(event.pointerId);
+    const boardRect = colorGameBoard.getBoundingClientRect();
+    offsetX = event.clientX - boardRect.left - square.offsetLeft;
+    offsetY = event.clientY - boardRect.top - square.offsetTop;
+    square.classList.add('dragging');
+    square.addEventListener('pointermove', onPointerMove);
+    square.addEventListener('pointerup', onPointerUp);
+    square.addEventListener('pointercancel', onPointerUp);
+  });
+}
+
+function checkMatch(square) {
+  const circle = colorGameBoard.querySelector(`.color-circle[data-color="${square.dataset.color}"]`);
+  const squareCenter = { x: square.offsetLeft + SQUARE_SIZE / 2, y: square.offsetTop + SQUARE_SIZE / 2 };
+  const circleCenter = { x: circle.offsetLeft + CIRCLE_SIZE / 2, y: circle.offsetTop + CIRCLE_SIZE / 2 };
+  const distance = Math.hypot(squareCenter.x - circleCenter.x, squareCenter.y - circleCenter.y);
+
+  if (distance >= MATCH_THRESHOLD) return;
+
+  square.style.left = `${circle.offsetLeft + (CIRCLE_SIZE - SQUARE_SIZE) / 2}px`;
+  square.style.top = `${circle.offsetTop + (CIRCLE_SIZE - SQUARE_SIZE) / 2}px`;
+  square.classList.add('matched');
+  matchedCount += 1;
+
+  if (matchedCount === SHAPE_COUNT) {
+    setTimeout(() => {
+      showPopup('success', texts.miniGameSuccess);
+      playSuccessSoundThenClose();
+    }, SUCCESS_SOUND_DELAY_MS);
+  }
+}
+
+function newColorRound() {
+  matchedCount = 0;
+  colorGameBoard.innerHTML = '';
+  const boardRect = colorGameBoard.getBoundingClientRect();
+  const colors = shuffled(COLOR_PALETTE).slice(0, SHAPE_COUNT);
+
+  colors.forEach((color) => {
+    const circle = createShape('color-circle', CIRCLE_SIZE, color, boardRect);
+    circle.style.borderColor = color;
+    colorGameBoard.appendChild(circle);
+  });
+
+  colors.forEach((color) => {
+    const square = createShape('color-square', SQUARE_SIZE, color, boardRect);
+    square.style.background = color;
+    makeDraggable(square);
+    colorGameBoard.appendChild(square);
+  });
+}
+
+function openColorGame() {
+  homeScreen.classList.add('hidden');
+  colorGameScreen.classList.remove('hidden');
+  pushOverlayState();
+  activeGameClose = closeColorGame;
+  newColorRound();
+}
+
+function closeColorGame() {
+  hidePopup();
+  colorGameScreen.classList.add('hidden');
+  homeScreen.classList.remove('hidden');
+  closeOverlayState();
+}
+
+testMinigame1Button.addEventListener('click', openColorGame);
 
 const scanButton = document.querySelector('#scan-button');
 const scanPopup = document.querySelector('#scan-popup');
@@ -266,6 +396,8 @@ window.addEventListener('popstate', () => {
     closeMiniGame();
   } else if (!scanPopup.classList.contains('hidden')) {
     closeScanPopup();
+  } else if (!colorGameScreen.classList.contains('hidden')) {
+    closeColorGame();
   }
   closingFromPopState = false;
 });

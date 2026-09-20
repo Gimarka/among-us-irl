@@ -2,6 +2,7 @@
 export const texts = {
   homeTitle: "Among Hugo's House",
   testButton: 'TEST PORTE',
+  testMinigame1Button: 'TEST MINIGAME1',
   miniGameInstruction: "CODE D'ACCÈS",
   miniGameSuccess: 'OUVERTURE PORTE',
   miniGameFail: 'CODE ERRONÉ',

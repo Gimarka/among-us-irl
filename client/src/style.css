@@ -197,6 +197,50 @@ body {
   margin: 0;
 }
 
+.colorgame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.colorgame-board {
+  position: relative;
+  width: 300px;
+  max-width: 85vw;
+  height: 420px;
+  max-height: 65vh;
+}
+
+.color-circle {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
+.color-square {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  border: 2px solid #fff;
+  cursor: grab;
+  touch-action: none;
+}
+
+.color-square.dragging {
+  cursor: grabbing;
+  z-index: 5;
+}
+
+.color-square.matched {
+  cursor: default;
+}
+
 .keypad {
   display: grid;
   grid-template-columns: repeat(3, 72px);
