@@ -200,6 +200,8 @@ const CIRCLE_SIZE = 60;
 const MATCH_THRESHOLD = 40;
 const TOTAL_ROUNDS = 3;
 const ROUND_RESET_DELAY_MS = 500;
+const SHAPE_GAP = 8;
+const MAX_PLACEMENT_ATTEMPTS = 200;
 
 let matchedCount = 0;
 let roundsCompleted = 0;
@@ -221,11 +223,29 @@ function randomPosition(boardRect, size) {
   };
 }
 
-function createShape(className, size, color, boardRect) {
+function centerOf(pos, size) {
+  return { cx: pos.x + size / 2, cy: pos.y + size / 2 };
+}
+
+function overlapsPlaced(center, radius, placed) {
+  return placed.some((p) => Math.hypot(center.cx - p.cx, center.cy - p.cy) < radius + p.r + SHAPE_GAP);
+}
+
+function randomNonOverlappingPosition(boardRect, size, placed) {
+  const radius = size / 2;
+  for (let attempt = 0; attempt < MAX_PLACEMENT_ATTEMPTS; attempt += 1) {
+    const pos = randomPosition(boardRect, size);
+    if (!overlapsPlaced(centerOf(pos, size), radius, placed)) return pos;
+  }
+  return randomPosition(boardRect, size); // board too cramped to fit everyone with a gap; place anyway
+}
+
+function createShape(className, size, color, boardRect, placed) {
   const shape = document.createElement('div');
   shape.className = className;
   shape.dataset.color = color;
-  const pos = randomPosition(boardRect, size);
+  const pos = randomNonOverlappingPosition(boardRect, size, placed);
+  placed.push({ ...centerOf(pos, size), r: size / 2 });
   shape.style.left = `${pos.x}px`;
   shape.style.top = `${pos.y}px`;
   return shape;
@@ -297,15 +317,16 @@ function newColorRound() {
   colorGameBoard.innerHTML = '';
   const boardRect = colorGameBoard.getBoundingClientRect();
   const colors = shuffled(COLOR_PALETTE).slice(0, SHAPE_COUNT);
+  const placed = [];
 
   colors.forEach((color) => {
-    const circle = createShape('color-circle', CIRCLE_SIZE, color, boardRect);
+    const circle = createShape('color-circle', CIRCLE_SIZE, color, boardRect, placed);
     circle.style.borderColor = color;
     colorGameBoard.appendChild(circle);
   });
 
   colors.forEach((color) => {
-    const square = createShape('color-square', SQUARE_SIZE, color, boardRect);
+    const square = createShape('color-square', SQUARE_SIZE, color, boardRect, placed);
     square.style.background = color;
     makeDraggable(square);
     colorGameBoard.appendChild(square);
