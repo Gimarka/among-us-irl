@@ -191,7 +191,7 @@ function startScan() {
   html5QrCode
     .start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: 250 },
+      { fps: 10, qrbox: 250, aspectRatio: 1.0 },
       (decodedText) => {
         stopScan();
         html5QrCode.stop().then(() => {
