@@ -13,11 +13,21 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #2a2e33 url('/images/background-panel.svg') repeat;
-  background-size: 50vw 50vw;
+  background: #2a2e33;
   color: #f2f2f2;
   display: flex;
   justify-content: center;
+}
+
+#background-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+#background-fx svg {
+  display: block;
 }
 
 .home {
@@ -403,6 +413,8 @@ body {
 }
 
 #app {
+  position: relative;
+  z-index: 1;
   width: 100%;
   max-width: 420px;
   padding: 24px 20px;

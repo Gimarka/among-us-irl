@@ -18,7 +18,6 @@ const IMAGE_PATHS = {
   titlePanel: '/images/title-panel.svg',
   instructionPanel: '/images/instruction-panel.svg',
   counterPanel: '/images/counter-panel.svg',
-  backgroundPanel: '/images/background-panel.svg',
 };
 
 export const sounds = {};

@@ -1,9 +1,11 @@
 import { Html5Qrcode } from 'html5-qrcode';
 import { texts } from './texts.fr.js';
 import { sounds, preloadAssets } from './assets.js';
+import { initBackground } from './background.js';
 import './style.css';
 
 preloadAssets();
+initBackground();
 
 const app = document.querySelector('#app');
 app.innerHTML = `
