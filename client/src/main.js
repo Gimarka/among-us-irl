@@ -3,6 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { texts } from './texts.fr.js';
 import { sounds, preloadAssets } from './assets.js';
 import { initBackground } from './background.js';
+import { characterMarkup, setVisorPhoto } from './character.js';
 import './style.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
@@ -18,9 +19,9 @@ app.innerHTML = `
     </div>
 
     <div id="join-screen" class="home-buttons">
-      <div class="selfie-frame" id="selfie-frame">
-        <video id="selfie-video" class="selfie-media hidden" playsinline muted></video>
-        <img id="selfie-photo" class="selfie-media hidden" alt="" />
+      <div class="character-frame">
+        <video id="selfie-video" class="character-video hidden" playsinline muted></video>
+        ${characterMarkup('join')}
       </div>
       <button id="selfie-button" class="test-button">${texts.takeSelfieButton}</button>
 
@@ -29,8 +30,8 @@ app.innerHTML = `
     </div>
 
     <div id="home-screen" class="home-buttons hidden">
-      <div class="selfie-frame hidden" id="menu-selfie-frame">
-        <img id="menu-selfie-photo" class="selfie-media" alt="" />
+      <div class="character-frame">
+        ${characterMarkup('menu')}
       </div>
 
       <button id="test-button" class="test-button">${texts.testButton}</button>
@@ -477,9 +478,7 @@ const joinNameInput = document.querySelector('#join-name-input');
 const joinButton = document.querySelector('#join-button');
 const selfieButton = document.querySelector('#selfie-button');
 const selfieVideo = document.querySelector('#selfie-video');
-const selfiePhoto = document.querySelector('#selfie-photo');
-const menuSelfieFrame = document.querySelector('#menu-selfie-frame');
-const menuSelfiePhoto = document.querySelector('#menu-selfie-photo');
+const joinVisorBase = document.querySelector('#join-visor-base');
 
 // A face shown at avatar size never needs more than this, and it keeps the
 // photo at a few KB so it's cheap to send and to hold in server memory.
@@ -501,7 +500,10 @@ async function startSelfieCamera() {
   selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
   selfieVideo.srcObject = selfieStream;
   await selfieVideo.play();
-  selfiePhoto.classList.add('hidden');
+  // The video sits behind the character; clearing the glass visor is what
+  // lets the live feed show through it.
+  joinVisorBase.classList.add('hidden');
+  document.querySelector('#join-visor-photo').classList.add('hidden');
   selfieVideo.classList.remove('hidden');
   selfieButton.textContent = texts.captureSelfieButton;
 }
@@ -525,9 +527,8 @@ function captureSelfie() {
   photoDataUrl = canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
   stopSelfieCamera();
 
-  selfiePhoto.src = photoDataUrl;
   selfieVideo.classList.add('hidden');
-  selfiePhoto.classList.remove('hidden');
+  setVisorPhoto('join', photoDataUrl);
   selfieButton.textContent = texts.retakeSelfieButton;
 }
 
@@ -541,6 +542,8 @@ async function handleSelfieClick() {
     await startSelfieCamera();
   } catch {
     stopSelfieCamera();
+    selfieVideo.classList.add('hidden');
+    joinVisorBase.classList.remove('hidden');
     selfieButton.textContent = texts.takeSelfieButton;
     showPopup('error', texts.selfieError);
     setTimeout(hidePopup, ERROR_POPUP_DURATION_MS);
@@ -567,8 +570,7 @@ function handleJoinClick() {
     socket.emit('join', { name, photo: photoDataUrl });
 
     if (photoDataUrl) {
-      menuSelfiePhoto.src = photoDataUrl;
-      menuSelfieFrame.classList.remove('hidden');
+      setVisorPhoto('menu', photoDataUrl);
     }
 
     joinScreen.classList.add('hidden');

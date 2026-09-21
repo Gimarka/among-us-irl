@@ -76,25 +76,33 @@ body {
   background: url('/images/title-panel.svg') no-repeat center / contain;
 }
 
-.selfie-frame {
-  width: 130px;
-  height: 130px;
-  border-radius: 50%;
-  border: 3px solid #00f0ff;
-  background: #0d151d;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
-  overflow: hidden;
+.character-frame {
+  position: relative;
+  width: 150px;
+  max-width: 45vw;
+  aspect-ratio: 200 / 240;
 }
 
-.selfie-media {
+.character-svg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
 }
 
-/* Only the live feed gets mirrored, the way a selfie camera should look. The
-   captured photo is already mirrored on the canvas, so it displays as-is. */
-#selfie-video {
+/* Sits behind the character, lined up with the visor rect in the SVG's
+   200x240 viewBox (x 82, y 68, 64 wide, 46 tall) so the live feed shows
+   through the visor once its glass is cleared. It is mirrored the way a
+   selfie camera should look; the captured photo is already mirrored on the
+   canvas, so it needs no flip of its own. */
+.character-video {
+  position: absolute;
+  left: 41%;
+  top: 28.33%;
+  width: 32%;
+  height: 19.17%;
+  object-fit: cover;
+  border-radius: 999px;
   transform: scaleX(-1);
 }
 
