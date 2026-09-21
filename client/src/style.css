@@ -32,10 +32,20 @@ body {
 
 .home {
   height: 100%;
+  box-sizing: border-box;
+  /* Set from JS to the measured height of the fixed title panel, so screens
+     centre in the space left below it instead of running under it. */
+  padding-top: var(--title-space, 110px);
+  padding-bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  /* On a screen too short for a whole screen's content, plain centring pushes
+     the top of it back under the title. "safe" keeps it pinned below the title
+     instead and lets the overflow scroll. */
+  justify-content: safe center;
+  overflow-y: auto;
   gap: 32px;
   text-align: center;
 }

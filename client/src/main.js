@@ -95,6 +95,26 @@ app.innerHTML = `
   </div>
 `;
 
+// The title sits in a fixed panel, outside the flow, so the screens below it
+// don't know how tall it is and tall content (a hat, for instance) slides
+// underneath. Measure it and reserve exactly that much room at the top.
+const titlePanel = document.querySelector('.title-panel');
+const homeLayout = document.querySelector('.home');
+const TITLE_GAP_PX = 12;
+
+function syncTitleSpace() {
+  const space = titlePanel.getBoundingClientRect().bottom + TITLE_GAP_PX;
+  homeLayout.style.setProperty('--title-space', `${Math.round(space)}px`);
+}
+
+syncTitleSpace();
+window.addEventListener('resize', syncTitleSpace);
+window.addEventListener('orientationchange', syncTitleSpace);
+// The panel's height comes from its font, so re-measure once Orbitron lands.
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(syncTitleSpace);
+}
+
 const homeScreen = document.querySelector('#home-screen');
 const testButton = document.querySelector('#test-button');
 
@@ -499,7 +519,11 @@ const colorPicker = document.querySelector('#color-picker');
 
 // A face shown at avatar size never needs more than this, and it keeps the
 // photo at a few KB so it's cheap to send and to hold in server memory.
-const PHOTO_SIZE = 160;
+// The shape matches the visor's image box so the saved photo frames the face
+// exactly like the live preview did.
+const PHOTO_WIDTH = 144;
+const PHOTO_HEIGHT = 200;
+const PHOTO_ASPECT = PHOTO_WIDTH / PHOTO_HEIGHT;
 const PHOTO_QUALITY = 0.6;
 
 let socket = null;
@@ -554,20 +578,32 @@ async function startSelfieCamera() {
 }
 
 function captureSelfie() {
-  // Crop the biggest centered square out of the camera frame, then scale it
-  // down and JPEG-compress it in one draw.
-  const side = Math.min(selfieVideo.videoWidth, selfieVideo.videoHeight);
-  const sourceX = (selfieVideo.videoWidth - side) / 2;
-  const sourceY = (selfieVideo.videoHeight - side) / 2;
+  // Crop the camera frame to the visor's own shape, exactly the way the live
+  // preview does. Cropping to a square here instead would get cropped again
+  // by the taller visor, so the saved photo came out tighter than what the
+  // player framed.
+  const { videoWidth, videoHeight } = selfieVideo;
+  let sourceWidth = videoWidth;
+  let sourceHeight = videoWidth / PHOTO_ASPECT;
+  if (sourceHeight > videoHeight) {
+    sourceHeight = videoHeight;
+    sourceWidth = videoHeight * PHOTO_ASPECT;
+  }
+  const sourceX = (videoWidth - sourceWidth) / 2;
+  const sourceY = (videoHeight - sourceHeight) / 2;
 
   const canvas = document.createElement('canvas');
-  canvas.width = PHOTO_SIZE;
-  canvas.height = PHOTO_SIZE;
+  canvas.width = PHOTO_WIDTH;
+  canvas.height = PHOTO_HEIGHT;
   const context = canvas.getContext('2d');
   // Mirror it so the saved photo matches the mirrored preview the player saw.
-  context.translate(PHOTO_SIZE, 0);
+  context.translate(PHOTO_WIDTH, 0);
   context.scale(-1, 1);
-  context.drawImage(selfieVideo, sourceX, sourceY, side, side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
+  context.drawImage(
+    selfieVideo,
+    sourceX, sourceY, sourceWidth, sourceHeight,
+    0, 0, PHOTO_WIDTH, PHOTO_HEIGHT,
+  );
 
   photoDataUrl = canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
   stopSelfieCamera();
