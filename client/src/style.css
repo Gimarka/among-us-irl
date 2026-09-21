@@ -100,17 +100,17 @@ body {
 }
 
 /* Layered over the visor while filming (the helmet behind it is opaque, so
-   the feed can't simply show through). Lined up with the visor circle in
-   the SVG's 220x240 viewBox - centre 110,85 - and sized to the inside of
-   its 8-unit ring so the ring stays visible around the feed. Mirrored the
-   way a selfie camera should look; the captured photo is already mirrored
-   on the canvas, so it needs no flip of its own. */
+   the feed can't simply show through). Lined up with the visor ellipse in
+   the SVG's 220x240 viewBox - centre 110,85, radii 36x50 - and inset to the
+   inside of its 8-unit ring so the ring stays visible around the feed.
+   Mirrored the way a selfie camera should look; the captured photo is
+   already mirrored on the canvas, so it needs no flip of its own. */
 .character-video {
   position: absolute;
-  left: 30%;
-  top: 17.08%;
-  width: 40%;
-  height: 36.67%;
+  left: 35.45%;
+  top: 16.25%;
+  width: 29.09%;
+  height: 38.33%;
   z-index: 1;
   object-fit: cover;
   border-radius: 50%;
@@ -125,20 +125,22 @@ body {
   max-width: 80vw;
 }
 
+/* Same heavy black outline the character is drawn with. */
 .color-swatch {
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.35);
+  border: 3px solid #101419;
   cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
+/* The selected one keeps its black outline and gains a white ring, so the
+   swatches all stay in the character's style. */
 .color-swatch.selected {
-  border-color: #fff;
-  box-shadow: 0 0 10px rgba(0, 240, 255, 0.9);
-  transform: scale(1.15);
+  box-shadow: 0 0 0 3px #fff, 0 0 12px rgba(0, 240, 255, 0.9);
+  transform: scale(1.12);
 }
 
 .name-input {

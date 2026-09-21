@@ -24,7 +24,7 @@ export const SUIT_COLORS = [
 
 export const DEFAULT_SUIT_COLOR = SUIT_COLORS[0];
 
-const VISOR = 'cx="110" cy="85" r="48"';
+const VISOR = 'cx="110" cy="85" rx="36" ry="50"';
 
 export function characterMarkup(id) {
   return `
@@ -36,7 +36,7 @@ export function characterMarkup(id) {
         </linearGradient>
 
         <clipPath id="${id}-visorClip">
-          <circle ${VISOR}/>
+          <ellipse ${VISOR}/>
         </clipPath>
       </defs>
 
@@ -54,16 +54,16 @@ export function characterMarkup(id) {
             stroke="#101419" stroke-width="8" stroke-linejoin="round"/>
 
       <!-- Glass visor, shown until there is a selfie to put behind it -->
-      <circle id="${id}-visor-base" ${VISOR} fill="url(#${id}-visorGlass)"/>
+      <ellipse id="${id}-visor-base" ${VISOR} fill="url(#${id}-visorGlass)"/>
 
-      <!-- The selfie itself -->
-      <image id="${id}-visor-photo" class="hidden" x="62" y="37" width="96" height="96"
+      <!-- The selfie itself, boxed to the visor's bounds -->
+      <image id="${id}-visor-photo" class="hidden" x="74" y="35" width="72" height="100"
              preserveAspectRatio="xMidYMid slice"
              clip-path="url(#${id}-visorClip)"/>
 
       <!-- Visor ring and glare drawn last so they sit over the photo -->
-      <circle ${VISOR} fill="none" stroke="#101419" stroke-width="8"/>
-      <ellipse class="visor-glare" cx="96" cy="68" rx="16" ry="7" fill="#ffffff" opacity="0.85" transform="rotate(-15 96 68)"/>
+      <ellipse ${VISOR} fill="none" stroke="#101419" stroke-width="8"/>
+      <ellipse class="visor-glare" cx="98" cy="62" rx="12" ry="8" fill="#ffffff" opacity="0.85" transform="rotate(-15 98 62)"/>
     </svg>
   `;
 }
