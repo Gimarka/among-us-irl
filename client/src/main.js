@@ -3,7 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { texts } from './texts.fr.js';
 import { sounds, preloadAssets } from './assets.js';
 import { initBackground } from './background.js';
-import { characterMarkup, setVisorPhoto } from './character.js';
+import { characterMarkup, visorMarkup, setVisorPhoto } from './character.js';
 import './style.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
@@ -19,9 +19,9 @@ app.innerHTML = `
     </div>
 
     <div id="join-screen" class="home-buttons">
-      <div class="character-frame">
-        <video id="selfie-video" class="character-video hidden" playsinline muted></video>
-        ${characterMarkup('join')}
+      <div class="visor-frame character-outline" id="join-visor">
+        <video id="selfie-video" class="visor-video hidden" playsinline muted></video>
+        ${visorMarkup('join')}
       </div>
       <button id="selfie-button" class="test-button">${texts.takeSelfieButton}</button>
 
@@ -478,7 +478,7 @@ const joinNameInput = document.querySelector('#join-name-input');
 const joinButton = document.querySelector('#join-button');
 const selfieButton = document.querySelector('#selfie-button');
 const selfieVideo = document.querySelector('#selfie-video');
-const joinVisorBase = document.querySelector('#join-visor-base');
+const joinVisor = document.querySelector('#join-visor');
 
 // A face shown at avatar size never needs more than this, and it keeps the
 // photo at a few KB so it's cheap to send and to hold in server memory.
@@ -500,11 +500,11 @@ async function startSelfieCamera() {
   selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
   selfieVideo.srcObject = selfieStream;
   await selfieVideo.play();
-  // The video sits behind the character; clearing the glass visor is what
-  // lets the live feed show through it.
-  joinVisorBase.classList.add('hidden');
+  // The video sits behind the visor SVG and shows through it, since the
+  // login visor's glass is never filled in.
   document.querySelector('#join-visor-photo').classList.add('hidden');
   selfieVideo.classList.remove('hidden');
+  joinVisor.classList.add('visor-lit');
   selfieButton.textContent = texts.captureSelfieButton;
 }
 
@@ -543,7 +543,7 @@ async function handleSelfieClick() {
   } catch {
     stopSelfieCamera();
     selfieVideo.classList.add('hidden');
-    joinVisorBase.classList.remove('hidden');
+    joinVisor.classList.remove('visor-lit');
     selfieButton.textContent = texts.takeSelfieButton;
     showPopup('error', texts.selfieError);
     setTimeout(hidePopup, ERROR_POPUP_DURATION_MS);

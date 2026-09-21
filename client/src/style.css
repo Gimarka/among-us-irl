@@ -90,17 +90,42 @@ body {
   height: 100%;
 }
 
-/* Sits behind the character, lined up with the visor rect in the SVG's
-   200x240 viewBox (x 82, y 68, 64 wide, 46 tall) so the live feed shows
-   through the visor once its glass is cleared. It is mirrored the way a
-   selfie camera should look; the captured photo is already mirrored on the
-   canvas, so it needs no flip of its own. */
-.character-video {
+/* Before there's a selfie the character is just its black contour, so it
+   reads as an empty slot. Dropping the fills is also what lets the live
+   camera behind the SVG show through the visor - the opaque body fill is
+   what would otherwise cover it. */
+.character-outline .character-fill {
+  fill: none;
+}
+
+/* The login screen shows the visor on its own, big enough to frame a face. */
+.visor-frame {
+  position: relative;
+  width: 210px;
+  max-width: 62vw;
+  aspect-ratio: 70 / 52;
+}
+
+/* The glare only makes sense once there's a face behind the glass; in an
+   empty visor it just reads as a stray white blob. */
+.visor-frame .visor-glare {
+  display: none;
+}
+
+.visor-frame.visor-lit .visor-glare {
+  display: block;
+}
+
+/* Sits behind the visor SVG, lined up with the visor rect in its 70x52
+   viewBox (x 3, y 3, 64 wide, 46 tall), so the live feed shows through the
+   unfilled glass. Mirrored the way a selfie camera should look; the captured
+   photo is already mirrored on the canvas, so it needs no flip of its own. */
+.visor-video {
   position: absolute;
-  left: 41%;
-  top: 28.33%;
-  width: 32%;
-  height: 19.17%;
+  left: 4.29%;
+  top: 5.77%;
+  width: 91.43%;
+  height: 88.46%;
   object-fit: cover;
   border-radius: 999px;
   transform: scaleX(-1);
