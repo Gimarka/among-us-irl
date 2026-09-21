@@ -29,6 +29,10 @@ app.innerHTML = `
     </div>
 
     <div id="home-screen" class="home-buttons hidden">
+      <div class="selfie-frame hidden" id="menu-selfie-frame">
+        <img id="menu-selfie-photo" class="selfie-media" alt="" />
+      </div>
+
       <button id="test-button" class="test-button">${texts.testButton}</button>
 
       <button id="scan-button" class="test-button">${texts.scanButton}</button>
@@ -474,6 +478,8 @@ const joinButton = document.querySelector('#join-button');
 const selfieButton = document.querySelector('#selfie-button');
 const selfieVideo = document.querySelector('#selfie-video');
 const selfiePhoto = document.querySelector('#selfie-photo');
+const menuSelfieFrame = document.querySelector('#menu-selfie-frame');
+const menuSelfiePhoto = document.querySelector('#menu-selfie-photo');
 
 // A face shown at avatar size never needs more than this, and it keeps the
 // photo at a few KB so it's cheap to send and to hold in server memory.
@@ -559,6 +565,12 @@ function handleJoinClick() {
     cleanup();
     stopSelfieCamera(); // release the camera before leaving the join screen
     socket.emit('join', { name, photo: photoDataUrl });
+
+    if (photoDataUrl) {
+      menuSelfiePhoto.src = photoDataUrl;
+      menuSelfieFrame.classList.remove('hidden');
+    }
+
     joinScreen.classList.add('hidden');
     homeScreen.classList.remove('hidden');
   }
