@@ -48,7 +48,7 @@ test('two players joining see each other in the players list', async () => {
   }
 });
 
-test('a joining player keeps a valid colour and falls back on a bad one', async () => {
+test('a joining player keeps a valid colour and hat, and falls back on bad ones', async () => {
   clearPlayers();
   const { httpServer, io } = createGameServer();
   const port = await listenOnRandomPort(httpServer);
@@ -61,15 +61,19 @@ test('a joining player keeps a valid colour and falls back on a bad one', async 
     await Promise.all([waitForEvent(picked, 'connect'), waitForEvent(garbage, 'connect')]);
 
     const firstJoin = Promise.all([waitForEvent(picked, 'players'), waitForEvent(garbage, 'players')]);
-    picked.emit('join', { name: 'Alice', color: '#38FEDC' });
+    picked.emit('join', { name: 'Alice', color: '#38FEDC', hat: 'crown' });
     await firstJoin;
 
     const secondJoin = Promise.all([waitForEvent(picked, 'players'), waitForEvent(garbage, 'players')]);
-    garbage.emit('join', { name: 'Bob', color: 'javascript:alert(1)' });
+    garbage.emit('join', { name: 'Bob', color: 'javascript:alert(1)', hat: '<script>' });
     const [players] = await secondJoin;
 
-    assert.equal(players.find((p) => p.name === 'Alice').color, '#38fedc');
-    assert.equal(players.find((p) => p.name === 'Bob').color, '#c51111', 'bad colour falls back');
+    const alice = players.find((p) => p.name === 'Alice');
+    const bob = players.find((p) => p.name === 'Bob');
+    assert.equal(alice.color, '#38fedc');
+    assert.equal(alice.hat, 'crown');
+    assert.equal(bob.color, '#c51111', 'bad colour falls back');
+    assert.equal(bob.hat, 'none', 'bad hat falls back');
   } finally {
     picked.close();
     garbage.close();

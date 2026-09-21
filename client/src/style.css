@@ -80,7 +80,7 @@ body {
   position: relative;
   width: 140px;
   max-width: 42vw;
-  aspect-ratio: 220 / 240;
+  aspect-ratio: 220 / 260;
 }
 
 .character-frame-large {
@@ -101,20 +101,54 @@ body {
 
 /* Layered over the visor while filming (the helmet behind it is opaque, so
    the feed can't simply show through). Lined up with the visor ellipse in
-   the SVG's 220x240 viewBox - centre 110,85, radii 36x50 - and inset to the
+   the SVG's 220x260 viewBox - centre 110,105, radii 36x50 - and inset to the
    inside of its 8-unit ring so the ring stays visible around the feed.
    Mirrored the way a selfie camera should look; the captured photo is
    already mirrored on the canvas, so it needs no flip of its own. */
 .character-video {
   position: absolute;
   left: 35.45%;
-  top: 16.25%;
+  top: 22.69%;
   width: 29.09%;
-  height: 38.33%;
+  height: 35.38%;
   z-index: 1;
   object-fit: cover;
   border-radius: 50%;
   transform: scaleX(-1);
+}
+
+/* Sit just outside the character's right edge, so the character itself
+   stays centred on the screen. */
+.hat-arrows {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hat-arrow {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #00f0ff;
+  background: #0d151d;
+  border: 3px solid #101419;
+  border-radius: 12px;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+  cursor: pointer;
+}
+
+.hat-arrow:active {
+  filter: brightness(1.4);
 }
 
 .color-picker {

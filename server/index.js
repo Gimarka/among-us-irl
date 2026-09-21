@@ -24,6 +24,14 @@ function cleanColor(color) {
   return COLOR_PATTERN.test(color) ? color.toLowerCase() : DEFAULT_COLOR;
 }
 
+const DEFAULT_HAT = 'none';
+const HAT_PATTERN = /^[a-z]{1,20}$/;
+
+function cleanHat(hat) {
+  if (typeof hat !== 'string') return DEFAULT_HAT;
+  return HAT_PATTERN.test(hat) ? hat : DEFAULT_HAT;
+}
+
 export function createGameServer() {
   const app = express();
   const httpServer = createServer(app);
@@ -36,9 +44,15 @@ export function createGameServer() {
   });
 
   io.on('connection', (socket) => {
-    socket.on('join', ({ name, photo, color } = {}) => {
+    socket.on('join', ({ name, photo, color, hat } = {}) => {
       const cleanName = String(name || '').trim().slice(0, 20) || 'Joueur';
-      const players = addPlayer(socket.id, cleanName, cleanPhoto(photo), cleanColor(color));
+      const players = addPlayer(
+        socket.id,
+        cleanName,
+        cleanPhoto(photo),
+        cleanColor(color),
+        cleanHat(hat),
+      );
       io.emit('players', players);
     });
 

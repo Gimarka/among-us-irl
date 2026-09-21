@@ -22,6 +22,8 @@ export const texts = {
   captureSelfieButton: 'CAPTURER',
   retakeSelfieButton: 'REPRENDRE',
   selfieError: 'CAMÉRA INDISPONIBLE',
+  previousHat: 'Chapeau précédent',
+  nextHat: 'Chapeau suivant',
   connecting: 'Connexion au serveur…',
   playersHeading: 'Joueurs connectés',
   noPlayers: 'Aucun joueur pour le moment.',

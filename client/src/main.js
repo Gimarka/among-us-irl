@@ -7,8 +7,10 @@ import {
   characterMarkup,
   setVisorPhoto,
   setSuitColor,
+  setHat,
   SUIT_COLORS,
   DEFAULT_SUIT_COLOR,
+  HATS,
 } from './character.js';
 import './style.css';
 
@@ -28,6 +30,10 @@ app.innerHTML = `
       <div class="character-frame character-frame-large" id="join-character">
         <video id="selfie-video" class="character-video hidden" playsinline muted></video>
         ${characterMarkup('join')}
+        <div class="hat-arrows">
+          <button id="hat-prev" class="hat-arrow" aria-label="${texts.previousHat}">▲</button>
+          <button id="hat-next" class="hat-arrow" aria-label="${texts.nextHat}">▼</button>
+        </div>
       </div>
 
       <div class="color-picker" id="color-picker"></div>
@@ -519,6 +525,16 @@ SUIT_COLORS.forEach((color) => {
 
 selectColor(DEFAULT_SUIT_COLOR, colorPicker.firstElementChild);
 
+let hatIndex = 0;
+
+function cycleHat(step) {
+  hatIndex = (hatIndex + step + HATS.length) % HATS.length;
+  setHat(joinCharacter, HATS[hatIndex].id);
+}
+
+document.querySelector('#hat-prev').addEventListener('click', () => cycleHat(-1));
+document.querySelector('#hat-next').addEventListener('click', () => cycleHat(1));
+
 function stopSelfieCamera() {
   if (!selfieStream) return;
   selfieStream.getTracks().forEach((track) => track.stop());
@@ -595,9 +611,11 @@ function handleJoinClick() {
   function onConnect() {
     cleanup();
     stopSelfieCamera(); // release the camera before leaving the join screen
-    socket.emit('join', { name, photo: photoDataUrl, color: suitColor });
+    const hat = HATS[hatIndex].id;
+    socket.emit('join', { name, photo: photoDataUrl, color: suitColor, hat });
 
     setSuitColor(menuCharacter, suitColor);
+    setHat(menuCharacter, hat);
     if (photoDataUrl) {
       setVisorPhoto('menu', photoDataUrl);
     }
