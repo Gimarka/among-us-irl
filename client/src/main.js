@@ -18,6 +18,12 @@ app.innerHTML = `
     </div>
 
     <div id="join-screen" class="home-buttons">
+      <div class="selfie-frame" id="selfie-frame">
+        <video id="selfie-video" class="selfie-media hidden" playsinline muted></video>
+        <img id="selfie-photo" class="selfie-media hidden" alt="" />
+      </div>
+      <button id="selfie-button" class="test-button">${texts.takeSelfieButton}</button>
+
       <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="20" />
       <button id="join-button" class="test-button">${texts.joinButton}</button>
     </div>
@@ -465,8 +471,75 @@ window.addEventListener('popstate', () => {
 const joinScreen = document.querySelector('#join-screen');
 const joinNameInput = document.querySelector('#join-name-input');
 const joinButton = document.querySelector('#join-button');
+const selfieButton = document.querySelector('#selfie-button');
+const selfieVideo = document.querySelector('#selfie-video');
+const selfiePhoto = document.querySelector('#selfie-photo');
+
+// A face shown at avatar size never needs more than this, and it keeps the
+// photo at a few KB so it's cheap to send and to hold in server memory.
+const PHOTO_SIZE = 160;
+const PHOTO_QUALITY = 0.6;
 
 let socket = null;
+let selfieStream = null;
+let photoDataUrl = null;
+
+function stopSelfieCamera() {
+  if (!selfieStream) return;
+  selfieStream.getTracks().forEach((track) => track.stop());
+  selfieStream = null;
+  selfieVideo.srcObject = null;
+}
+
+async function startSelfieCamera() {
+  selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+  selfieVideo.srcObject = selfieStream;
+  await selfieVideo.play();
+  selfiePhoto.classList.add('hidden');
+  selfieVideo.classList.remove('hidden');
+  selfieButton.textContent = texts.captureSelfieButton;
+}
+
+function captureSelfie() {
+  // Crop the biggest centered square out of the camera frame, then scale it
+  // down and JPEG-compress it in one draw.
+  const side = Math.min(selfieVideo.videoWidth, selfieVideo.videoHeight);
+  const sourceX = (selfieVideo.videoWidth - side) / 2;
+  const sourceY = (selfieVideo.videoHeight - side) / 2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = PHOTO_SIZE;
+  canvas.height = PHOTO_SIZE;
+  const context = canvas.getContext('2d');
+  // Mirror it so the saved photo matches the mirrored preview the player saw.
+  context.translate(PHOTO_SIZE, 0);
+  context.scale(-1, 1);
+  context.drawImage(selfieVideo, sourceX, sourceY, side, side, 0, 0, PHOTO_SIZE, PHOTO_SIZE);
+
+  photoDataUrl = canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
+  stopSelfieCamera();
+
+  selfiePhoto.src = photoDataUrl;
+  selfieVideo.classList.add('hidden');
+  selfiePhoto.classList.remove('hidden');
+  selfieButton.textContent = texts.retakeSelfieButton;
+}
+
+async function handleSelfieClick() {
+  if (selfieStream) {
+    captureSelfie();
+    return;
+  }
+
+  try {
+    await startSelfieCamera();
+  } catch {
+    stopSelfieCamera();
+    selfieButton.textContent = texts.takeSelfieButton;
+    showPopup('error', texts.selfieError);
+    setTimeout(hidePopup, ERROR_POPUP_DURATION_MS);
+  }
+}
 
 function handleJoinClick() {
   const name = joinNameInput.value.trim();
@@ -484,7 +557,8 @@ function handleJoinClick() {
 
   function onConnect() {
     cleanup();
-    socket.emit('join', name);
+    stopSelfieCamera(); // release the camera before leaving the join screen
+    socket.emit('join', { name, photo: photoDataUrl });
     joinScreen.classList.add('hidden');
     homeScreen.classList.remove('hidden');
   }
@@ -500,6 +574,7 @@ function handleJoinClick() {
   socket.on('connect_error', onConnectError);
 }
 
+selfieButton.addEventListener('click', handleSelfieClick);
 joinButton.addEventListener('click', handleJoinClick);
 joinNameInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') handleJoinClick();

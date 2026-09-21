@@ -30,11 +30,11 @@ test('two players joining see each other in the players list', async () => {
     // Both sockets receive every broadcast, so wait for both before moving on
     // to avoid a listener registered after the fact missing the event.
     const aliceAlone = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    alice.emit('join', 'Alice');
+    alice.emit('join', { name: 'Alice' });
     await aliceAlone;
 
     const bothJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    bob.emit('join', 'Bob');
+    bob.emit('join', { name: 'Bob' });
     const [fromAlice, fromBob] = await bothJoined;
 
     for (const players of [fromAlice, fromBob]) {
@@ -44,6 +44,49 @@ test('two players joining see each other in the players list', async () => {
   } finally {
     alice.close();
     bob.close();
+    io.close();
+  }
+});
+
+test('a joining player keeps a valid selfie but not an oversized one', async () => {
+  clearPlayers();
+  const { httpServer, io } = createGameServer();
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const withPhoto = ioClient(url);
+  const withHugePhoto = ioClient(url);
+
+  try {
+    await Promise.all([waitForEvent(withPhoto, 'connect'), waitForEvent(withHugePhoto, 'connect')]);
+
+    // Both sockets receive every broadcast, so wait for both before moving on
+    // to avoid a listener registered after the fact catching the wrong one.
+    const photo = `data:image/jpeg;base64,${'a'.repeat(500)}`;
+    const firstJoin = Promise.all([
+      waitForEvent(withPhoto, 'players'),
+      waitForEvent(withHugePhoto, 'players'),
+    ]);
+    withPhoto.emit('join', { name: 'Alice', photo });
+    await firstJoin;
+
+    const secondJoin = Promise.all([
+      waitForEvent(withPhoto, 'players'),
+      waitForEvent(withHugePhoto, 'players'),
+    ]);
+    withHugePhoto.emit('join', {
+      name: 'Bob',
+      photo: `data:image/jpeg;base64,${'a'.repeat(200_000)}`,
+    });
+    const [players] = await secondJoin;
+
+    const alice = players.find((p) => p.name === 'Alice');
+    const bob = players.find((p) => p.name === 'Bob');
+    assert.equal(alice.photo, photo);
+    assert.equal(bob.photo, null, 'oversized photo is dropped, player still joins');
+  } finally {
+    withPhoto.close();
+    withHugePhoto.close();
     io.close();
   }
 });

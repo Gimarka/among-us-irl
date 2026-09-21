@@ -76,6 +76,28 @@ body {
   background: url('/images/title-panel.svg') no-repeat center / contain;
 }
 
+.selfie-frame {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  border: 3px solid #00f0ff;
+  background: #0d151d;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+  overflow: hidden;
+}
+
+.selfie-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Only the live feed gets mirrored, the way a selfie camera should look. The
+   captured photo is already mirrored on the canvas, so it displays as-is. */
+#selfie-video {
+  transform: scaleX(-1);
+}
+
 .name-input {
   width: 300px;
   max-width: 85vw;
