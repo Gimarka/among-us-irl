@@ -48,6 +48,35 @@ test('two players joining see each other in the players list', async () => {
   }
 });
 
+test('a joining player keeps a valid colour and falls back on a bad one', async () => {
+  clearPlayers();
+  const { httpServer, io } = createGameServer();
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const picked = ioClient(url);
+  const garbage = ioClient(url);
+
+  try {
+    await Promise.all([waitForEvent(picked, 'connect'), waitForEvent(garbage, 'connect')]);
+
+    const firstJoin = Promise.all([waitForEvent(picked, 'players'), waitForEvent(garbage, 'players')]);
+    picked.emit('join', { name: 'Alice', color: '#38FEDC' });
+    await firstJoin;
+
+    const secondJoin = Promise.all([waitForEvent(picked, 'players'), waitForEvent(garbage, 'players')]);
+    garbage.emit('join', { name: 'Bob', color: 'javascript:alert(1)' });
+    const [players] = await secondJoin;
+
+    assert.equal(players.find((p) => p.name === 'Alice').color, '#38fedc');
+    assert.equal(players.find((p) => p.name === 'Bob').color, '#c51111', 'bad colour falls back');
+  } finally {
+    picked.close();
+    garbage.close();
+    io.close();
+  }
+});
+
 test('a joining player keeps a valid selfie but not an oversized one', async () => {
   clearPlayers();
   const { httpServer, io } = createGameServer();

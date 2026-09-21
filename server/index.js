@@ -16,6 +16,14 @@ function cleanPhoto(photo) {
   return photo;
 }
 
+const DEFAULT_COLOR = '#c51111';
+const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+
+function cleanColor(color) {
+  if (typeof color !== 'string') return DEFAULT_COLOR;
+  return COLOR_PATTERN.test(color) ? color.toLowerCase() : DEFAULT_COLOR;
+}
+
 export function createGameServer() {
   const app = express();
   const httpServer = createServer(app);
@@ -28,9 +36,9 @@ export function createGameServer() {
   });
 
   io.on('connection', (socket) => {
-    socket.on('join', ({ name, photo } = {}) => {
+    socket.on('join', ({ name, photo, color } = {}) => {
       const cleanName = String(name || '').trim().slice(0, 20) || 'Joueur';
-      const players = addPlayer(socket.id, cleanName, cleanPhoto(photo));
+      const players = addPlayer(socket.id, cleanName, cleanPhoto(photo), cleanColor(color));
       io.emit('players', players);
     });
 

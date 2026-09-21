@@ -3,7 +3,13 @@ import { Html5Qrcode } from 'html5-qrcode';
 import { texts } from './texts.fr.js';
 import { sounds, preloadAssets } from './assets.js';
 import { initBackground } from './background.js';
-import { characterMarkup, visorMarkup, setVisorPhoto } from './character.js';
+import {
+  characterMarkup,
+  setVisorPhoto,
+  setSuitColor,
+  SUIT_COLORS,
+  DEFAULT_SUIT_COLOR,
+} from './character.js';
 import './style.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
@@ -19,10 +25,13 @@ app.innerHTML = `
     </div>
 
     <div id="join-screen" class="home-buttons">
-      <div class="visor-frame character-outline" id="join-visor">
-        <video id="selfie-video" class="visor-video hidden" playsinline muted></video>
-        ${visorMarkup('join')}
+      <div class="character-frame character-frame-large" id="join-character">
+        <video id="selfie-video" class="character-video hidden" playsinline muted></video>
+        ${characterMarkup('join')}
       </div>
+
+      <div class="color-picker" id="color-picker"></div>
+
       <button id="selfie-button" class="test-button">${texts.takeSelfieButton}</button>
 
       <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="20" />
@@ -30,7 +39,7 @@ app.innerHTML = `
     </div>
 
     <div id="home-screen" class="home-buttons hidden">
-      <div class="character-frame">
+      <div class="character-frame" id="menu-character">
         ${characterMarkup('menu')}
       </div>
 
@@ -478,7 +487,9 @@ const joinNameInput = document.querySelector('#join-name-input');
 const joinButton = document.querySelector('#join-button');
 const selfieButton = document.querySelector('#selfie-button');
 const selfieVideo = document.querySelector('#selfie-video');
-const joinVisor = document.querySelector('#join-visor');
+const joinCharacter = document.querySelector('#join-character');
+const menuCharacter = document.querySelector('#menu-character');
+const colorPicker = document.querySelector('#color-picker');
 
 // A face shown at avatar size never needs more than this, and it keeps the
 // photo at a few KB so it's cheap to send and to hold in server memory.
@@ -488,6 +499,25 @@ const PHOTO_QUALITY = 0.6;
 let socket = null;
 let selfieStream = null;
 let photoDataUrl = null;
+let suitColor = DEFAULT_SUIT_COLOR;
+
+function selectColor(color, swatch) {
+  suitColor = color;
+  setSuitColor(joinCharacter, color);
+  colorPicker.querySelectorAll('.color-swatch').forEach((other) => {
+    other.classList.toggle('selected', other === swatch);
+  });
+}
+
+SUIT_COLORS.forEach((color) => {
+  const swatch = document.createElement('button');
+  swatch.className = 'color-swatch';
+  swatch.style.background = color;
+  swatch.addEventListener('click', () => selectColor(color, swatch));
+  colorPicker.appendChild(swatch);
+});
+
+selectColor(DEFAULT_SUIT_COLOR, colorPicker.firstElementChild);
 
 function stopSelfieCamera() {
   if (!selfieStream) return;
@@ -500,11 +530,10 @@ async function startSelfieCamera() {
   selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
   selfieVideo.srcObject = selfieStream;
   await selfieVideo.play();
-  // The video sits behind the visor SVG and shows through it, since the
-  // login visor's glass is never filled in.
+  // The video is layered over the visor while filming, since the helmet
+  // behind it is opaque.
   document.querySelector('#join-visor-photo').classList.add('hidden');
   selfieVideo.classList.remove('hidden');
-  joinVisor.classList.add('visor-lit');
   selfieButton.textContent = texts.captureSelfieButton;
 }
 
@@ -543,7 +572,6 @@ async function handleSelfieClick() {
   } catch {
     stopSelfieCamera();
     selfieVideo.classList.add('hidden');
-    joinVisor.classList.remove('visor-lit');
     selfieButton.textContent = texts.takeSelfieButton;
     showPopup('error', texts.selfieError);
     setTimeout(hidePopup, ERROR_POPUP_DURATION_MS);
@@ -567,8 +595,9 @@ function handleJoinClick() {
   function onConnect() {
     cleanup();
     stopSelfieCamera(); // release the camera before leaving the join screen
-    socket.emit('join', { name, photo: photoDataUrl });
+    socket.emit('join', { name, photo: photoDataUrl, color: suitColor });
 
+    setSuitColor(menuCharacter, suitColor);
     if (photoDataUrl) {
       setVisorPhoto('menu', photoDataUrl);
     }

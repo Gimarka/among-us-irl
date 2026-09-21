@@ -78,9 +78,18 @@ body {
 
 .character-frame {
   position: relative;
-  width: 150px;
-  max-width: 45vw;
-  aspect-ratio: 200 / 240;
+  width: 140px;
+  max-width: 42vw;
+  aspect-ratio: 220 / 240;
+}
+
+.character-frame-large {
+  width: 200px;
+  max-width: 58vw;
+}
+
+.character-suit {
+  fill: var(--suit-color, #c51111);
 }
 
 .character-svg {
@@ -90,45 +99,46 @@ body {
   height: 100%;
 }
 
-/* Before there's a selfie the character is just its black contour, so it
-   reads as an empty slot. Dropping the fills is also what lets the live
-   camera behind the SVG show through the visor - the opaque body fill is
-   what would otherwise cover it. */
-.character-outline .character-fill {
-  fill: none;
-}
-
-/* The login screen shows the visor on its own, big enough to frame a face. */
-.visor-frame {
-  position: relative;
-  width: 210px;
-  max-width: 62vw;
-  aspect-ratio: 70 / 52;
-}
-
-/* The glare only makes sense once there's a face behind the glass; in an
-   empty visor it just reads as a stray white blob. */
-.visor-frame .visor-glare {
-  display: none;
-}
-
-.visor-frame.visor-lit .visor-glare {
-  display: block;
-}
-
-/* Sits behind the visor SVG, lined up with the visor rect in its 70x52
-   viewBox (x 3, y 3, 64 wide, 46 tall), so the live feed shows through the
-   unfilled glass. Mirrored the way a selfie camera should look; the captured
-   photo is already mirrored on the canvas, so it needs no flip of its own. */
-.visor-video {
+/* Layered over the visor while filming (the helmet behind it is opaque, so
+   the feed can't simply show through). Lined up with the visor circle in
+   the SVG's 220x240 viewBox - centre 110,85 - and sized to the inside of
+   its 8-unit ring so the ring stays visible around the feed. Mirrored the
+   way a selfie camera should look; the captured photo is already mirrored
+   on the canvas, so it needs no flip of its own. */
+.character-video {
   position: absolute;
-  left: 4.29%;
-  top: 5.77%;
-  width: 91.43%;
-  height: 88.46%;
+  left: 30%;
+  top: 17.08%;
+  width: 40%;
+  height: 36.67%;
+  z-index: 1;
   object-fit: cover;
-  border-radius: 999px;
+  border-radius: 50%;
   transform: scaleX(-1);
+}
+
+.color-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  width: 280px;
+  max-width: 80vw;
+}
+
+.color-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.color-swatch.selected {
+  border-color: #fff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.9);
+  transform: scale(1.15);
 }
 
 .name-input {

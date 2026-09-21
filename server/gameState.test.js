@@ -5,7 +5,7 @@ import { addPlayer, removePlayer, listPlayers, clearPlayers } from './gameState.
 test('addPlayer adds a player and returns the full list', () => {
   clearPlayers();
   const result = addPlayer('socket1', 'Alice');
-  assert.deepEqual(result, [{ id: 'socket1', name: 'Alice', photo: null }]);
+  assert.deepEqual(result, [{ id: 'socket1', name: 'Alice', photo: null, color: null }]);
 });
 
 test('addPlayer keeps the selfie it was given', () => {
@@ -28,7 +28,7 @@ test('removePlayer takes a player out of the list', () => {
   addPlayer('socket1', 'Alice');
   addPlayer('socket2', 'Bob');
   const result = removePlayer('socket1');
-  assert.deepEqual(result, [{ id: 'socket2', name: 'Bob', photo: null }]);
+  assert.deepEqual(result, [{ id: 'socket2', name: 'Bob', photo: null, color: null }]);
 });
 
 test('listPlayers reflects current state without mutating it', () => {
