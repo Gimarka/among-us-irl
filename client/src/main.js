@@ -18,6 +18,15 @@ import './style.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
+// The selfie button is icon-only throughout its three states (idle,
+// camera live/ready to shoot, photo taken) rather than switching between a
+// small icon and long French labels - "CAPTURER"/"REPRENDRE" don't fit the
+// compact square this button became once the hat arrows moved in next to
+// it. All three read via currentColor, same as the button's own colour/glow.
+const CAMERA_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M9.6 3a1 1 0 0 0-.8.4L7.5 5H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.5l-1.3-1.6a1 1 0 0 0-.8-.4H9.6zM12 8a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2.4a2.6 2.6 0 1 0 0 5.2 2.6 2.6 0 0 0 0-5.2z"/></svg>`;
+const SHUTTER_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="5.2" fill="currentColor"/></svg>`;
+const RETAKE_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>`;
+
 preloadAssets();
 initBackground();
 
@@ -52,24 +61,24 @@ app.innerHTML = `
 
     <div id="join-screen" class="screen">
       <div class="screen-fit home-buttons">
-        <div class="character-row">
-          <div class="character-panel">
-            <div class="character-frame character-frame-large" id="join-character">
-              <video id="selfie-video" class="character-video hidden" playsinline muted></video>
-              ${characterMarkup('join')}
-            </div>
-          </div>
-          <div class="hat-arrows-panel">
-            <div class="hat-arrows">
-              <button id="hat-prev" class="hat-arrow" aria-label="${texts.previousHat}">▲</button>
-              <button id="hat-next" class="hat-arrow" aria-label="${texts.nextHat}">▼</button>
-            </div>
+        <div class="character-panel">
+          <div class="character-frame character-frame-large" id="join-character">
+            <video id="selfie-video" class="character-video hidden" playsinline muted></video>
+            ${characterMarkup('join')}
           </div>
         </div>
 
         <div class="color-picker" id="color-picker"></div>
 
-        <button id="selfie-button" class="test-button">${texts.takeSelfieButton}</button>
+        <div class="selfie-row">
+          <button id="selfie-button" class="test-button selfie-button" aria-label="${texts.takeSelfieButton}">${CAMERA_ICON}</button>
+          <div class="hat-arrows-panel">
+            <div class="hat-arrows">
+              <button id="hat-prev" class="hat-arrow" aria-label="${texts.previousHat}">◀</button>
+              <button id="hat-next" class="hat-arrow" aria-label="${texts.nextHat}">▶</button>
+            </div>
+          </div>
+        </div>
 
         <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="${NAME_MAX_LENGTH}" />
         <button id="join-button" class="test-button">${texts.joinButton}</button>
@@ -639,6 +648,15 @@ const joinScreen = document.querySelector('#join-screen');
 const joinNameInput = document.querySelector('#join-name-input');
 const joinButton = document.querySelector('#join-button');
 const selfieButton = document.querySelector('#selfie-button');
+
+// No visible label in any of the button's three states (see the note on
+// CAMERA_ICON above), so its accessible name has to come from aria-label
+// instead of its own text content in every case.
+function setSelfieButtonState(icon, label) {
+  selfieButton.innerHTML = icon;
+  selfieButton.setAttribute('aria-label', label);
+}
+
 const selfieVideo = document.querySelector('#selfie-video');
 const joinCharacter = document.querySelector('#join-character');
 const menuCharacter = document.querySelector('#menu-character');
@@ -863,7 +881,7 @@ async function startSelfieCamera() {
   // silhouette behind it is opaque.
   document.querySelector('#join-visor-photo').classList.add('hidden');
   selfieVideo.classList.remove('hidden');
-  selfieButton.textContent = texts.captureSelfieButton;
+  setSelfieButtonState(SHUTTER_ICON, texts.captureSelfieButton);
 }
 
 function captureSelfie() {
@@ -899,7 +917,7 @@ function captureSelfie() {
 
   selfieVideo.classList.add('hidden');
   setVisorPhoto('join', photoDataUrl);
-  selfieButton.textContent = texts.retakeSelfieButton;
+  setSelfieButtonState(RETAKE_ICON, texts.retakeSelfieButton);
 }
 
 async function handleSelfieClick() {
@@ -913,7 +931,7 @@ async function handleSelfieClick() {
   } catch {
     stopSelfieCamera();
     selfieVideo.classList.add('hidden');
-    selfieButton.textContent = texts.takeSelfieButton;
+    setSelfieButtonState(CAMERA_ICON, texts.takeSelfieButton);
     showPopup('error', texts.selfieError);
     setTimeout(hidePopup, ERROR_POPUP_DURATION_MS);
   }
@@ -995,7 +1013,7 @@ function resetJoinForm() {
   hatIndex = 0;
   stopSelfieCamera();
   selfieVideo.classList.add('hidden');
-  selfieButton.textContent = texts.takeSelfieButton;
+  setSelfieButtonState(CAMERA_ICON, texts.takeSelfieButton);
   clearVisorPhoto('join');
   setHat(joinCharacter, HATS[0].id);
   selectColor(DEFAULT_SUIT_COLOR, colorPicker.firstElementChild);

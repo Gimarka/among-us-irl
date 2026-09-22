@@ -249,19 +249,12 @@ body {
   transform: scaleX(-1);
 }
 
-.character-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
 /* Everything on screen sits in a bordered panel against the animated
-   background, this one included: the character and the hat arrows each get
-   their own panel. Plain border/glow rather than a stretched background SVG
-   - see the note on .lobby-slot above for why. The character is drawn
-   wider than tall (those flexed arms), wider than this panel is meant to
-   be, so overflow stays visible: the character spills past the left/right
-   edges on purpose instead of being shrunk to fit inside them. */
+   background, this one included. Plain border/glow rather than a stretched
+   background SVG - see the note on .lobby-slot above for why. The character
+   is drawn wider than tall (those flexed arms), wider than this panel is
+   meant to be, so overflow stays visible: the character spills past the
+   left/right edges on purpose instead of being shrunk to fit inside them. */
 .character-panel {
   display: flex;
   align-items: center;
@@ -289,7 +282,6 @@ body {
 
 .hat-arrows {
   display: flex;
-  flex-direction: column;
   gap: 10px;
 }
 
@@ -312,6 +304,37 @@ body {
 
 .hat-arrow:active {
   filter: brightness(1.4);
+}
+
+/* The camera button and the (now horizontal) hat arrows sit side by side
+   in their own row, separate from the character/colour panels above. */
+.selfie-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* An icon-only button, sized to match the hat-arrows panel beside it. The
+   wide hexagonal shape the other .test-button labels use (menu-button.svg)
+   is built for a wide box - squeezed down to this one's square footprint it
+   comes out as a thin sliver, so this drops that background for a plain
+   bordered square instead, in the same style as .hat-arrow. Chained with
+   .test-button rather than a bare .selfie-button rule so it wins on
+   specificity regardless of the two rules' order in this file. */
+.test-button.selfie-button {
+  width: 70px;
+  height: 70px;
+  padding: 0;
+  border-radius: 16px;
+  border: 3px solid #101419;
+  background: #0d151d;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+.button-icon {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.7));
 }
 
 .color-picker {
