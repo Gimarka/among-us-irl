@@ -12,16 +12,6 @@
 // static background image.
 const TILE_VARIANT_IDS = ['tile-a', 'tile-b', 'tile-c'];
 
-// Shared tile-boundary seams every variant must reuse unchanged.
-const SHARED_OUTER_SEAMS = `
-  <g stroke="#181a1d" stroke-width="6" fill="none" stroke-linecap="square">
-    <line x1="0" y1="0" x2="200" y2="0"/>
-    <line x1="0" y1="200" x2="200" y2="200"/>
-    <line x1="0" y1="0" x2="0" y2="200"/>
-    <line x1="200" y1="0" x2="200" y2="200"/>
-  </g>
-`;
-
 function wireGroup(id, wires) {
   // The 1px highlight lines reuse the wire paths themselves (offset by a
   // pixel) instead of duplicating their coordinates, so they always match
@@ -42,17 +32,9 @@ function wireGroup(id, wires) {
 const SHARED_NODES = `
   <g fill="#00f0ff" filter="url(#nodeGlow)">
     <circle cx="100" cy="80" r="3.5"/>
-    <circle cx="0" cy="0" r="4"/>
-    <circle cx="200" cy="0" r="4"/>
-    <circle cx="0" cy="200" r="4"/>
-    <circle cx="200" cy="200" r="4"/>
   </g>
   <g fill="none" stroke="#181a1d" stroke-width="1.5">
     <circle cx="100" cy="80" r="6"/>
-    <circle cx="0" cy="0" r="6"/>
-    <circle cx="200" cy="0" r="6"/>
-    <circle cx="0" cy="200" r="6"/>
-    <circle cx="200" cy="200" r="6"/>
   </g>
 `;
 
@@ -138,7 +120,6 @@ function buildSymbol({ id, gradient, wires, vents, pulses }) {
     <symbol id="${id}" viewBox="0 0 200 200">
       <rect width="200" height="200" fill="url(#${gradient})"/>
       ${vents}
-      ${SHARED_OUTER_SEAMS}
       ${wireGroup(id, wires)}
       ${pulses(id)}
       ${SHARED_NODES}
