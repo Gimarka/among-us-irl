@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import express from 'express';
 import { Server } from 'socket.io';
-import { addPlayer, removePlayer, listPlayers } from './gameState.js';
+import { addPlayer, removePlayer, listPlayers, findPlayerByClientId } from './gameState.js';
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -32,6 +32,17 @@ function cleanHat(hat) {
   return HAT_PATTERN.test(hat) ? hat : DEFAULT_HAT;
 }
 
+// The browser makes this up once and keeps it in localStorage; it's what
+// lets a reconnecting phone be recognised as the same player rather than a
+// new one. A missing or malformed one (an older client, a bad payload)
+// falls back to this connection's own socket id, which just means this
+// particular join won't be merged with any other connection.
+const CLIENT_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+
+function cleanClientId(clientId, fallback) {
+  return typeof clientId === 'string' && CLIENT_ID_PATTERN.test(clientId) ? clientId : fallback;
+}
+
 export function createGameServer() {
   const app = express();
   const httpServer = createServer(app);
@@ -44,9 +55,25 @@ export function createGameServer() {
   });
 
   io.on('connection', (socket) => {
-    socket.on('join', ({ name, photo, color, hat } = {}) => {
+    socket.on('join', ({ clientId, name, photo, color, hat } = {}) => {
+      const id = cleanClientId(clientId, socket.id);
       const cleanName = String(name || '').trim().slice(0, 20) || 'Joueur';
+
+      // The same player can briefly hold two live connections - a second
+      // tab, a phone that reconnected under a fresh socket just before its
+      // old one timed out. Only one should count, so the previous
+      // connection gets closed below. That has to happen *after* the
+      // roster already reflects the new connection: disconnect() can fire
+      // its 'disconnect' handler synchronously, and that handler's own
+      // stale-connection check (see removePlayer) only stays correct if
+      // this new entry is already in place by the time it runs - otherwise
+      // it would broadcast Tyty as gone for an instant before reappearing.
+      const existing = findPlayerByClientId(id);
+      const previousSocketId = existing && existing.socketId !== socket.id ? existing.socketId : null;
+
+      socket.data.clientId = id;
       const players = addPlayer(
+        id,
         socket.id,
         cleanName,
         cleanPhoto(photo),
@@ -54,10 +81,15 @@ export function createGameServer() {
         cleanHat(hat),
       );
       io.emit('players', players);
+
+      if (previousSocketId) {
+        io.sockets.sockets.get(previousSocketId)?.disconnect(true);
+      }
     });
 
     socket.on('disconnect', () => {
-      const players = removePlayer(socket.id);
+      if (!socket.data.clientId) return; // disconnected before ever joining
+      const players = removePlayer(socket.data.clientId, socket.id);
       io.emit('players', players);
     });
   });

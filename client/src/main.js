@@ -724,6 +724,34 @@ function loadIdentity() {
   }
 }
 
+// A stable id for this browser, separate from the chosen name/photo/colour:
+// it's what lets the server recognise "this is the same player reconnecting"
+// (a new tab, a phone waking back up) and replace their old entry instead of
+// adding a duplicate. Made up once and kept for as long as this browser's
+// storage lasts.
+const CLIENT_ID_STORAGE_KEY = 'amongUsIrl.clientId';
+
+function makeClientId() {
+  return crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function getOrCreateClientId() {
+  try {
+    const existing = localStorage.getItem(CLIENT_ID_STORAGE_KEY);
+    if (existing) return existing;
+    const created = makeClientId();
+    localStorage.setItem(CLIENT_ID_STORAGE_KEY, created);
+    return created;
+  } catch {
+    // Storage blocked - fall back to a one-off id for this page load. It
+    // just means this tab won't be recognised as "the same player" next
+    // time, same as the saved identity above in that situation.
+    return makeClientId();
+  }
+}
+
+const clientId = getOrCreateClientId();
+
 let currentIdentity = null; // { name, photo, color, hat } once we know who we are
 let hasEnteredGame = false; // true once we've left the join screen this page load
 
@@ -850,7 +878,7 @@ function connectSocket() {
 
   socket.on('connect', () => {
     if (!currentIdentity) return; // shouldn't happen: nothing to join with yet
-    socket.emit('join', currentIdentity);
+    socket.emit('join', { ...currentIdentity, clientId });
 
     if (!hasEnteredGame) {
       hasEnteredGame = true;

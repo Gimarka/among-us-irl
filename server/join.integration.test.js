@@ -123,3 +123,47 @@ test('a joining player keeps a valid selfie but not an oversized one', async () 
     io.close();
   }
 });
+
+test('the same clientId reconnecting (a second tab) replaces the old connection instead of duplicating', async () => {
+  clearPlayers();
+  const { httpServer, io } = createGameServer();
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const spectator = ioClient(url);
+  const firstTab = ioClient(url);
+
+  try {
+    await Promise.all([waitForEvent(spectator, 'connect'), waitForEvent(firstTab, 'connect')]);
+
+    const firstJoin = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(firstTab, 'players')]);
+    firstTab.emit('join', { clientId: 'same-browser', name: 'Tyty' });
+    await firstJoin;
+
+    // A second tab in the same browser, same saved identity/clientId.
+    const secondTab = ioClient(url);
+    await waitForEvent(secondTab, 'connect');
+
+    const secondJoinSeen = Promise.all([
+      waitForEvent(spectator, 'players'),
+      waitForEvent(secondTab, 'players'),
+    ]);
+    // The first tab's connection getting closed by the server also fires a
+    // 'players' broadcast (its own disconnect handler runs) - wait for that
+    // too so we're asserting on the final, settled roster.
+    const firstTabClosed = waitForEvent(firstTab, 'disconnect');
+    secondTab.emit('join', { clientId: 'same-browser', name: 'Tyty' });
+    const [players] = await secondJoinSeen;
+    await firstTabClosed;
+
+    const matches = players.filter((p) => p.name === 'Tyty');
+    assert.equal(matches.length, 1, 'only one entry for the same clientId, not two');
+    assert.equal(firstTab.connected, false, 'the replaced tab gets disconnected, not left as a ghost');
+
+    secondTab.close();
+  } finally {
+    spectator.close();
+    firstTab.close();
+    io.close();
+  }
+});
