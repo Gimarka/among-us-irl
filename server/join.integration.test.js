@@ -92,6 +92,64 @@ test('a joining player keeps a valid colour and hat, and falls back on bad ones'
   }
 });
 
+test('a player joining with a colour already in use is switched to a free one', async () => {
+  clearPlayers();
+  const { httpServer, io } = createGameServer();
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const alice = ioClient(url);
+  const bob = ioClient(url);
+
+  try {
+    await Promise.all([waitForEvent(alice, 'connect'), waitForEvent(bob, 'connect')]);
+
+    const firstJoin = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
+    alice.emit('join', { name: 'Alice', color: '#c51111' });
+    await firstJoin;
+
+    const secondJoin = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
+    bob.emit('join', { name: 'Bob', color: '#c51111' });
+    const [players] = await secondJoin;
+
+    const alicePlayer = players.find((p) => p.name === 'Alice');
+    const bobPlayer = players.find((p) => p.name === 'Bob');
+    assert.equal(alicePlayer.color, '#c51111');
+    assert.notEqual(bobPlayer.color, '#c51111', 'colour already taken must not be handed out again');
+  } finally {
+    alice.close();
+    bob.close();
+    closeGameServer({ httpServer, io });
+  }
+});
+
+test('a reconnecting player keeps their own colour instead of being bumped off it', async () => {
+  clearPlayers();
+  const { httpServer, io } = createGameServer();
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const alice = ioClient(url);
+
+  try {
+    await waitForEvent(alice, 'connect');
+
+    const firstJoin = waitForEvent(alice, 'players');
+    alice.emit('join', { name: 'Alice', color: '#38fedc', clientId: 'alice-client' });
+    await firstJoin;
+
+    const secondJoin = waitForEvent(alice, 'players');
+    alice.emit('join', { name: 'Alice', color: '#38fedc', clientId: 'alice-client' });
+    const players = await secondJoin;
+
+    assert.equal(players.length, 1);
+    assert.equal(players[0].color, '#38fedc');
+  } finally {
+    alice.close();
+    closeGameServer({ httpServer, io });
+  }
+});
+
 test('a joining player keeps a valid selfie but not an oversized one', async () => {
   clearPlayers();
   const { httpServer, io } = createGameServer();

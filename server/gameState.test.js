@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, clearPlayers } from './gameState.js';
+import {
+  addPlayer,
+  removePlayer,
+  listPlayers,
+  findPlayerByClientId,
+  clearPlayers,
+  resolveColor,
+} from './gameState.js';
 
 test('addPlayer adds a player and returns the full list', () => {
   clearPlayers();
@@ -57,4 +64,32 @@ test('listPlayers reflects current state without mutating it', () => {
   const a = listPlayers();
   const b = listPlayers();
   assert.deepEqual(a, b);
+});
+
+test('resolveColor keeps a requested colour nobody else has', () => {
+  clearPlayers();
+  addPlayer('client1', 'socket1', 'Alice', null, '#c51111');
+  assert.equal(resolveColor('client2', '#132ed1'), '#132ed1');
+});
+
+test('resolveColor swaps a colour that is already taken for a free one', () => {
+  clearPlayers();
+  addPlayer('client1', 'socket1', 'Alice', null, '#c51111');
+  const color = resolveColor('client2', '#c51111');
+  assert.notEqual(color, '#c51111');
+});
+
+test('resolveColor lets a player keep their own colour on reconnect', () => {
+  clearPlayers();
+  addPlayer('client1', 'socket1', 'Alice', null, '#c51111');
+  assert.equal(resolveColor('client1', '#c51111'), '#c51111');
+});
+
+test('resolveColor never hands out a colour two different players already hold', () => {
+  clearPlayers();
+  addPlayer('client1', 'socket1', 'Alice', null, '#c51111');
+  addPlayer('client2', 'socket2', 'Bob', null, '#132ed1');
+  const color = resolveColor('client3', '#c51111');
+  assert.notEqual(color, '#c51111');
+  assert.notEqual(color, '#132ed1');
 });

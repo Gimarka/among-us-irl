@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import express from 'express';
 import { Server } from 'socket.io';
-import { addPlayer, removePlayer, listPlayers, findPlayerByClientId } from './gameState.js';
+import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, resolveColor } from './gameState.js';
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -110,7 +110,7 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
         socket.id,
         cleanName,
         cleanPhoto(photo),
-        cleanColor(color),
+        resolveColor(id, cleanColor(color)),
         cleanHat(hat),
       );
       io.emit('players', players);

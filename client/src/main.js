@@ -661,6 +661,18 @@ const lobbySlots = Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => ({
 // the last player is shown empty; a slot that previously held a photo but
 // is reused for a photo-less player is reset back to the plain visor.
 function renderLobby(players) {
+  // The server has the final say on colour - it swaps a requested colour
+  // for a free one when another player already holds it. Pick that up here
+  // so our own character (the lobby grid already just shows player.color
+  // straight off the roster) and future reconnects reflect what we actually
+  // got, not what we originally asked for.
+  const self = players.find((player) => player.id === clientId);
+  if (self && currentIdentity && self.color && self.color !== currentIdentity.color) {
+    currentIdentity = { ...currentIdentity, color: self.color };
+    saveIdentity(currentIdentity);
+    applyIdentityToMenuCharacter(currentIdentity);
+  }
+
   lobbySlots.forEach((slot, index) => {
     const player = players[index];
     if (!player) {

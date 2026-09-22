@@ -9,6 +9,29 @@
 
 const players = new Map(); // clientId -> { id, socketId, name, photo, color, hat }
 
+// Mirrors client/src/character.js's SUIT_COLORS (keep the two in sync). Also
+// doubles as the fallback order when a player's requested colour is already
+// taken: the first one nobody else currently holds.
+const SUIT_COLORS = [
+  '#c51111', '#132ed1', '#117f2d', '#ed54ba', '#ef7d0d', '#f5f557',
+  '#3f474e', '#d6e0f0', '#6b2fbb', '#71491e', '#38fedc', '#50ef39',
+];
+
+// Colours are unique per player. A requested colour is kept unless someone
+// else already has it (an already-connected player, or a still-connected
+// slot mid-reconnect), in which case it's swapped for the first colour free
+// in the palette above - falling back to the request itself if every
+// colour is somehow taken (more players than the palette has colours).
+export function resolveColor(clientId, requestedColor) {
+  const takenByOthers = new Set(
+    Array.from(players.values())
+      .filter((player) => player.id !== clientId)
+      .map((player) => player.color),
+  );
+  if (!takenByOthers.has(requestedColor)) return requestedColor;
+  return SUIT_COLORS.find((color) => !takenByOthers.has(color)) || requestedColor;
+}
+
 export function addPlayer(clientId, socketId, name, photo = null, color = null, hat = null) {
   players.set(clientId, { id: clientId, socketId, name, photo, color, hat });
   return listPlayers();
