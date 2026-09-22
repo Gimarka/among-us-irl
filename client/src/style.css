@@ -137,7 +137,10 @@ body {
   position: relative;
   width: 190px;
   max-width: 56vw;
-  aspect-ratio: 600 / 335;
+  /* Matches character.js's VIEW_BOX exactly, so the SVG (which fits itself
+     to this box via preserveAspectRatio) is resized to it perfectly with
+     no cropping on any side. */
+  aspect-ratio: 630 / 380;
 }
 
 .character-frame-large {
@@ -146,8 +149,8 @@ body {
 }
 
 .character-frame-tiny {
-  width: 90px;
-  max-width: 24vw;
+  width: 100px;
+  max-width: 26vw;
 }
 
 .lobby {
@@ -207,20 +210,25 @@ body {
 }
 
 /* Layered over the visor while filming (the head/arms silhouette behind it
-   is opaque, so the feed can't simply show through). Lined up with the
-   visor ellipse in the SVG's 600x335 viewBox (see VISOR_BOX in
-   character.js) as percentages of the frame, so it tracks the visor at any
-   frame size. Mirrored the way a selfie camera should look; the captured
-   photo is already mirrored on the canvas, so it needs no flip of its own. */
+   is opaque, so the feed can't simply show through). Lined up with
+   VISOR_BOX inside character.js's VIEW_BOX, as percentages of the frame,
+   so it tracks the visor at any frame size. The visor's hole is closer to
+   a stadium/pill shape than a true oval (flatter sides than an ellipse
+   would have), which a plain 50% border-radius undershoots - "50% / X%"
+   instead gives the corners a fixed radius equal to half the box's width
+   in both directions, producing straight sides and semicircular caps that
+   match it much more closely. Mirrored the way a selfie camera should
+   look; the captured photo is already mirrored on the canvas, so it needs
+   no flip of its own. */
 .character-video {
   position: absolute;
-  left: 39.17%;
-  top: 15.22%;
-  width: 24.67%;
-  height: 72.24%;
+  left: 38.05%;
+  top: 25.29%;
+  width: 23.43%;
+  height: 63.61%;
   z-index: 1;
   object-fit: cover;
-  border-radius: 50%;
+  border-radius: 50% / 30.53%;
   transform: scaleX(-1);
 }
 
