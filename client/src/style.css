@@ -340,6 +340,15 @@ body {
   transform: scale(1.12);
 }
 
+/* A colour another player already has - greyed out and unpickable rather
+   than removed outright, so the full palette stays visible and it's clear
+   why a colour can't be picked right now. */
+.color-swatch:disabled {
+  filter: grayscale(1) brightness(0.6);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .name-input {
   width: 300px;
   max-width: 85vw;

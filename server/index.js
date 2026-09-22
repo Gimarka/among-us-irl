@@ -84,6 +84,11 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
   }
 
   io.on('connection', (socket) => {
+    // Sent right away, before this socket has joined anything, so a
+    // freshly opened join screen knows which colours are already taken
+    // instead of only finding out from the next player to join or leave.
+    socket.emit('players', listPlayers());
+
     socket.on('join', ({ clientId, name, photo, color, hat } = {}) => {
       const id = cleanClientId(clientId, socket.id);
       const cleanName = String(name || '').trim().slice(0, 20) || 'Joueur';

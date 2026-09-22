@@ -661,6 +661,8 @@ const lobbySlots = Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => ({
 // the last player is shown empty; a slot that previously held a photo but
 // is reused for a photo-less player is reset back to the plain visor.
 function renderLobby(players) {
+  updateColorAvailability(players);
+
   // The server has the final say on colour - it swaps a requested colour
   // for a free one when another player already holds it. Pick that up here
   // so our own character (the lobby grid already just shows player.color
@@ -791,6 +793,7 @@ const clientId = getOrCreateClientId();
 
 let currentIdentity = null; // { name, photo, color, hat } once we know who we are
 let hasEnteredGame = false; // true once we've left the join screen this page load
+let latestPlayers = []; // last roster we heard from the server, for the colour picker
 
 function selectColor(color, swatch) {
   suitColor = color;
@@ -804,11 +807,36 @@ SUIT_COLORS.forEach((color) => {
   const swatch = document.createElement('button');
   swatch.className = 'color-swatch';
   swatch.style.background = color;
+  swatch.dataset.color = color;
   swatch.addEventListener('click', () => selectColor(color, swatch));
   colorPicker.appendChild(swatch);
 });
 
 selectColor(DEFAULT_SUIT_COLOR, colorPicker.firstElementChild);
+
+// Colours are unique per player (the server enforces this on join - see
+// resolveColor in server/gameState.js), so the picker greys out and
+// disables any colour someone else already holds, live, as players come
+// and go. If our own current pick gets taken out from under us this way,
+// we fall back to the next free one automatically instead of leaving a
+// disabled swatch selected.
+function updateColorAvailability(players) {
+  latestPlayers = players;
+  const takenByOthers = new Set(
+    players.filter((player) => player.id !== clientId).map((player) => player.color),
+  );
+
+  colorPicker.querySelectorAll('.color-swatch').forEach((swatch) => {
+    swatch.disabled = takenByOthers.has(swatch.dataset.color);
+  });
+
+  if (takenByOthers.has(suitColor)) {
+    const nextSwatch = Array.from(colorPicker.querySelectorAll('.color-swatch')).find(
+      (swatch) => !takenByOthers.has(swatch.dataset.color),
+    );
+    if (nextSwatch) selectColor(nextSwatch.dataset.color, nextSwatch);
+  }
+}
 
 let hatIndex = 0;
 
@@ -899,12 +927,27 @@ function applyIdentityToMenuCharacter(identity) {
   }
 }
 
-// One persistent connection, joined as soon as it's (re)connected. The first
-// connect of a page load takes the player from the join screen into the
-// lobby; every connect after that - the phone woke up, the tab came back,
-// a ping timed out and Socket.IO auto-reconnected - just re-announces the
-// same identity to the server so the player quietly reappears wherever
-// they already were, instead of getting sent back to the join screen.
+// Sends our identity to the server and, the first time this page load does
+// so, moves on from the join screen into the lobby.
+function sendJoin() {
+  socket.emit('join', { ...currentIdentity, clientId });
+
+  if (!hasEnteredGame) {
+    hasEnteredGame = true;
+    stopSelfieCamera(); // release the camera before leaving the join screen
+    applyIdentityToMenuCharacter(currentIdentity);
+    openLobby();
+  }
+}
+
+// One persistent connection, opened as soon as this page loads (even before
+// the player has picked a name) so the join screen's colour picker can grey
+// out colours other players already hold in real time - see renderLobby.
+// Once an identity exists, every connect - the first join, and every one
+// after (the phone woke up, the tab came back, a ping timed out and
+// Socket.IO auto-reconnected) - re-announces it so the player quietly
+// reappears wherever they already were, instead of getting sent back to
+// the join screen.
 function connectSocket() {
   if (socket) {
     // A disconnect the player asked for (see handleDisconnectClick) leaves
@@ -916,23 +959,16 @@ function connectSocket() {
 
   socket = io(SERVER_URL);
   // Kept for the whole session, not just the join handshake, so the lobby
-  // stays live as other players join or leave while everyone waits.
+  // (and the join screen's colour picker, before that) stay live as other
+  // players join or leave while everyone waits.
   socket.on('players', renderLobby);
 
   socket.on('connect', () => {
-    if (!currentIdentity) return; // shouldn't happen: nothing to join with yet
-    socket.emit('join', { ...currentIdentity, clientId });
-
-    if (!hasEnteredGame) {
-      hasEnteredGame = true;
-      stopSelfieCamera(); // release the camera before leaving the join screen
-      applyIdentityToMenuCharacter(currentIdentity);
-      openLobby();
-    }
+    if (currentIdentity) sendJoin();
   });
 
   socket.on('connect_error', () => {
-    if (hasEnteredGame) return; // already in - a mid-game hiccup retries quietly
+    if (hasEnteredGame || !currentIdentity) return; // no join in flight to fail
     joinButton.disabled = false;
     showPopup('error', texts.joinError);
     setTimeout(hidePopup, ERROR_POPUP_DURATION_MS);
@@ -948,7 +984,8 @@ function handleJoinClick() {
   joinButton.disabled = true;
   currentIdentity = { name, photo: photoDataUrl, color: suitColor, hat: HATS[hatIndex].id };
   saveIdentity(currentIdentity);
-  connectSocket();
+  const activeSocket = connectSocket();
+  if (activeSocket.connected) sendJoin();
 }
 
 // Back to a blank join form, as if this browser had never joined.
@@ -962,6 +999,7 @@ function resetJoinForm() {
   clearVisorPhoto('join');
   setHat(joinCharacter, HATS[0].id);
   selectColor(DEFAULT_SUIT_COLOR, colorPicker.firstElementChild);
+  updateColorAvailability(latestPlayers); // steps off DEFAULT_SUIT_COLOR above if it's now taken
   joinButton.disabled = false;
 }
 
@@ -1009,5 +1047,8 @@ const savedIdentity = loadIdentity();
 if (savedIdentity) {
   currentIdentity = savedIdentity;
   openLobby();
-  connectSocket();
 }
+// Connects either way: with a saved identity, straight into the lobby as
+// above; without one, just to listen for the roster so the join screen's
+// colour picker knows what's already taken.
+connectSocket();
