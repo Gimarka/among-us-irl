@@ -708,8 +708,8 @@ playButton.addEventListener('click', openMenuFromLobby);
 // photo at a few KB so it's cheap to send and to hold in server memory.
 // The shape matches the visor's image box so the saved photo frames the face
 // exactly like the live preview did.
-const PHOTO_WIDTH = 144;
-const PHOTO_HEIGHT = 200;
+const PHOTO_WIDTH = 132;
+const PHOTO_HEIGHT = 216;
 const PHOTO_ASPECT = PHOTO_WIDTH / PHOTO_HEIGHT;
 const PHOTO_QUALITY = 0.6;
 
@@ -813,8 +813,8 @@ async function startSelfieCamera() {
   selfieStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
   selfieVideo.srcObject = selfieStream;
   await selfieVideo.play();
-  // The video is layered over the visor while filming, since the helmet
-  // behind it is opaque.
+  // The video is layered over the visor while filming, since the head/arms
+  // silhouette behind it is opaque.
   document.querySelector('#join-visor-photo').classList.add('hidden');
   selfieVideo.classList.remove('hidden');
   selfieButton.textContent = texts.captureSelfieButton;
