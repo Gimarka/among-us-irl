@@ -54,6 +54,19 @@ const VIEW_BOX = '-5 -45 630 380';
 // scale(0.1,-0.1)"> did.
 const BODY_TRANSFORM = 'translate(0,335) scale(0.1,-0.1)';
 
+// The fill trace and the line-art trace aren't pixel-identical (they're two
+// separate traces of the same artwork), and the fill runs very slightly
+// past the line art's own edge in a few spots. Shrinking it 1% around its
+// own centre - not the coordinate origin, which would shift it sideways
+// instead of shrinking it in place - pulls it back inside the outline
+// everywhere without the difference being visible at the sizes this
+// renders at.
+const BODY_FILL_SCALE = 0.99;
+const BODY_FILL_CENTER = { x: 3096.16, y: 1674.05 };
+const BODY_FILL_TRANSFORM =
+  `${BODY_TRANSFORM} translate(${BODY_FILL_CENTER.x},${BODY_FILL_CENTER.y}) ` +
+  `scale(${BODY_FILL_SCALE}) translate(${-BODY_FILL_CENTER.x},${-BODY_FILL_CENTER.y})`;
+
 // The face sits inside the head/visor ring path's own hole - there's no
 // separate helmet shape to cut a hole in, the ring is two opposite-wound
 // subpaths (an outer outline and an inner oval) that already leave their
@@ -73,8 +86,12 @@ const VISOR_BOX = { x: 234.7, y: 51.1, width: 147.6, height: 241.7 };
 // of the way the old rounder helmet did, so each hat (still drawn in its
 // original 220x260, head-centred-at-(110,105) coordinate space) is
 // remapped with this transform onto the new head's position and size,
-// derived from the ratio of the new head's width to the old one's.
-const HAT_TRANSFORM = 'translate(156.28,-20.37) scale(1.386)';
+// derived from the ratio of the new head's width to the old one's, then
+// scaled up another 15% on top of that so hats read clearly at the size
+// characters actually render at. translate is recomputed each time the
+// scale changes, so hat-local (110,45) - the old head's centre/top - keeps
+// landing on the same point on the new head instead of drifting off it.
+const HAT_TRANSFORM = 'translate(133.44,-29.71) scale(1.594)';
 
 // Hats are drawn last so they sit in front of the head instead of tucked
 // behind it.
@@ -144,7 +161,7 @@ export function characterMarkup(id) {
       <!-- The solid, recolourable body fill (a genuinely filled silhouette,
            not the hollow line art below) - drawn first so the visor and
            the line art on top of it can each play their own part. -->
-      <g class="character-suit" transform="${BODY_TRANSFORM}">
+      <g class="character-suit" transform="${BODY_FILL_TRANSFORM}">
         <path d="M2845 3327 c-288 -95 -477 -319 -599 -710 -25 -78 -47 -155 -51 -170 -6 -31 -4 -30 -95 -46 -105 -19 -176 -49 -214 -91 -41 -46 -88 -183 -114 -331 l-16 -98 -64 -32 -63 -31 -41 37 c-83 76 -222 117 -320 97 -29 -6 -63 -14 -76 -18 -21 -6 -22 -5 -11 22 19 48 15 189 -10 287 -25 99 -20 159 22 258 39 95 35 92 92 63 42 -21 61 -25 117 -22 52 2 70 -1 86 -15 43 -39 133 -47 198 -18 57 26 86 66 82 114 -2 30 2 41 17 49 66 35 110 103 101 158 -7 45 -54 151 -108 244 -33 56 -48 71 -85 88 -54 24 -80 22 -313 -23 -299 -58 -389 -90 -463 -167 -19 -20 -65 -89 -102 -152 -74 -128 -132 -208 -260 -355 -221 -254 -295 -376 -322 -533 -13 -73 -13 -100 -2 -172 7 -47 11 -103 9 -125 -2 -22 -4 -74 -4 -116 -1 -68 2 -81 29 -125 38 -60 110 -116 190 -145 45 -17 79 -40 136 -94 166 -158 387 -269 604 -306 134 -22 319 -11 450 26 17 5 24 -5 49 -72 65 -178 146 -311 262 -433 l73 -76 28 -147 28 -147 1012 0 c955 0 1012 1 1017 18 3 9 15 73 27 142 l22 125 66 70 c119 125 210 272 272 440 18 50 33 91 35 93 1 2 35 -6 75 -16 333 -88 738 26 1006 281 43 41 89 78 103 82 56 17 144 71 180 112 65 74 85 169 57 264 -10 33 -11 52 -4 70 6 13 11 83 11 154 0 116 -3 138 -27 204 -39 108 -103 210 -224 360 -170 209 -231 291 -276 369 -23 40 -58 101 -78 135 -68 117 -155 162 -431 221 -309 66 -343 68 -404 14 -57 -50 -154 -258 -154 -329 0 -43 33 -96 77 -124 28 -17 32 -26 33 -63 0 -27 8 -55 20 -72 48 -68 198 -81 262 -23 12 11 40 16 90 17 59 1 79 5 105 24 17 12 35 22 41 22 13 0 50 -88 69 -167 14 -56 15 -74 4 -122 -7 -31 -19 -87 -27 -126 -15 -68 -14 -166 2 -224 6 -21 5 -23 -12 -17 -125 52 -293 21 -407 -76 l-49 -41 -36 20 c-21 12 -54 26 -74 33 -32 10 -38 16 -38 40 0 37 -27 168 -52 255 -27 94 -51 139 -90 169 -36 26 -147 63 -225 74 -47 7 -48 8 -61 52 -73 248 -142 412 -221 529 -101 149 -237 260 -393 322 -83 33 -84 33 -278 36 -181 3 -200 1 -265 -20z"/>
       </g>
 
