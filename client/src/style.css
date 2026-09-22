@@ -194,6 +194,13 @@ body {
   opacity: 0.4;
 }
 
+/* No character for a slot nobody has taken yet - visibility:hidden rather
+   than display:none, so the empty slot still reserves the same space and
+   the grid's rows stay aligned with the filled ones next to them. */
+.lobby-slot-empty .character-frame {
+  visibility: hidden;
+}
+
 .lobby-slot-name {
   margin: 0;
   max-width: 100%;
@@ -324,6 +331,7 @@ body {
 
 /* Same heavy black outline the character is drawn with. */
 .color-swatch {
+  position: relative;
   width: 100%;
   aspect-ratio: 1;
   padding: 0;
@@ -340,13 +348,32 @@ body {
   transform: scale(1.12);
 }
 
-/* A colour another player already has - greyed out and unpickable rather
-   than removed outright, so the full palette stays visible and it's clear
-   why a colour can't be picked right now. */
+/* A colour another player already has - a black cross over it rather than
+   removed outright, so the full palette stays visible and it's clear why
+   this one can't be picked right now. The colour itself stays visible
+   underneath. */
 .color-swatch:disabled {
-  filter: grayscale(1) brightness(0.6);
-  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.color-swatch:disabled::before,
+.color-swatch:disabled::after {
+  content: '';
+  position: absolute;
+  left: 14%;
+  top: 50%;
+  width: 72%;
+  height: 3px;
+  background: #101419;
+  border-radius: 2px;
+}
+
+.color-swatch:disabled::before {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.color-swatch:disabled::after {
+  transform: translateY(-50%) rotate(-45deg);
 }
 
 .name-input {
