@@ -88,6 +88,8 @@ app.innerHTML = `
         <button id="scan-button" class="test-button">${texts.scanButton}</button>
 
         <button id="test-minigame1-button" class="test-button">${texts.testMinigame1Button}</button>
+
+        <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
       </div>
     </div>
 
@@ -148,9 +150,14 @@ const SCREEN_BOTTOM_GAP_PX = 16;
 // .colorgame-board in style.css).
 const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #home-screen, #minigame-screen';
 
+// The title only shows on the join screen (see openLobby/handleDisconnectClick
+// below); everywhere else it's hidden so the game screens get the full
+// height instead of leaving a gap where it used to be.
 function syncTitleSpace() {
-  const titleBottom = titlePanel.getBoundingClientRect().bottom;
-  const space = titleBottom + TITLE_GAP_PX;
+  const titleVisible = !titlePanel.classList.contains('hidden');
+  const space = titleVisible
+    ? titlePanel.getBoundingClientRect().bottom + TITLE_GAP_PX
+    : SCREEN_BOTTOM_GAP_PX; // same small margin as the bottom, for symmetry
   homeLayout.style.setProperty('--title-space', `${Math.round(space)}px`);
   const availableHeight = window.innerHeight - space - SCREEN_BOTTOM_GAP_PX;
   homeLayout.style.setProperty('--avail-h', `${Math.round(availableHeight)}px`);
@@ -351,6 +358,10 @@ function handleDigitTap(digit) {
 testButton.addEventListener('click', openMiniGame);
 
 const testMinigame1Button = document.querySelector('#test-minigame1-button');
+
+const disconnectButton = document.querySelector('#disconnect-button');
+disconnectButton.addEventListener('click', handleDisconnectClick);
+
 const colorGameScreen = document.querySelector('#colorgame-screen');
 const colorGameBoard = document.querySelector('#colorgame-board');
 const counterDots = document.querySelectorAll('#colorgame-counter .counter-dot');
@@ -673,8 +684,9 @@ function renderLobby(players) {
 
 function openLobby() {
   joinScreen.classList.add('hidden');
+  titlePanel.classList.add('hidden');
   lobbyScreen.classList.remove('hidden');
-  fitActiveScreen();
+  syncLayout(); // hiding the title changes how much space screens get, not just their fit
 }
 
 function openMenuFromLobby() {
@@ -869,7 +881,13 @@ function applyIdentityToMenuCharacter(identity) {
 // same identity to the server so the player quietly reappears wherever
 // they already were, instead of getting sent back to the join screen.
 function connectSocket() {
-  if (socket) return socket;
+  if (socket) {
+    // A disconnect the player asked for (see handleDisconnectClick) leaves
+    // the socket around but deliberately not reconnecting - reopen it by
+    // hand if they come back and join again.
+    if (!socket.connected) socket.connect();
+    return socket;
+  }
 
   socket = io(SERVER_URL);
   // Kept for the whole session, not just the join handshake, so the lobby
@@ -908,6 +926,41 @@ function handleJoinClick() {
   connectSocket();
 }
 
+// Back to a blank join form, as if this browser had never joined.
+function resetJoinForm() {
+  joinNameInput.value = '';
+  photoDataUrl = null;
+  hatIndex = 0;
+  stopSelfieCamera();
+  selfieVideo.classList.add('hidden');
+  selfieButton.textContent = texts.takeSelfieButton;
+  clearVisorPhoto('join');
+  setHat(joinCharacter, HATS[0].id);
+  selectColor(DEFAULT_SUIT_COLOR, colorPicker.firstElementChild);
+  joinButton.disabled = false;
+}
+
+function handleDisconnectClick() {
+  // A deliberate disconnect - not one Socket.IO should try to paper over by
+  // silently reconnecting us, which is exactly why connectSocket() leaves a
+  // disconnected socket alone instead of reopening it right away.
+  if (socket) socket.disconnect();
+
+  try {
+    localStorage.removeItem(IDENTITY_STORAGE_KEY);
+  } catch {
+    // Storage can be blocked; nothing to clean up in that case.
+  }
+  currentIdentity = null;
+  hasEnteredGame = false;
+
+  homeScreen.classList.add('hidden');
+  resetJoinForm();
+  titlePanel.classList.remove('hidden');
+  joinScreen.classList.remove('hidden');
+  syncLayout();
+}
+
 selfieButton.addEventListener('click', handleSelfieClick);
 joinButton.addEventListener('click', handleJoinClick);
 joinNameInput.addEventListener('keydown', (event) => {
@@ -921,8 +974,6 @@ joinNameInput.addEventListener('keydown', (event) => {
 const savedIdentity = loadIdentity();
 if (savedIdentity) {
   currentIdentity = savedIdentity;
-  joinScreen.classList.add('hidden');
-  lobbyScreen.classList.remove('hidden');
-  fitActiveScreen();
+  openLobby();
   connectSocket();
 }

@@ -30,4 +30,5 @@ export const texts = {
   disconnected: 'Connexion perdue, nouvelle tentative…',
   playButton: 'JOUER',
   emptySlot: 'En attente…',
+  disconnectButton: 'SE DÉCONNECTER',
 };
