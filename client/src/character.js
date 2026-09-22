@@ -61,7 +61,7 @@ const BODY_TRANSFORM = 'translate(0,335) scale(0.1,-0.1)';
 // instead of shrinking it in place - pulls it back inside the outline
 // everywhere without the difference being visible at the sizes this
 // renders at.
-const BODY_FILL_SCALE = 0.99;
+const BODY_FILL_SCALE = 0.98;
 const BODY_FILL_CENTER = { x: 3096.16, y: 1674.05 };
 const BODY_FILL_TRANSFORM =
   `${BODY_TRANSFORM} translate(${BODY_FILL_CENTER.x},${BODY_FILL_CENTER.y}) ` +
