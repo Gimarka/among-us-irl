@@ -15,6 +15,17 @@ function waitForEvent(socket, event) {
   return new Promise((resolve) => socket.once(event, resolve));
 }
 
+// io.close() alone only stops accepting new connections and waits for
+// existing ones to end on their own - a socket a test killed abruptly
+// (engine.close(), simulating a real network drop) can be left as a raw
+// connection the HTTP server still considers open, which keeps this test
+// process from ever exiting once enough of these tests have run.
+// closeAllConnections() forces every one of them shut immediately.
+function closeGameServer({ httpServer, io }) {
+  io.close();
+  httpServer.closeAllConnections();
+}
+
 test('two players joining see each other in the players list', async () => {
   clearPlayers();
   const { httpServer, io } = createGameServer();
@@ -44,7 +55,7 @@ test('two players joining see each other in the players list', async () => {
   } finally {
     alice.close();
     bob.close();
-    io.close();
+    closeGameServer({ httpServer, io });
   }
 });
 
@@ -77,7 +88,7 @@ test('a joining player keeps a valid colour and hat, and falls back on bad ones'
   } finally {
     picked.close();
     garbage.close();
-    io.close();
+    closeGameServer({ httpServer, io });
   }
 });
 
@@ -120,7 +131,7 @@ test('a joining player keeps a valid selfie but not an oversized one', async () 
   } finally {
     withPhoto.close();
     withHugePhoto.close();
-    io.close();
+    closeGameServer({ httpServer, io });
   }
 });
 
@@ -164,6 +175,120 @@ test('the same clientId reconnecting (a second tab) replaces the old connection 
   } finally {
     spectator.close();
     firstTab.close();
-    io.close();
+    closeGameServer({ httpServer, io });
   }
 });
+
+test('an unexpected disconnect keeps the player in the roster until the grace period runs out', async () => {
+  clearPlayers();
+  const { httpServer, io } = createGameServer({ disconnectGraceMs: 150 });
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const spectator = ioClient(url);
+  // No auto-reconnect needed here - this test is only about the server's own
+  // grace-period timer, and a client left endlessly retrying in the
+  // background is exactly the kind of lingering handle that stops the test
+  // process from exiting cleanly once the assertions are done.
+  const flaky = ioClient(url, { reconnection: false });
+
+  try {
+    await Promise.all([waitForEvent(spectator, 'connect'), waitForEvent(flaky, 'connect')]);
+
+    const joined = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(flaky, 'players')]);
+    flaky.emit('join', { clientId: 'flaky-client', name: 'Flaky' });
+    await joined;
+
+    // Close the raw transport rather than calling disconnect() - the same
+    // way a locked phone or a Wi-Fi drop looks from the server's side,
+    // skipping the clean handshake a deliberate disconnect would do.
+    const removedBroadcast = waitForEvent(spectator, 'players');
+    flaky.io.engine.close();
+
+    let broadcastArrived = false;
+    removedBroadcast.then(() => {
+      broadcastArrived = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 80)); // well under the 150ms grace period
+    assert.equal(broadcastArrived, false, 'no removal broadcast while the grace period is still running');
+
+    const players = await removedBroadcast; // resolves once the grace period actually elapses
+    assert.equal(players.find((p) => p.name === 'Flaky'), undefined, 'removed once the grace period ran out');
+  } finally {
+    spectator.close();
+    flaky.close();
+    closeGameServer({ httpServer, io });
+  }
+});
+
+test('reconnecting during the grace period cancels the pending removal', async () => {
+  clearPlayers();
+  const { httpServer, io } = createGameServer({ disconnectGraceMs: 150 });
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const spectator = ioClient(url);
+  // Sped up so the client's own auto-reconnect - which a real drop also
+  // relies on - lands comfortably inside the short grace period above.
+  const flaky = ioClient(url, { reconnectionDelay: 10, reconnectionDelayMax: 20 });
+
+  try {
+    await Promise.all([waitForEvent(spectator, 'connect'), waitForEvent(flaky, 'connect')]);
+
+    const joined = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(flaky, 'players')]);
+    flaky.emit('join', { clientId: 'flaky-client', name: 'Flaky' });
+    await joined;
+
+    flaky.io.engine.close();
+
+    // Socket.IO reconnects the transport on its own; the app re-joins with
+    // the same clientId as soon as it does (see connectSocket in main.js).
+    await waitForEvent(flaky, 'connect');
+    const rejoined = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(flaky, 'players')]);
+    flaky.emit('join', { clientId: 'flaky-client', name: 'Flaky' });
+    const [players] = await rejoined;
+    assert.ok(players.find((p) => p.name === 'Flaky'), 'still present right after reconnecting');
+
+    // Wait past the *original* grace deadline - if the first timer hadn't
+    // been cancelled on rejoin, a stray removal would show up here.
+    let strayRemoval = false;
+    spectator.once('players', (p) => {
+      if (!p.find((x) => x.name === 'Flaky')) strayRemoval = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    assert.equal(strayRemoval, false, 'never removed - the reconnect cancelled the original timer');
+  } finally {
+    spectator.close();
+    flaky.close();
+    closeGameServer({ httpServer, io });
+  }
+});
+
+test('a deliberate disconnect (logout) removes the player immediately, ignoring the grace period', async () => {
+  clearPlayers();
+  // Long enough that only an *immediate* removal could show up in this test.
+  const { httpServer, io } = createGameServer({ disconnectGraceMs: 60_000 });
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const spectator = ioClient(url);
+  const leaver = ioClient(url);
+
+  try {
+    await Promise.all([waitForEvent(spectator, 'connect'), waitForEvent(leaver, 'connect')]);
+
+    const joined = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(leaver, 'players')]);
+    leaver.emit('join', { clientId: 'leaver-client', name: 'Leaver' });
+    await joined;
+
+    const left = waitForEvent(spectator, 'players');
+    leaver.disconnect(); // exactly what the "SE DECONNECTER" button does
+    const players = await left;
+    assert.equal(players.find((p) => p.name === 'Leaver'), undefined, 'removed right away, not after a long wait');
+  } finally {
+    spectator.close();
+    leaver.close();
+    closeGameServer({ httpServer, io });
+  }
+});
+

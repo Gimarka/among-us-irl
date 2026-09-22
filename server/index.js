@@ -43,7 +43,25 @@ function cleanClientId(clientId, fallback) {
   return typeof clientId === 'string' && CLIENT_ID_PATTERN.test(clientId) ? clientId : fallback;
 }
 
-export function createGameServer() {
+// A dropped connection - phone locked, tab backgrounded, Wi-Fi hiccup - looks
+// identical to actually leaving from here, and reconnecting after any of
+// those is already handled client-side (it re-joins with the same clientId).
+// So an unexpected disconnect doesn't remove the player right away: they
+// stay in the shared roster, with this long to reconnect before they're
+// actually treated as gone.
+const DISCONNECT_GRACE_MS = 15 * 60 * 1000;
+
+// Reasons Socket.IO reports when *we* end the connection on purpose, rather
+// than it failing underneath us - the logout button (client-initiated) and
+// evicting a since-replaced connection (server-initiated, see the 'join'
+// handler below). Both mean the player is definitely not coming back on
+// this connection, so there's nothing to wait out.
+const IMMEDIATE_DISCONNECT_REASONS = new Set([
+  'client namespace disconnect',
+  'server namespace disconnect',
+]);
+
+export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {}) {
   const app = express();
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
@@ -53,6 +71,17 @@ export function createGameServer() {
   app.get('/health', (req, res) => {
     res.json({ ok: true, players: listPlayers().length });
   });
+
+  // clientId -> pending removal timer, for players riding out the grace
+  // period above. Never more than one entry per clientId: joining or
+  // disconnecting again both replace whatever was there before.
+  const pendingRemovals = new Map();
+
+  function cancelPendingRemoval(clientId) {
+    const timer = pendingRemovals.get(clientId);
+    if (timer) clearTimeout(timer);
+    pendingRemovals.delete(clientId);
+  }
 
   io.on('connection', (socket) => {
     socket.on('join', ({ clientId, name, photo, color, hat } = {}) => {
@@ -71,6 +100,10 @@ export function createGameServer() {
       const existing = findPlayerByClientId(id);
       const previousSocketId = existing && existing.socketId !== socket.id ? existing.socketId : null;
 
+      // Reconnecting - the same tab coming back, or a new one - before the
+      // grace period ran out means they never really left.
+      cancelPendingRemoval(id);
+
       socket.data.clientId = id;
       const players = addPlayer(
         id,
@@ -87,10 +120,24 @@ export function createGameServer() {
       }
     });
 
-    socket.on('disconnect', () => {
-      if (!socket.data.clientId) return; // disconnected before ever joining
-      const players = removePlayer(socket.data.clientId, socket.id);
-      io.emit('players', players);
+    socket.on('disconnect', (reason) => {
+      const id = socket.data.clientId;
+      if (!id) return; // disconnected before ever joining
+
+      cancelPendingRemoval(id);
+
+      if (IMMEDIATE_DISCONNECT_REASONS.has(reason)) {
+        const players = removePlayer(id, socket.id);
+        io.emit('players', players);
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        pendingRemovals.delete(id);
+        const players = removePlayer(id, socket.id);
+        io.emit('players', players);
+      }, disconnectGraceMs);
+      pendingRemovals.set(id, timer);
     });
   });
 
