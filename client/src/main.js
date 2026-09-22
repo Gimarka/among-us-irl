@@ -25,6 +25,11 @@ initBackground();
 // player, filled in as people join (see renderLobby below).
 const LOBBY_SLOT_COUNT = 10;
 
+// Matches the server's own cap (see index.js) - the HTML attribute below
+// stops normal typing/pasting, and the input handler further down is a
+// defensive backstop for anything that might slip past it.
+const NAME_MAX_LENGTH = 20;
+
 function lobbySlotMarkup(index) {
   return `
     <div class="lobby-slot" id="lobby-slot-${index}">
@@ -43,6 +48,8 @@ app.innerHTML = `
       <h1 class="home-title">${texts.homeTitle}</h1>
     </div>
 
+    <button id="lobby-back-button" class="lobby-back-button hidden" aria-label="${texts.backButtonLabel}">‹</button>
+
     <div id="join-screen" class="screen">
       <div class="screen-fit home-buttons">
         <div class="character-frame character-frame-large" id="join-character">
@@ -58,17 +65,13 @@ app.innerHTML = `
 
         <button id="selfie-button" class="test-button">${texts.takeSelfieButton}</button>
 
-        <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="20" />
+        <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="${NAME_MAX_LENGTH}" />
         <button id="join-button" class="test-button">${texts.joinButton}</button>
       </div>
     </div>
 
     <div id="lobby-screen" class="screen hidden">
       <div class="screen-fit lobby">
-        <div class="lobby-instruction">
-          <p class="minigame-instruction-label">${texts.playersHeading}</p>
-        </div>
-
         <div class="lobby-grid">
           ${Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => lobbySlotMarkup(index)).join('')}
         </div>
@@ -637,6 +640,8 @@ const colorPicker = document.querySelector('#color-picker');
 
 const lobbyScreen = document.querySelector('#lobby-screen');
 const playButton = document.querySelector('#play-button');
+const lobbyBackButton = document.querySelector('#lobby-back-button');
+lobbyBackButton.addEventListener('click', () => handleDisconnectClick());
 const lobbySlots = Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => ({
   root: document.querySelector(`#lobby-slot-${index}`),
   frame: document.querySelector(`#lobby-${index}-character`),
@@ -686,11 +691,13 @@ function openLobby() {
   joinScreen.classList.add('hidden');
   titlePanel.classList.add('hidden');
   lobbyScreen.classList.remove('hidden');
+  lobbyBackButton.classList.remove('hidden');
   syncLayout(); // hiding the title changes how much space screens get, not just their fit
 }
 
 function openMenuFromLobby() {
   lobbyScreen.classList.add('hidden');
+  lobbyBackButton.classList.add('hidden');
   homeScreen.classList.remove('hidden');
   fitActiveScreen();
 }
@@ -954,7 +961,11 @@ function handleDisconnectClick() {
   currentIdentity = null;
   hasEnteredGame = false;
 
+  // Reachable from either the menu's "SE DECONNECTER" or the lobby's back
+  // button, so hide both regardless of which one is actually showing.
   homeScreen.classList.add('hidden');
+  lobbyScreen.classList.add('hidden');
+  lobbyBackButton.classList.add('hidden');
   resetJoinForm();
   titlePanel.classList.remove('hidden');
   joinScreen.classList.remove('hidden');
@@ -965,6 +976,11 @@ selfieButton.addEventListener('click', handleSelfieClick);
 joinButton.addEventListener('click', handleJoinClick);
 joinNameInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') handleJoinClick();
+});
+joinNameInput.addEventListener('input', () => {
+  if (joinNameInput.value.length > NAME_MAX_LENGTH) {
+    joinNameInput.value = joinNameInput.value.slice(0, NAME_MAX_LENGTH);
+  }
 });
 
 // Resume automatically if this browser already joined before (a refresh, or
