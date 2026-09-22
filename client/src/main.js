@@ -52,9 +52,11 @@ app.innerHTML = `
 
     <div id="join-screen" class="screen">
       <div class="screen-fit home-buttons">
-        <div class="character-frame character-frame-large" id="join-character">
-          <video id="selfie-video" class="character-video hidden" playsinline muted></video>
-          ${characterMarkup('join')}
+        <div class="character-panel">
+          <div class="character-frame character-frame-large" id="join-character">
+            <video id="selfie-video" class="character-video hidden" playsinline muted></video>
+            ${characterMarkup('join')}
+          </div>
           <div class="hat-arrows">
             <button id="hat-prev" class="hat-arrow" aria-label="${texts.previousHat}">▲</button>
             <button id="hat-next" class="hat-arrow" aria-label="${texts.nextHat}">▼</button>

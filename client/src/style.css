@@ -169,6 +169,13 @@ body {
   gap: 14px 28px;
 }
 
+/* A plain bordered/glowing panel rather than a stretched background SVG:
+   keypad-button.svg (and SVG backgrounds generally, it turns out) won't
+   stretch non-uniformly to a box this much wider than it is tall - it
+   keeps its own square proportions centred in the middle instead of
+   filling the box, leaving the character overflowing the visible border.
+   This same panel look is reused on .character-panel and .color-picker
+   below. */
 .lobby-slot {
   display: flex;
   flex-direction: column;
@@ -177,7 +184,10 @@ body {
   width: 120px;
   padding: 10px 8px 8px;
   box-sizing: border-box;
-  background: url('/images/keypad-button.svg') no-repeat center / 100% 100%;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
 }
 
 .lobby-slot-empty {
@@ -232,14 +242,24 @@ body {
   transform: scaleX(-1);
 }
 
-/* Sit just outside the character's right edge, so the character itself
-   stays centred on the screen. */
+/* Everything on screen sits in a bordered panel against the animated
+   background, this one included: the character and its hat arrows share
+   one panel instead of floating loose over the wall. Plain border/glow
+   rather than a stretched background SVG - see the note on .lobby-slot
+   above for why. */
+.character-panel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 28px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
 .hat-arrows {
-  position: absolute;
-  left: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-left: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -269,9 +289,16 @@ body {
 .color-picker {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 10px;
+  gap: 12px;
   width: 280px;
   max-width: 80vw;
+  padding: 16px;
+  box-sizing: border-box;
+  /* Same panel treatment as .character-panel above. */
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
 }
 
 /* Same heavy black outline the character is drawn with. */
