@@ -31,23 +31,41 @@ body {
 }
 
 .home {
+  position: relative;
   height: 100%;
+  text-align: center;
+}
+
+/* Each screen (join, menu, minigame, colorgame) fills the space below the
+   fixed title panel and centres its own content in it. Scrolling is never
+   an option here: join/home/minigame additionally get scaled down by JS
+   (fitActiveScreen in main.js) whenever their natural content would be
+   taller or wider than this box. The colorgame screen instead sizes its
+   board with vh-relative units, because its drag-and-drop math reads real
+   (untransformed) pixel positions and a scale transform would throw it off. */
+.screen {
+  position: absolute;
+  top: var(--title-space, 110px);
+  left: 0;
+  right: 0;
+  bottom: 16px;
   box-sizing: border-box;
-  /* Set from JS to the measured height of the fixed title panel, so screens
-     centre in the space left below it instead of running under it. */
-  padding-top: var(--title-space, 110px);
-  padding-bottom: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  /* On a screen too short for a whole screen's content, plain centring pushes
-     the top of it back under the title. "safe" keeps it pinned below the title
-     instead and lets the overflow scroll. */
-  justify-content: safe center;
-  overflow-y: auto;
-  gap: 32px;
-  text-align: center;
+  overflow: hidden;
+}
+
+/* The actual content of join/home/minigame screens, wrapped so it can be
+   scaled down (by fitActiveScreen in main.js) without also shrinking the
+   fixed .screen viewport it's centred in - transforming .screen itself would
+   shrink the very box we're trying to fit content into. flex-shrink: 0 keeps
+   its natural size stable for that measurement, instead of the browser's own
+   flexbox shrinking quietly compressing it first. */
+.screen-fit {
+  flex-shrink: 0;
+  transform-origin: center center;
 }
 
 .title-panel {
@@ -350,7 +368,6 @@ body {
   align-items: center;
   justify-content: center;
   gap: 24px;
-  height: 100%;
 }
 
 .colorgame-instruction {
@@ -372,7 +389,12 @@ body {
   width: 300px;
   max-width: 85vw;
   height: 380px;
-  max-height: 52vh;
+  /* The drag-and-drop game reads real, untransformed pixel positions, so it
+     can't be scaled down like the other screens (see .screen above). Instead
+     it's kept inside the actual space below the title by capping its height
+     against --avail-h (set from JS), minus the instruction box and gap above
+     it, with 52vh as a plain fallback before that variable is set. */
+  max-height: min(52vh, calc(var(--avail-h, 480px) - 120px));
 }
 
 .colorgame-counter {

@@ -87,8 +87,6 @@ export function characterMarkup(id) {
         </clipPath>
       </defs>
 
-      ${hats}
-
       <!-- Bust / shoulders -->
       <path class="character-suit"
             d="M 25 250 C 25 200, 55 170, 80 165 L 80 150 L 140 150 L 140 165 C 165 170, 195 200, 195 250 Z"
@@ -110,8 +108,11 @@ export function characterMarkup(id) {
              preserveAspectRatio="xMidYMid slice"
              clip-path="url(#${id}-visorClip)"/>
 
-      <!-- Visor ring drawn last so it sits over the photo -->
+      <!-- Visor ring -->
       <ellipse ${VISOR} fill="none" stroke="#101419" stroke-width="8"/>
+
+      <!-- Hats drawn last so they sit in front of the helmet and visor -->
+      ${hats}
     </svg>
   `;
 }

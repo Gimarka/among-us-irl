@@ -26,45 +26,51 @@ app.innerHTML = `
       <h1 class="home-title">${texts.homeTitle}</h1>
     </div>
 
-    <div id="join-screen" class="home-buttons">
-      <div class="character-frame character-frame-large" id="join-character">
-        <video id="selfie-video" class="character-video hidden" playsinline muted></video>
-        ${characterMarkup('join')}
-        <div class="hat-arrows">
-          <button id="hat-prev" class="hat-arrow" aria-label="${texts.previousHat}">▲</button>
-          <button id="hat-next" class="hat-arrow" aria-label="${texts.nextHat}">▼</button>
+    <div id="join-screen" class="screen">
+      <div class="screen-fit home-buttons">
+        <div class="character-frame character-frame-large" id="join-character">
+          <video id="selfie-video" class="character-video hidden" playsinline muted></video>
+          ${characterMarkup('join')}
+          <div class="hat-arrows">
+            <button id="hat-prev" class="hat-arrow" aria-label="${texts.previousHat}">▲</button>
+            <button id="hat-next" class="hat-arrow" aria-label="${texts.nextHat}">▼</button>
+          </div>
         </div>
+
+        <div class="color-picker" id="color-picker"></div>
+
+        <button id="selfie-button" class="test-button">${texts.takeSelfieButton}</button>
+
+        <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="20" />
+        <button id="join-button" class="test-button">${texts.joinButton}</button>
       </div>
-
-      <div class="color-picker" id="color-picker"></div>
-
-      <button id="selfie-button" class="test-button">${texts.takeSelfieButton}</button>
-
-      <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="20" />
-      <button id="join-button" class="test-button">${texts.joinButton}</button>
     </div>
 
-    <div id="home-screen" class="home-buttons hidden">
-      <div class="character-frame" id="menu-character">
-        ${characterMarkup('menu')}
+    <div id="home-screen" class="screen hidden">
+      <div class="screen-fit home-buttons">
+        <div class="character-frame" id="menu-character">
+          ${characterMarkup('menu')}
+        </div>
+
+        <button id="test-button" class="test-button">${texts.testButton}</button>
+
+        <button id="scan-button" class="test-button">${texts.scanButton}</button>
+
+        <button id="test-minigame1-button" class="test-button">${texts.testMinigame1Button}</button>
       </div>
-
-      <button id="test-button" class="test-button">${texts.testButton}</button>
-
-      <button id="scan-button" class="test-button">${texts.scanButton}</button>
-
-      <button id="test-minigame1-button" class="test-button">${texts.testMinigame1Button}</button>
     </div>
 
-    <div id="minigame-screen" class="minigame hidden">
-      <div class="minigame-instruction">
-        <p class="minigame-instruction-label">${texts.miniGameInstruction}</p>
-        <p class="minigame-code" id="minigame-code"></p>
+    <div id="minigame-screen" class="screen hidden">
+      <div class="screen-fit minigame">
+        <div class="minigame-instruction">
+          <p class="minigame-instruction-label">${texts.miniGameInstruction}</p>
+          <p class="minigame-code" id="minigame-code"></p>
+        </div>
+        <div class="keypad" id="keypad"></div>
       </div>
-      <div class="keypad" id="keypad"></div>
     </div>
 
-    <div id="colorgame-screen" class="colorgame hidden">
+    <div id="colorgame-screen" class="screen colorgame hidden">
       <div class="colorgame-instruction">
         <p class="minigame-instruction-label">${texts.colorGameInstruction}</p>
       </div>
@@ -101,18 +107,83 @@ app.innerHTML = `
 const titlePanel = document.querySelector('.title-panel');
 const homeLayout = document.querySelector('.home');
 const TITLE_GAP_PX = 12;
+const SCREEN_BOTTOM_GAP_PX = 16;
+
+// Screens that get shrunk to fit rather than sized with vh units, because
+// their content is a flat stack (character, buttons, a keypad) with no
+// pixel math that a scale transform could throw off. The colorgame screen
+// is deliberately left out: its drag-and-drop reads real, untransformed
+// pointer positions, so it's sized with vh-relative CSS instead (see
+// .colorgame-board in style.css).
+const FIT_SCREEN_SELECTOR = '#join-screen, #home-screen, #minigame-screen';
 
 function syncTitleSpace() {
-  const space = titlePanel.getBoundingClientRect().bottom + TITLE_GAP_PX;
+  const titleBottom = titlePanel.getBoundingClientRect().bottom;
+  const space = titleBottom + TITLE_GAP_PX;
   homeLayout.style.setProperty('--title-space', `${Math.round(space)}px`);
+  const availableHeight = window.innerHeight - space - SCREEN_BOTTOM_GAP_PX;
+  homeLayout.style.setProperty('--avail-h', `${Math.round(availableHeight)}px`);
 }
 
-syncTitleSpace();
-window.addEventListener('resize', syncTitleSpace);
-window.addEventListener('orientationchange', syncTitleSpace);
+// Everything must fit on screen with no scrolling, on any phone. Rather than
+// hand-tune sizes for every viewport, measure each screen's natural
+// (unscaled) size against the space actually available below the title and
+// shrink it uniformly if it doesn't fit. Because the screen itself is the
+// box that centres its content (see .screen in style.css), scaling it from
+// its own centre keeps that content centred as it shrinks.
+// scrollHeight/scrollWidth only measure overflow that spills past an
+// element's own bottom/right edge - a flex box that centres oversized
+// content (as ours does) overflows equally on the top/left too, and that
+// half is invisible to scrollHeight. So the true extent is measured by
+// hand: the outermost edges of everything actually rendered inside, which
+// also naturally picks up an absolutely positioned child (the hat arrows)
+// poking out past its own parent's box.
+function measureContentExtent(container) {
+  let minTop = Infinity;
+  let maxBottom = -Infinity;
+  let minLeft = Infinity;
+  let maxRight = -Infinity;
+  container.querySelectorAll('*').forEach((el) => {
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return; // hidden/collapsed, ignore
+    minTop = Math.min(minTop, rect.top);
+    maxBottom = Math.max(maxBottom, rect.bottom);
+    minLeft = Math.min(minLeft, rect.left);
+    maxRight = Math.max(maxRight, rect.right);
+  });
+  if (!Number.isFinite(minTop)) return { height: 0, width: 0 };
+  return { height: maxBottom - minTop, width: maxRight - minLeft };
+}
+
+function fitActiveScreen() {
+  document.querySelectorAll(FIT_SCREEN_SELECTOR).forEach((screen) => {
+    if (screen.classList.contains('hidden')) return;
+    // Scaling the screen itself would shrink its own box along with its
+    // content - a moving target, since the "available space" would keep
+    // shrinking along with whatever we're trying to fit into it. Instead the
+    // screen is a fixed, unscaled viewport (see .screen in style.css) and
+    // only its inner .screen-fit wrapper - the actual content - gets scaled.
+    const content = screen.querySelector(':scope > .screen-fit');
+    content.style.transform = 'none';
+    const availableHeight = screen.clientHeight;
+    const availableWidth = screen.clientWidth;
+    const { height: naturalHeight, width: naturalWidth } = measureContentExtent(content);
+    const scale = Math.min(1, availableHeight / naturalHeight, availableWidth / naturalWidth);
+    content.style.transform = scale < 1 ? `scale(${scale})` : 'none';
+  });
+}
+
+function syncLayout() {
+  syncTitleSpace();
+  fitActiveScreen();
+}
+
+syncLayout();
+window.addEventListener('resize', syncLayout);
+window.addEventListener('orientationchange', syncLayout);
 // The panel's height comes from its font, so re-measure once Orbitron lands.
 if (document.fonts && document.fonts.ready) {
-  document.fonts.ready.then(syncTitleSpace);
+  document.fonts.ready.then(syncLayout);
 }
 
 const homeScreen = document.querySelector('#home-screen');
@@ -185,13 +256,17 @@ function openMiniGame() {
   minigameScreen.classList.remove('hidden');
   pushOverlayState();
   activeGameClose = closeMiniGame;
+  // Fill the keypad before fitting: the fit measures actual rendered content,
+  // and an empty keypad would under-measure how tall this screen really is.
   newRound();
+  fitActiveScreen();
 }
 
 function closeMiniGame() {
   hidePopup();
   minigameScreen.classList.add('hidden');
   homeScreen.classList.remove('hidden');
+  fitActiveScreen();
   closeOverlayState();
 }
 
@@ -402,6 +477,7 @@ function closeColorGame() {
   hidePopup();
   colorGameScreen.classList.add('hidden');
   homeScreen.classList.remove('hidden');
+  fitActiveScreen();
   closeOverlayState();
 }
 
@@ -658,6 +734,7 @@ function handleJoinClick() {
 
     joinScreen.classList.add('hidden');
     homeScreen.classList.remove('hidden');
+    fitActiveScreen();
   }
 
   function onConnectError() {
