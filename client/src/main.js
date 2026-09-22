@@ -699,6 +699,34 @@ let selfieStream = null;
 let photoDataUrl = null;
 let suitColor = DEFAULT_SUIT_COLOR;
 
+// Remembers who we are across a page refresh, and lets a dropped connection
+// (phone locked, tab backgrounded, brief network loss) silently rejoin as
+// the same character instead of bouncing the player back to the join
+// screen. This is a convenience for the browser tab, not a real account -
+// nothing server-side ties back to it.
+const IDENTITY_STORAGE_KEY = 'amongUsIrl.player';
+
+function saveIdentity(identity) {
+  try {
+    localStorage.setItem(IDENTITY_STORAGE_KEY, JSON.stringify(identity));
+  } catch {
+    // Storage can be blocked (private browsing, full quota) - resuming
+    // across a refresh is a nicety, not a requirement, so just skip it.
+  }
+}
+
+function loadIdentity() {
+  try {
+    const raw = localStorage.getItem(IDENTITY_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+let currentIdentity = null; // { name, photo, color, hat } once we know who we are
+let hasEnteredGame = false; // true once we've left the join screen this page load
+
 function selectColor(color, swatch) {
   suitColor = color;
   setSuitColor(joinCharacter, color);
@@ -798,47 +826,58 @@ async function handleSelfieClick() {
   }
 }
 
+function applyIdentityToMenuCharacter(identity) {
+  setSuitColor(menuCharacter, identity.color || DEFAULT_SUIT_COLOR);
+  setHat(menuCharacter, identity.hat || DEFAULT_HAT);
+  if (identity.photo) {
+    setVisorPhoto('menu', identity.photo);
+  }
+}
+
+// One persistent connection, joined as soon as it's (re)connected. The first
+// connect of a page load takes the player from the join screen into the
+// lobby; every connect after that - the phone woke up, the tab came back,
+// a ping timed out and Socket.IO auto-reconnected - just re-announces the
+// same identity to the server so the player quietly reappears wherever
+// they already were, instead of getting sent back to the join screen.
+function connectSocket() {
+  if (socket) return socket;
+
+  socket = io(SERVER_URL);
+  // Kept for the whole session, not just the join handshake, so the lobby
+  // stays live as other players join or leave while everyone waits.
+  socket.on('players', renderLobby);
+
+  socket.on('connect', () => {
+    if (!currentIdentity) return; // shouldn't happen: nothing to join with yet
+    socket.emit('join', currentIdentity);
+
+    if (!hasEnteredGame) {
+      hasEnteredGame = true;
+      stopSelfieCamera(); // release the camera before leaving the join screen
+      applyIdentityToMenuCharacter(currentIdentity);
+      openLobby();
+    }
+  });
+
+  socket.on('connect_error', () => {
+    if (hasEnteredGame) return; // already in - a mid-game hiccup retries quietly
+    joinButton.disabled = false;
+    showPopup('error', texts.joinError);
+    setTimeout(hidePopup, ERROR_POPUP_DURATION_MS);
+  });
+
+  return socket;
+}
+
 function handleJoinClick() {
   const name = joinNameInput.value.trim();
   if (!name) return;
 
   joinButton.disabled = true;
-  if (!socket) {
-    socket = io(SERVER_URL);
-    // Kept for the whole session, not just the join handshake, so the lobby
-    // stays live as other players join or leave while everyone waits.
-    socket.on('players', renderLobby);
-  }
-
-  function cleanup() {
-    socket.off('connect', onConnect);
-    socket.off('connect_error', onConnectError);
-  }
-
-  function onConnect() {
-    cleanup();
-    stopSelfieCamera(); // release the camera before leaving the join screen
-    const hat = HATS[hatIndex].id;
-    socket.emit('join', { name, photo: photoDataUrl, color: suitColor, hat });
-
-    setSuitColor(menuCharacter, suitColor);
-    setHat(menuCharacter, hat);
-    if (photoDataUrl) {
-      setVisorPhoto('menu', photoDataUrl);
-    }
-
-    openLobby();
-  }
-
-  function onConnectError() {
-    cleanup();
-    joinButton.disabled = false;
-    showPopup('error', texts.joinError);
-    setTimeout(hidePopup, ERROR_POPUP_DURATION_MS);
-  }
-
-  socket.on('connect', onConnect);
-  socket.on('connect_error', onConnectError);
+  currentIdentity = { name, photo: photoDataUrl, color: suitColor, hat: HATS[hatIndex].id };
+  saveIdentity(currentIdentity);
+  connectSocket();
 }
 
 selfieButton.addEventListener('click', handleSelfieClick);
@@ -846,3 +885,16 @@ joinButton.addEventListener('click', handleJoinClick);
 joinNameInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') handleJoinClick();
 });
+
+// Resume automatically if this browser already joined before (a refresh, or
+// coming back after the page was fully reloaded rather than just
+// backgrounded). Reveal the lobby right away instead of the join screen, so
+// there's no flash of the join form while we reconnect.
+const savedIdentity = loadIdentity();
+if (savedIdentity) {
+  currentIdentity = savedIdentity;
+  joinScreen.classList.add('hidden');
+  lobbyScreen.classList.remove('hidden');
+  fitActiveScreen();
+  connectSocket();
+}
