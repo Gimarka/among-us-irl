@@ -126,6 +126,16 @@ export function setVisorPhoto(id, photoDataUrl) {
   base.classList.add('hidden');
 }
 
+// The reverse of setVisorPhoto: back to the plain glass visor. Needed for a
+// character slot that gets reused for different players over time (the
+// lobby), where a new occupant might not have taken a selfie.
+export function clearVisorPhoto(id) {
+  const photo = document.querySelector(`#${id}-visor-photo`);
+  const base = document.querySelector(`#${id}-visor-base`);
+  photo.classList.add('hidden');
+  base.classList.remove('hidden');
+}
+
 export function setSuitColor(frame, color) {
   frame.style.setProperty('--suit-color', color);
 }

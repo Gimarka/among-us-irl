@@ -28,4 +28,6 @@ export const texts = {
   playersHeading: 'Joueurs connectés',
   noPlayers: 'Aucun joueur pour le moment.',
   disconnected: 'Connexion perdue, nouvelle tentative…',
+  playButton: 'JOUER',
+  emptySlot: 'En attente…',
 };

@@ -6,10 +6,12 @@ import { initBackground } from './background.js';
 import {
   characterMarkup,
   setVisorPhoto,
+  clearVisorPhoto,
   setSuitColor,
   setHat,
   SUIT_COLORS,
   DEFAULT_SUIT_COLOR,
+  DEFAULT_HAT,
   HATS,
 } from './character.js';
 import './style.css';
@@ -18,6 +20,21 @@ const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
 preloadAssets();
 initBackground();
+
+// The waiting room between joining and the menu: one slot per possible
+// player, filled in as people join (see renderLobby below).
+const LOBBY_SLOT_COUNT = 10;
+
+function lobbySlotMarkup(index) {
+  return `
+    <div class="lobby-slot" id="lobby-slot-${index}">
+      <div class="character-frame character-frame-tiny" id="lobby-${index}-character">
+        ${characterMarkup(`lobby-${index}`)}
+      </div>
+      <p class="lobby-slot-name" id="lobby-slot-${index}-name">${texts.emptySlot}</p>
+    </div>
+  `;
+}
 
 const app = document.querySelector('#app');
 app.innerHTML = `
@@ -43,6 +60,20 @@ app.innerHTML = `
 
         <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="20" />
         <button id="join-button" class="test-button">${texts.joinButton}</button>
+      </div>
+    </div>
+
+    <div id="lobby-screen" class="screen hidden">
+      <div class="screen-fit lobby">
+        <div class="lobby-instruction">
+          <p class="minigame-instruction-label">${texts.playersHeading}</p>
+        </div>
+
+        <div class="lobby-grid">
+          ${Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => lobbySlotMarkup(index)).join('')}
+        </div>
+
+        <button id="play-button" class="test-button">${texts.playButton}</button>
       </div>
     </div>
 
@@ -115,7 +146,7 @@ const SCREEN_BOTTOM_GAP_PX = 16;
 // is deliberately left out: its drag-and-drop reads real, untransformed
 // pointer positions, so it's sized with vh-relative CSS instead (see
 // .colorgame-board in style.css).
-const FIT_SCREEN_SELECTOR = '#join-screen, #home-screen, #minigame-screen';
+const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #home-screen, #minigame-screen';
 
 function syncTitleSpace() {
   const titleBottom = titlePanel.getBoundingClientRect().bottom;
@@ -593,6 +624,67 @@ const joinCharacter = document.querySelector('#join-character');
 const menuCharacter = document.querySelector('#menu-character');
 const colorPicker = document.querySelector('#color-picker');
 
+const lobbyScreen = document.querySelector('#lobby-screen');
+const playButton = document.querySelector('#play-button');
+const lobbySlots = Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => ({
+  root: document.querySelector(`#lobby-slot-${index}`),
+  frame: document.querySelector(`#lobby-${index}-character`),
+  nameEl: document.querySelector(`#lobby-slot-${index}-name`),
+  id: `lobby-${index}`,
+  hasPhoto: false,
+}));
+
+// Renders the current player list into the fixed lobby slots. Slots are
+// filled in server order (the order players joined in) and any slot past
+// the last player is shown empty; a slot that previously held a photo but
+// is reused for a photo-less player is reset back to the plain visor.
+function renderLobby(players) {
+  lobbySlots.forEach((slot, index) => {
+    const player = players[index];
+    if (!player) {
+      slot.root.classList.add('lobby-slot-empty');
+      slot.nameEl.textContent = texts.emptySlot;
+      setSuitColor(slot.frame, DEFAULT_SUIT_COLOR);
+      setHat(slot.frame, DEFAULT_HAT);
+      if (slot.hasPhoto) {
+        clearVisorPhoto(slot.id);
+        slot.hasPhoto = false;
+      }
+      return;
+    }
+
+    slot.root.classList.remove('lobby-slot-empty');
+    slot.nameEl.textContent = player.name;
+    setSuitColor(slot.frame, player.color || DEFAULT_SUIT_COLOR);
+    setHat(slot.frame, player.hat || DEFAULT_HAT);
+    if (player.photo) {
+      setVisorPhoto(slot.id, player.photo);
+      slot.hasPhoto = true;
+    } else if (slot.hasPhoto) {
+      clearVisorPhoto(slot.id);
+      slot.hasPhoto = false;
+    }
+  });
+
+  if (!lobbyScreen.classList.contains('hidden')) {
+    fitActiveScreen();
+  }
+}
+
+function openLobby() {
+  joinScreen.classList.add('hidden');
+  lobbyScreen.classList.remove('hidden');
+  fitActiveScreen();
+}
+
+function openMenuFromLobby() {
+  lobbyScreen.classList.add('hidden');
+  homeScreen.classList.remove('hidden');
+  fitActiveScreen();
+}
+
+playButton.addEventListener('click', openMenuFromLobby);
+
 // A face shown at avatar size never needs more than this, and it keeps the
 // photo at a few KB so it's cheap to send and to hold in server memory.
 // The shape matches the visor's image box so the saved photo frames the face
@@ -713,6 +805,9 @@ function handleJoinClick() {
   joinButton.disabled = true;
   if (!socket) {
     socket = io(SERVER_URL);
+    // Kept for the whole session, not just the join handshake, so the lobby
+    // stays live as other players join or leave while everyone waits.
+    socket.on('players', renderLobby);
   }
 
   function cleanup() {
@@ -732,9 +827,7 @@ function handleJoinClick() {
       setVisorPhoto('menu', photoDataUrl);
     }
 
-    joinScreen.classList.add('hidden');
-    homeScreen.classList.remove('hidden');
-    fitActiveScreen();
+    openLobby();
   }
 
   function onConnectError() {
