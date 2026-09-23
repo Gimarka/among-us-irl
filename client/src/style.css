@@ -493,14 +493,22 @@ body {
   padding: 4px 0;
 }
 
+/* A small bordered pill rather than bare text - every label in this app
+   sits in a panel of some kind (the title, the instruction labels, the
+   score counter), so a floating title here would be the one loose exception. */
 .chat-title {
   margin: 0;
+  padding: 8px 22px;
   font-family: 'Orbitron', system-ui, sans-serif;
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 1px;
   color: #fff;
   text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+  border: 2px solid #00f0ff;
+  border-radius: 14px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
 }
 
 /* Same look as .scan-close-button, but positioned relative to this header
@@ -532,7 +540,9 @@ body {
 
 /* The only scrolling element on the whole page - min-height:0 is what lets
    a flex child actually shrink to its container and scroll instead of
-   stretching the column past it. */
+   stretching the column past it. Bordered/glowing like every other panel
+   in the app (.character-panel, .color-picker, .lobby-slot), so the
+   animated background wall never shows through a bare stretch of screen. */
 .chat-messages {
   flex: 1 1 auto;
   min-height: 0;
@@ -540,7 +550,19 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 4px 2px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
+.chat-empty {
+  margin: auto;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  text-align: center;
 }
 
 .chat-message {

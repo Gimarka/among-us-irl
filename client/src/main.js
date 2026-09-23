@@ -576,7 +576,21 @@ const chatCloseButton = document.querySelector('#chat-close-button');
 // fight over the same defs.
 let chatAvatarCounter = 0;
 
+function clearChatEmptyState() {
+  const empty = chatMessages.querySelector('.chat-empty');
+  if (empty) empty.remove();
+}
+
+function showChatEmptyState() {
+  const empty = document.createElement('p');
+  empty.className = 'chat-empty';
+  empty.textContent = texts.chatEmpty;
+  chatMessages.appendChild(empty);
+}
+
 function appendChatMessage(message) {
+  clearChatEmptyState();
+
   chatAvatarCounter += 1;
   const avatarId = `chat-avatar-${chatAvatarCounter}`;
 
@@ -586,9 +600,6 @@ function appendChatMessage(message) {
   const avatarFrame = document.createElement('div');
   avatarFrame.className = 'character-frame character-frame-chat';
   avatarFrame.innerHTML = characterMarkup(avatarId); // our own trusted markup, not user data
-  setSuitColor(avatarFrame, message.color || DEFAULT_SUIT_COLOR);
-  setHat(avatarFrame, message.hat || DEFAULT_HAT);
-  if (message.photo) setVisorPhoto(avatarId, message.photo);
 
   const nameEl = document.createElement('p');
   nameEl.className = 'chat-message-name';
@@ -605,12 +616,26 @@ function appendChatMessage(message) {
 
   row.appendChild(avatarFrame);
   row.appendChild(body);
+  // Attached to the document before setVisorPhoto runs: it looks up the
+  // visor image by id with document.querySelector, which can't find
+  // anything inside a node that isn't part of the document yet - calling
+  // it any earlier silently threw and dropped the whole message every time
+  // its sender had a selfie set.
   chatMessages.appendChild(row);
+
+  setSuitColor(avatarFrame, message.color || DEFAULT_SUIT_COLOR);
+  setHat(avatarFrame, message.hat || DEFAULT_HAT);
+  if (message.photo) setVisorPhoto(avatarId, message.photo);
+
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 function renderChatHistory(messages) {
   chatMessages.innerHTML = '';
+  if (messages.length === 0) {
+    showChatEmptyState();
+    return;
+  }
   messages.forEach(appendChatMessage);
 }
 
