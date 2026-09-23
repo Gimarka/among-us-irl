@@ -1,6 +1,6 @@
 // All player-facing text lives here, never hardcoded in components.
 export const texts = {
-  homeTitle: "Among Hugo's House",
+  homeTitle: 'AMONG HOUSE',
   testButton: 'TEST PORTE',
   testMinigame1Button: 'TEST MINIGAME1',
   miniGameInstruction: "CODE D'ACCÈS",
@@ -14,9 +14,9 @@ export const texts = {
   scanResultLabel: 'QR lu :',
   cameraError: "Impossible d'accéder à la caméra.",
   title: 'Among Us IRL',
-  namePrompt: 'Ton prénom',
+  namePrompt: 'Nom',
   namePlaceholder: 'Ex : Marie',
-  joinButton: 'REJOINDRE LA PARTIE',
+  joinButton: 'REJOINDRE',
   joinError: 'CONNEXION IMPOSSIBLE',
   takeSelfieButton: 'PRENDRE UN SELFIE',
   captureSelfieButton: 'CAPTURER',
