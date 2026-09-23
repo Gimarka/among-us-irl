@@ -81,6 +81,12 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Roles are drawn once per round, on the first "Jouer" click from whoever's
+  in the lobby at that moment (the imposter-count odds table above). A
+  player who joins after that draw defaults to crewmate rather than
+  reshuffling everyone else - there's no "new round" reset yet. Each
+  player's role is sent to them privately and revealed with a 3 s
+  fade-to-black screen (INNOCENT in blue, TRAÎTRE in red) before the menu.
 - UI in French; docs, code, discussion in English.
 - Screens: identical main screen for all roles; imposter panel opens by long-pressing the title;
   imposters see a no-op "I'm dead" button; meeting alerts name who found/called.
