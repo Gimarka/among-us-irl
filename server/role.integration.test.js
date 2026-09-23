@@ -1,0 +1,129 @@
+// Simulates players starting the game and drawing roles: real HTTP server, real sockets.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { io as ioClient } from 'socket.io-client';
+import { createGameServer } from './index.js';
+import { clearPlayers } from './gameState.js';
+import { clearRoles } from './roleState.js';
+
+function listenOnRandomPort(server) {
+  return new Promise((resolve) => {
+    server.listen(0, () => resolve(server.address().port));
+  });
+}
+
+function waitForEvent(socket, event) {
+  return new Promise((resolve) => socket.once(event, resolve));
+}
+
+// See join.integration.test.js for why this (rather than a plain io.close())
+// is needed to let the test process exit cleanly.
+function closeGameServer({ httpServer, io }) {
+  io.close();
+  httpServer.closeAllConnections();
+}
+
+test('starting the game sends a player their own role only, never broadcast', async () => {
+  clearPlayers();
+  clearRoles();
+  const { httpServer, io } = createGameServer();
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const alice = ioClient(url);
+  const bob = ioClient(url);
+
+  try {
+    await Promise.all([waitForEvent(alice, 'connect'), waitForEvent(bob, 'connect')]);
+
+    const aliceJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
+    alice.emit('join', { name: 'Alice' });
+    await aliceJoined;
+
+    const bobJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
+    bob.emit('join', { name: 'Bob' });
+    await bobJoined;
+
+    // Bob must never see a 'role' event meant for Alice.
+    let bobSawARole = false;
+    bob.on('role', () => { bobSawARole = true; });
+
+    const aliceRole = waitForEvent(alice, 'role');
+    alice.emit('startGame');
+    const { role } = await aliceRole;
+
+    assert.ok(role === 'crewmate' || role === 'imposter');
+    assert.equal(bobSawARole, false, "Alice's role must not reach Bob");
+  } finally {
+    alice.close();
+    bob.close();
+    closeGameServer({ httpServer, io });
+  }
+});
+
+test('two players starting the game together never both come back with only one role assigned overall', async () => {
+  clearPlayers();
+  clearRoles();
+  const { httpServer, io } = createGameServer();
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const alice = ioClient(url);
+  const bob = ioClient(url);
+
+  try {
+    await Promise.all([waitForEvent(alice, 'connect'), waitForEvent(bob, 'connect')]);
+
+    const aliceJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
+    alice.emit('join', { name: 'Alice' });
+    await aliceJoined;
+
+    const bobJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
+    bob.emit('join', { name: 'Bob' });
+    await bobJoined;
+
+    const aliceRole = waitForEvent(alice, 'role');
+    alice.emit('startGame');
+    const { role: aliceRoleValue } = await aliceRole;
+
+    const bobRole = waitForEvent(bob, 'role');
+    bob.emit('startGame');
+    const { role: bobRoleValue } = await bobRole;
+
+    assert.ok([aliceRoleValue, bobRoleValue].includes('imposter'), 'at least one of two players must be the impostor');
+  } finally {
+    alice.close();
+    bob.close();
+    closeGameServer({ httpServer, io });
+  }
+});
+
+test('a reconnecting player is told the same role they were already given', async () => {
+  clearPlayers();
+  clearRoles();
+  const { httpServer, io } = createGameServer();
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const alice = ioClient(url);
+
+  try {
+    await waitForEvent(alice, 'connect');
+    const joined = waitForEvent(alice, 'players');
+    alice.emit('join', { name: 'Alice', clientId: 'alice-client' });
+    await joined;
+
+    const firstRole = waitForEvent(alice, 'role');
+    alice.emit('startGame');
+    const { role: firstRoleValue } = await firstRole;
+
+    const secondRole = waitForEvent(alice, 'role');
+    alice.emit('startGame');
+    const { role: secondRoleValue } = await secondRole;
+
+    assert.equal(firstRoleValue, secondRoleValue);
+  } finally {
+    alice.close();
+    closeGameServer({ httpServer, io });
+  }
+});

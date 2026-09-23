@@ -933,6 +933,49 @@ body {
   filter: brightness(1.4);
 }
 
+/* Covers the whole page (not just the current .screen) while a role is
+   revealed, since it deliberately sits over the lobby-to-menu transition
+   rather than belonging to either screen. Opacity/pointer-events are what
+   actually fade it - .hidden (display:none) is only added/removed at the
+   very start/end so it doesn't sit invisibly on top of the page catching
+   clicks in between fades; see showRoleReveal in main.js. */
+.role-reveal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+.role-reveal.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.role-reveal-text {
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: 4px;
+  text-align: center;
+}
+
+.role-reveal-text.innocent {
+  color: #3fa9ff;
+  text-shadow: 0 0 24px rgba(63, 169, 255, 0.9);
+}
+
+.role-reveal-text.traitor {
+  color: #ff3b3b;
+  text-shadow: 0 0 24px rgba(255, 59, 59, 0.9);
+}
+
 .minigame-popup {
   position: fixed;
   inset: 0;

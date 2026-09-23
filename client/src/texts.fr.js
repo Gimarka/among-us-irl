@@ -36,4 +36,6 @@ export const texts = {
   chatPlaceholder: 'Message…',
   chatSendButton: 'ENVOYER',
   chatEmpty: 'Aucun message pour le moment.',
+  roleInnocent: 'INNOCENT',
+  roleTraitor: 'TRAÎTRE',
 };

@@ -3,6 +3,7 @@ import express from 'express';
 import { Server } from 'socket.io';
 import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, resolveColor } from './gameState.js';
 import { addMessage, listMessages } from './chatState.js';
+import { getRole } from './roleState.js';
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -159,6 +160,15 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
         text: cleanText,
       });
       io.emit('chatMessage', message);
+    });
+
+    // Sent privately (socket.emit, never io.emit) - a player's role is
+    // never anyone else's business but their own and the server's.
+    socket.on('startGame', () => {
+      const id = socket.data.clientId;
+      if (!id) return; // hasn't joined - shouldn't happen, play is only reachable post-join
+      const role = getRole(id, listPlayers());
+      socket.emit('role', { role });
     });
 
     socket.on('disconnect', (reason) => {

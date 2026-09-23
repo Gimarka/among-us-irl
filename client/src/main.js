@@ -150,6 +150,10 @@ app.innerHTML = `
       </form>
     </div>
 
+    <div class="role-reveal hidden" id="role-reveal-screen">
+      <p class="role-reveal-text" id="role-reveal-text"></p>
+    </div>
+
     <div class="minigame-popup hidden" id="minigame-popup">
       <p id="minigame-popup-text" class="hud-panel"></p>
     </div>
@@ -865,7 +869,44 @@ function openMenuFromLobby() {
   fitActiveScreen();
 }
 
-playButton.addEventListener('click', openMenuFromLobby);
+const roleRevealScreen = document.querySelector('#role-reveal-screen');
+const roleRevealText = document.querySelector('#role-reveal-text');
+
+const ROLE_REVEAL_DURATION_MS = 3000;
+const ROLE_REVEAL_FADE_MS = 600; // matches .role-reveal's own CSS transition duration
+const ROLE_LABELS = { crewmate: texts.roleInnocent, imposter: texts.roleTraitor };
+const ROLE_CLASSES = { crewmate: 'innocent', imposter: 'traitor' };
+
+// Fades the screen to black, shows the player's own role on it for a few
+// seconds, then fades back in on the menu underneath. The screen swap
+// happens while still fully black (see the inner setTimeout below), so the
+// fade-out reveals the menu rather than the lobby it covered up.
+function showRoleReveal(role) {
+  roleRevealText.textContent = ROLE_LABELS[role] || '';
+  roleRevealText.classList.remove('innocent', 'traitor');
+  roleRevealText.classList.add(ROLE_CLASSES[role] || 'innocent');
+  roleRevealScreen.classList.remove('hidden');
+  // Letting the browser paint the starting (opacity:0) state first is what
+  // makes this fade in instead of jumping straight to fully visible.
+  requestAnimationFrame(() => roleRevealScreen.classList.add('visible'));
+
+  setTimeout(() => {
+    openMenuFromLobby();
+    roleRevealScreen.classList.remove('visible');
+    setTimeout(() => roleRevealScreen.classList.add('hidden'), ROLE_REVEAL_FADE_MS);
+  }, ROLE_REVEAL_DURATION_MS);
+}
+
+function handlePlayClick() {
+  if (!socket) {
+    openMenuFromLobby(); // shouldn't happen once joined, but never get stuck on the lobby
+    return;
+  }
+  socket.once('role', ({ role }) => showRoleReveal(role));
+  socket.emit('startGame');
+}
+
+playButton.addEventListener('click', handlePlayClick);
 
 // A face shown at avatar size never needs more than this, and it keeps the
 // photo at a few KB so it's cheap to send and to hold in server memory.
