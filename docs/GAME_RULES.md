@@ -9,8 +9,7 @@ and sabotage through the app.
 
 ## Players and platform
 - 4–6 players, no game master. Everyone plays; the app runs the game.
-- Imposters: 1 or 2, drawn at random each game; only imposters know the count.
-  Imposters know each other. Odds of 2 imposters: 0% at 4 players, 30% at 5, 50% at 6.
+- Imposters: always exactly 1, drawn at random each game.
 - Web app in the phone browser (no install). Join by lobby QR code or short game code.
 - The victim reports their own death by tapping "I'm dead" right after being touched.
 
@@ -42,7 +41,7 @@ Target game length: 15–30 minutes.
 | Phone disruption | All phones (imposters' too, to avoid tells) scramble and cannot scan for 20 s |
 | Emergency event | Crewmates must fix it in a given room within 90 s or imposters win. 1 fixer at 4 players; at 5–6 players 2 fixers in two rooms at the same time |
 
-- Lock door, disruption and emergency event share one 90 s cooldown (shared by both imposters).
+- Lock door, disruption and emergency event share one 90 s cooldown.
 - No sabotages during meetings.
 
 ## Death, meetings and voting
@@ -75,18 +74,19 @@ Target game length: 15–30 minutes.
 | Emergency event timer | 90 s | 60–180 s |
 | Phone disruption length | 20 s | 10–40 s |
 | Door lock length | 30 s | 15–60 s |
-| Chance of 2 imposters (5 / 6 players) | 30% / 50% | 0–100% |
 
 ## Version 1 extras
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Simplified to always exactly 1 imposter, picked at random, dropping the
+  1-or-2 odds table (and the now-pointless "imposters know each other").
 - Roles are drawn once per round, on the first "Jouer" click from whoever's
-  in the lobby at that moment (the imposter-count odds table above). A
-  player who joins after that draw defaults to crewmate rather than
-  reshuffling everyone else - there's no "new round" reset yet. Each
-  player's role is sent to them privately and revealed with a 3 s
-  fade-to-black screen (INNOCENT in blue, TRAÎTRE in red) before the menu.
+  in the lobby at that moment. A player who joins after that draw defaults
+  to crewmate rather than reshuffling everyone else - there's no "new
+  round" reset yet. Each player's role is sent to them privately and
+  revealed with a 3 s fade-to-black screen (INNOCENT in blue, TRAÎTRE in
+  red) before the menu.
 - UI in French; docs, code, discussion in English.
 - Screens: identical main screen for all roles; imposter panel opens by long-pressing the title;
   imposters see a no-op "I'm dead" button; meeting alerts name who found/called.

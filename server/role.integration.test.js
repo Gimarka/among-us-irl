@@ -61,7 +61,7 @@ test('starting the game sends a player their own role only, never broadcast', as
   }
 });
 
-test('two players starting the game together never both come back with only one role assigned overall', async () => {
+test('two players starting the game together get exactly one traitor between them', async () => {
   clearPlayers();
   clearRoles();
   const { httpServer, io } = createGameServer();
@@ -90,7 +90,8 @@ test('two players starting the game together never both come back with only one 
     bob.emit('startGame');
     const { role: bobRoleValue } = await bobRole;
 
-    assert.ok([aliceRoleValue, bobRoleValue].includes('imposter'), 'at least one of two players must be the impostor');
+    const imposterCount = [aliceRoleValue, bobRoleValue].filter((role) => role === 'imposter').length;
+    assert.equal(imposterCount, 1, 'exactly one of the two players must be the traitor');
   } finally {
     alice.close();
     bob.close();
