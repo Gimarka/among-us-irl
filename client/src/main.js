@@ -128,7 +128,9 @@ app.innerHTML = `
       <div class="colorgame-instruction">
         <p class="minigame-instruction-label">${texts.colorGameInstruction}</p>
       </div>
-      <div class="colorgame-board" id="colorgame-board"></div>
+      <div class="colorgame-board-panel">
+        <div class="colorgame-board" id="colorgame-board"></div>
+      </div>
       <div class="colorgame-counter" id="colorgame-counter">
         <div class="counter-dot"></div>
         <div class="counter-dot"></div>
@@ -267,7 +269,10 @@ const minigamePopup = document.querySelector('#minigame-popup');
 const minigamePopupText = document.querySelector('#minigame-popup-text');
 
 const CODE_LENGTH = 4;
-const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+// Two symbols alongside the ten digits - a classic phone-keypad pairing -
+// so the grid fills its 3-column layout evenly (12 keys, 4 full rows) and
+// the code itself can include them too, not just show them as decoration.
+const KEYPAD_SYMBOLS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '#'];
 const ERROR_POPUP_DURATION_MS = 1000;
 const SUCCESS_SOUND_DELAY_MS = 500;
 
@@ -275,14 +280,15 @@ let code = [];
 let position = 0;
 let inputLocked = false;
 
-function playDigitTone(digit) {
-  // Same beep sample, pitched up one semitone per digit (0 = recorded
-  // pitch, 9 = nine semitones higher) so each number has its own tone.
+function playDigitTone(symbol) {
+  // Same beep sample, pitched up one semitone per key's position in
+  // KEYPAD_SYMBOLS (0 = recorded pitch, 11 = eleven semitones higher) so
+  // every key has its own tone, digits and the two symbols alike.
   const tone = sounds.beep.cloneNode();
   tone.preservesPitch = false;
   tone.mozPreservesPitch = false;
   tone.webkitPreservesPitch = false;
-  tone.playbackRate = 2 ** (digit / 12);
+  tone.playbackRate = 2 ** (KEYPAD_SYMBOLS.indexOf(symbol) / 12);
   tone.play().catch(() => {}); // sound is non-essential, ignore playback errors
 }
 
@@ -295,21 +301,21 @@ function shuffled(array) {
   return result;
 }
 
-function createKeypadButton(digit) {
+function createKeypadButton(symbol) {
   const button = document.createElement('button');
   button.className = 'keypad-button';
-  button.textContent = String(digit);
-  button.addEventListener('click', () => handleDigitTap(digit));
+  button.textContent = symbol;
+  button.addEventListener('click', () => handleDigitTap(symbol));
   return button;
 }
 
 function renderKeypad() {
   keypad.innerHTML = '';
-  shuffled(DIGITS).forEach((digit) => keypad.appendChild(createKeypadButton(digit)));
+  shuffled(KEYPAD_SYMBOLS).forEach((symbol) => keypad.appendChild(createKeypadButton(symbol)));
 }
 
 function randomCode(length) {
-  return Array.from({ length }, () => Math.floor(Math.random() * 10));
+  return Array.from({ length }, () => KEYPAD_SYMBOLS[Math.floor(Math.random() * KEYPAD_SYMBOLS.length)]);
 }
 
 function newRound() {
@@ -363,11 +369,11 @@ function playSuccessSoundThenClose() {
   sound.play().catch(finish); // if playback is blocked, don't get stuck on this screen
 }
 
-function handleDigitTap(digit) {
+function handleDigitTap(symbol) {
   if (inputLocked) return;
 
-  if (digit === code[position]) {
-    playDigitTone(digit);
+  if (symbol === code[position]) {
+    playDigitTone(symbol);
     position += 1;
     if (position === code.length) {
       inputLocked = true;

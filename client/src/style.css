@@ -807,6 +807,20 @@ body {
   background: url('/images/instruction-panel.svg') no-repeat center / 100% 100%;
 }
 
+/* Bordered/glowing frame around the board, same as every other container in
+   the app - the board itself is left alone rather than given this padding
+   directly, since its drag-and-drop math reads its own getBoundingClientRect
+   as the full draggable area; padding the board would shrink that area
+   without the position math knowing, letting shapes drift into the border. */
+.colorgame-board-panel {
+  padding: 12px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
 .colorgame-board {
   position: relative;
   width: 300px;
@@ -815,9 +829,10 @@ body {
   /* The drag-and-drop game reads real, untransformed pixel positions, so it
      can't be scaled down like the other screens (see .screen above). Instead
      it's kept inside the actual space below the title by capping its height
-     against --avail-h (set from JS), minus the instruction box and gap above
-     it, with 52vh as a plain fallback before that variable is set. */
-  max-height: min(52vh, calc(var(--avail-h, 480px) - 120px));
+     against --avail-h (set from JS), minus the instruction box, the gap
+     above it and the panel's own border/padding, with 52vh as a plain
+     fallback before that variable is set. */
+  max-height: min(52vh, calc(var(--avail-h, 480px) - 150px));
 }
 
 .colorgame-counter {
