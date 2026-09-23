@@ -571,11 +571,19 @@ body {
   gap: 10px;
 }
 
+/* .home sets text-align:center globally (every screen's buttons/labels
+   want that), which this inherits by default same as anything else under
+   it - explicitly overridden back to left here because a chat bubble's
+   name/text read naturally left-aligned next to its avatar, and inheriting
+   centre instead visibly drifts the (usually short) name sideways by
+   however much narrower it is than the message text stretched-to-match
+   width above it. */
 .chat-message-body {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  text-align: left;
 }
 
 .chat-message-name {
