@@ -153,8 +153,13 @@ body {
   max-width: 34vw;
 }
 
+/* flex-shrink:0 because this is a flex item in .chat-message (a row) - a
+   long message pushes .chat-message-body's line wide, and without this the
+   avatar would give up its own space to make room, shrinking well below
+   its 46px instead of staying fixed while the text wraps around it. */
 .character-frame-chat {
   width: 46px;
+  flex-shrink: 0;
 }
 
 .lobby {
@@ -565,9 +570,12 @@ body {
   text-align: center;
 }
 
+/* flex-start rather than center: a multi-line message would otherwise
+   float its avatar past the name and down alongside the middle of the
+   wrapped text instead of staying put next to the name at the top. */
 .chat-message {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
