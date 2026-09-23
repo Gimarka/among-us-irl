@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import express from 'express';
 import { Server } from 'socket.io';
 import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, resolveColor } from './gameState.js';
+import { addMessage, listMessages } from './chatState.js';
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -30,6 +31,16 @@ const HAT_PATTERN = /^[a-z]{1,20}$/;
 function cleanHat(hat) {
   if (typeof hat !== 'string') return DEFAULT_HAT;
   return HAT_PATTERN.test(hat) ? hat : DEFAULT_HAT;
+}
+
+// Matches the client's input maxlength (see CHAT_MAX_LENGTH in main.js) -
+// this is the enforced copy, that one's just so the phone's keyboard stops
+// early instead of typing into the void.
+const MAX_CHAT_LENGTH = 300;
+
+function cleanChatText(text) {
+  if (typeof text !== 'string') return '';
+  return text.trim().slice(0, MAX_CHAT_LENGTH);
 }
 
 // The browser makes this up once and keeps it in localStorage; it's what
@@ -88,6 +99,7 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
     // freshly opened join screen knows which colours are already taken
     // instead of only finding out from the next player to join or leave.
     socket.emit('players', listPlayers());
+    socket.emit('chatHistory', listMessages());
 
     socket.on('join', ({ clientId, name, photo, color, hat } = {}) => {
       const id = cleanClientId(clientId, socket.id);
@@ -123,6 +135,30 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
       if (previousSocketId) {
         io.sockets.sockets.get(previousSocketId)?.disconnect(true);
       }
+    });
+
+    // The sender's name/colour/hat/photo are snapshotted from the roster
+    // onto the message itself rather than looked up again on every render -
+    // a message keeps showing who its sender was at the time, even if that
+    // player later changes their look or leaves.
+    socket.on('chatMessage', ({ text } = {}) => {
+      const id = socket.data.clientId;
+      if (!id) return; // hasn't joined - shouldn't happen, chat is only reachable post-join
+      const player = findPlayerByClientId(id);
+      if (!player) return;
+
+      const cleanText = cleanChatText(text);
+      if (!cleanText) return;
+
+      const message = addMessage({
+        clientId: id,
+        name: player.name,
+        photo: player.photo,
+        color: player.color,
+        hat: player.hat,
+        text: cleanText,
+      });
+      io.emit('chatMessage', message);
     });
 
     socket.on('disconnect', (reason) => {

@@ -153,6 +153,10 @@ body {
   max-width: 34vw;
 }
 
+.character-frame-chat {
+  width: 46px;
+}
+
 .lobby {
   display: flex;
   flex-direction: column;
@@ -462,6 +466,176 @@ body {
 
 .test-button-danger:active {
   filter: hue-rotate(180deg) saturate(1.2) brightness(1.3);
+}
+
+/* The chat screen fills its .screen box top to bottom (header, then the
+   scrollable log, then the input row) instead of the centred stack every
+   other screen uses, since a message log needs to grow and scroll rather
+   than sit centred as one fixed-size block. */
+.chat {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  width: 100%;
+  height: 100%;
+  padding: 8px 4px 0;
+  box-sizing: border-box;
+  gap: 10px;
+}
+
+.chat-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 4px 0;
+}
+
+.chat-title {
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+}
+
+/* Same look as .scan-close-button, but positioned relative to this header
+   instead of a popup card. */
+.chat-close-button {
+  position: absolute;
+  top: 0;
+  right: 4px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #00f0ff;
+  background: #050a0f;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  color: #00f0ff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chat-close-button:active {
+  filter: brightness(1.4);
+}
+
+/* The only scrolling element on the whole page - min-height:0 is what lets
+   a flex child actually shrink to its container and scroll instead of
+   stretching the column past it. */
+.chat-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 2px;
+}
+
+.chat-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chat-message-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chat-message-name {
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #00f0ff;
+  text-shadow: 0 0 4px rgba(0, 240, 255, 0.6);
+}
+
+.chat-message-text {
+  margin: 0;
+  color: #fff;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.chat-form {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-bottom: 8px;
+}
+
+/* Scoped under .chat-form (rather than a bare .chat-input class) because
+   the legacy input[type='text'] rule near the bottom of this file (from
+   this project's original pre-redesign skeleton) has higher specificity
+   than a single class - width, padding, border, background, colour and
+   margin-bottom would otherwise all leak through from it silently. */
+.chat-form .chat-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 52px;
+  margin: 0;
+  padding: 0 16px;
+  box-sizing: border-box;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 0.95rem;
+  color: #fff;
+  background: #0d151d;
+  border: 2px solid #00f0ff;
+  border-radius: 14px;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+.chat-form .chat-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.chat-form .chat-input:focus {
+  outline: none;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.8);
+}
+
+.chat-send-button {
+  flex-shrink: 0;
+  /* Same reasoning as the .chat-form .chat-input note above - the legacy
+     bare `button` rule sets width:100%, and since this class never
+     declared its own width, that leftover rule was free to apply. */
+  width: auto;
+  height: 52px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.7);
+  background: #0d151d;
+  border: 2px solid #00f0ff;
+  border-radius: 14px;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+  cursor: pointer;
+}
+
+.chat-send-button:active {
+  filter: brightness(1.4);
 }
 
 .test-result {

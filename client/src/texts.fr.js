@@ -31,4 +31,9 @@ export const texts = {
   emptySlot: 'En attente…',
   disconnectButton: 'SE DÉCONNECTER',
   backButtonLabel: 'Retour à la connexion',
+  testChatButton: 'TEST CHAT',
+  chatTitle: 'Chat',
+  chatPlaceholder: 'Message…',
+  chatSendButton: 'ENVOYER',
+  chatEmpty: 'Aucun message pour le moment.',
 };

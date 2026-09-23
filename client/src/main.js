@@ -39,6 +39,9 @@ const LOBBY_SLOT_COUNT = 10;
 // defensive backstop for anything that might slip past it.
 const NAME_MAX_LENGTH = 20;
 
+// Matches the server's own cap (see MAX_CHAT_LENGTH in server/index.js).
+const CHAT_MAX_LENGTH = 300;
+
 function lobbySlotMarkup(index) {
   return `
     <div class="lobby-slot" id="lobby-slot-${index}">
@@ -107,6 +110,8 @@ app.innerHTML = `
 
         <button id="test-minigame1-button" class="test-button">${texts.testMinigame1Button}</button>
 
+        <button id="test-chat-button" class="test-button">${texts.testChatButton}</button>
+
         <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
       </div>
     </div>
@@ -131,6 +136,18 @@ app.innerHTML = `
         <div class="counter-dot"></div>
         <div class="counter-dot"></div>
       </div>
+    </div>
+
+    <div id="chat-screen" class="screen chat hidden">
+      <div class="chat-header">
+        <p class="chat-title">${texts.chatTitle}</p>
+        <button id="chat-close-button" class="chat-close-button" aria-label="${texts.closeButtonLabel}">×</button>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <form class="chat-form" id="chat-form">
+        <input id="chat-input" class="chat-input" type="text" placeholder="${texts.chatPlaceholder}" maxlength="${CHAT_MAX_LENGTH}" autocomplete="off" />
+        <button type="submit" class="chat-send-button">${texts.chatSendButton}</button>
+      </form>
     </div>
 
     <div class="minigame-popup hidden" id="minigame-popup">
@@ -543,6 +560,86 @@ function closeColorGame() {
 
 testMinigame1Button.addEventListener('click', openColorGame);
 
+const testChatButton = document.querySelector('#test-chat-button');
+const chatScreen = document.querySelector('#chat-screen');
+const chatMessages = document.querySelector('#chat-messages');
+const chatForm = document.querySelector('#chat-form');
+const chatInput = document.querySelector('#chat-input');
+const chatCloseButton = document.querySelector('#chat-close-button');
+
+// Every message gets its own little character, built the same way the
+// lobby's tiny ones are. Each needs a DOM id that's unique across every
+// message ever shown (not just the server's own message id, in case the
+// chat log - and therefore ids - ever gets reset while messages from an
+// earlier log are still on screen) - characterMarkup hangs the visor's
+// gradient/clip-path defs off that id, and two messages sharing one would
+// fight over the same defs.
+let chatAvatarCounter = 0;
+
+function appendChatMessage(message) {
+  chatAvatarCounter += 1;
+  const avatarId = `chat-avatar-${chatAvatarCounter}`;
+
+  const row = document.createElement('div');
+  row.className = 'chat-message';
+
+  const avatarFrame = document.createElement('div');
+  avatarFrame.className = 'character-frame character-frame-chat';
+  avatarFrame.innerHTML = characterMarkup(avatarId); // our own trusted markup, not user data
+  setSuitColor(avatarFrame, message.color || DEFAULT_SUIT_COLOR);
+  setHat(avatarFrame, message.hat || DEFAULT_HAT);
+  if (message.photo) setVisorPhoto(avatarId, message.photo);
+
+  const nameEl = document.createElement('p');
+  nameEl.className = 'chat-message-name';
+  nameEl.textContent = message.name;
+
+  const textEl = document.createElement('p');
+  textEl.className = 'chat-message-text';
+  textEl.textContent = message.text;
+
+  const body = document.createElement('div');
+  body.className = 'chat-message-body';
+  body.appendChild(nameEl);
+  body.appendChild(textEl);
+
+  row.appendChild(avatarFrame);
+  row.appendChild(body);
+  chatMessages.appendChild(row);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function renderChatHistory(messages) {
+  chatMessages.innerHTML = '';
+  messages.forEach(appendChatMessage);
+}
+
+function openChat() {
+  homeScreen.classList.add('hidden');
+  chatScreen.classList.remove('hidden');
+  pushOverlayState();
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  chatInput.focus();
+}
+
+function closeChat() {
+  chatScreen.classList.add('hidden');
+  homeScreen.classList.remove('hidden');
+  fitActiveScreen();
+  closeOverlayState();
+}
+
+testChatButton.addEventListener('click', openChat);
+chatCloseButton.addEventListener('click', closeChat);
+
+chatForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const text = chatInput.value.trim();
+  if (!text || !socket) return;
+  socket.emit('chatMessage', { text });
+  chatInput.value = '';
+});
+
 const scanButton = document.querySelector('#scan-button');
 const scanPopup = document.querySelector('#scan-popup');
 const scanCloseButton = document.querySelector('#scan-close-button');
@@ -640,6 +737,8 @@ window.addEventListener('popstate', () => {
     closeScanPopup();
   } else if (!colorGameScreen.classList.contains('hidden')) {
     closeColorGame();
+  } else if (!chatScreen.classList.contains('hidden')) {
+    closeChat();
   }
   closingFromPopState = false;
 });
@@ -980,6 +1079,8 @@ function connectSocket() {
   // (and the join screen's colour picker, before that) stay live as other
   // players join or leave while everyone waits.
   socket.on('players', renderLobby);
+  socket.on('chatHistory', renderChatHistory);
+  socket.on('chatMessage', appendChatMessage);
 
   socket.on('connect', () => {
     if (currentIdentity) sendJoin();
