@@ -266,9 +266,9 @@ body {
    left/right edges on purpose instead of being shrunk to fit inside them. */
 .character-panel {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  padding: 22px 8px;
+  padding: 22px 8px 0;
   box-sizing: border-box;
   overflow: visible;
   border: 2px solid #00f0ff;
@@ -878,6 +878,21 @@ body {
 
 .color-square.matched {
   cursor: default;
+}
+
+/* Same bordered/glowing panel look as .character-panel, .color-picker,
+   .chat-messages, etc. - the keypad grid used to float loose over the
+   animated background wall with nothing setting it apart. */
+.keypad-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
 }
 
 .keypad {

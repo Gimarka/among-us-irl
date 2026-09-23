@@ -100,10 +100,6 @@ app.innerHTML = `
 
     <div id="home-screen" class="screen hidden">
       <div class="screen-fit home-buttons">
-        <div class="character-frame" id="menu-character">
-          ${characterMarkup('menu')}
-        </div>
-
         <button id="test-button" class="test-button">${texts.testButton}</button>
 
         <button id="scan-button" class="test-button">${texts.scanButton}</button>
@@ -122,7 +118,9 @@ app.innerHTML = `
           <p class="minigame-instruction-label">${texts.miniGameInstruction}</p>
           <p class="minigame-code" id="minigame-code"></p>
         </div>
-        <div class="keypad" id="keypad"></div>
+        <div class="keypad-panel">
+          <div class="keypad" id="keypad"></div>
+        </div>
       </div>
     </div>
 
@@ -783,7 +781,6 @@ function setSelfieButtonState(icon, label) {
 
 const selfieVideo = document.querySelector('#selfie-video');
 const joinCharacter = document.querySelector('#join-character');
-const menuCharacter = document.querySelector('#menu-character');
 const colorPicker = document.querySelector('#color-picker');
 
 const lobbyScreen = document.querySelector('#lobby-screen');
@@ -807,14 +804,12 @@ function renderLobby(players) {
 
   // The server has the final say on colour - it swaps a requested colour
   // for a free one when another player already holds it. Pick that up here
-  // so our own character (the lobby grid already just shows player.color
-  // straight off the roster) and future reconnects reflect what we actually
-  // got, not what we originally asked for.
+  // so a future reconnect re-joins with what we actually got, not what we
+  // originally asked for.
   const self = players.find((player) => player.id === clientId);
   if (self && currentIdentity && self.color && self.color !== currentIdentity.color) {
     currentIdentity = { ...currentIdentity, color: self.color };
     saveIdentity(currentIdentity);
-    applyIdentityToMenuCharacter(currentIdentity);
   }
 
   lobbySlots.forEach((slot, index) => {
@@ -1061,14 +1056,6 @@ async function handleSelfieClick() {
   }
 }
 
-function applyIdentityToMenuCharacter(identity) {
-  setSuitColor(menuCharacter, identity.color || DEFAULT_SUIT_COLOR);
-  setHat(menuCharacter, identity.hat || DEFAULT_HAT);
-  if (identity.photo) {
-    setVisorPhoto('menu', identity.photo);
-  }
-}
-
 // Sends our identity to the server and, the first time this page load does
 // so, moves on from the join screen into the lobby.
 function sendJoin() {
@@ -1077,7 +1064,6 @@ function sendJoin() {
   if (!hasEnteredGame) {
     hasEnteredGame = true;
     stopSelfieCamera(); // release the camera before leaving the join screen
-    applyIdentityToMenuCharacter(currentIdentity);
     openLobby();
   }
 }
