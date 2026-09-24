@@ -18,6 +18,10 @@ import './style.css';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 
+// __COMMIT_HASH__ is baked in at build time (see vite.config.js) - shown on
+// the join screen so it's easy to tell which deploy a phone is actually on.
+const BUILD_ID = __COMMIT_HASH__;
+
 // The selfie button is icon-only throughout its three states (idle,
 // camera live/ready to shoot, photo taken) rather than switching between a
 // small icon and long French labels - "CAPTURER"/"REPRENDRE" don't fit the
@@ -66,6 +70,7 @@ app.innerHTML = `
     <button id="lobby-back-button" class="lobby-back-button hidden" aria-label="${texts.backButtonLabel}">‹</button>
 
     <div id="join-screen" class="screen">
+      <p class="build-id">${BUILD_ID}</p>
       <div class="screen-fit home-buttons">
         <div class="character-panel">
           <div class="character-frame character-frame-large" id="join-character">

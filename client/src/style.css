@@ -57,6 +57,21 @@ body {
   overflow: hidden;
 }
 
+/* Positioned absolute within #join-screen (itself position:absolute), so
+   it sits in its own corner independent of .screen-fit's centred, possibly
+   scaled-down content below it. */
+.build-id {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.35);
+  z-index: 1;
+}
+
 /* The actual content of join/home/minigame screens, wrapped so it can be
    scaled down (by fitActiveScreen in main.js) without also shrinking the
    fixed .screen viewport it's centred in - transforming .screen itself would
