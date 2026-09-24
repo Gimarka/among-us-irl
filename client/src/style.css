@@ -19,6 +19,29 @@ body {
   justify-content: center;
 }
 
+/* Without these, holding a tap a little too long anywhere (not just a real
+   button/input) makes mobile Chrome/Safari treat it as a long-press: a
+   text-selection highlight, the native copy/paste callout, or Chrome's own
+   blue tap-highlight flash. Applied to every element (not just body) since
+   -webkit-tap-highlight-color in particular isn't reliably inherited.
+   Text inputs are the one place selection/typing must still work normally,
+   so they opt back in below. */
+body,
+body * {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+}
+
 #background-fx {
   position: fixed;
   inset: 0;
@@ -1065,22 +1088,9 @@ body {
 }
 
 /* The tap-to-jump listener is on the whole screen, not just the track
-   below, so the cursor affordance matches that everywhere. */
-/* Without these, holding a tap a little too long on a plain div (rather
-   than a real button/input) makes mobile Chrome/Safari treat it as a
-   long-press: a text-selection highlight, the native callout menu, or
-   Chrome's own blue tap-highlight flash, instead of just registering the
-   jump. Applied to every descendant too (not just .dino itself) since
-   -webkit-tap-highlight-color in particular isn't reliably inherited. */
-.dino,
-.dino * {
-  touch-action: manipulation;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
+   below, so the cursor affordance matches that everywhere. Long-press
+   text-selection/callout prevention is now handled globally (see body,
+   body * above), so .dino no longer needs its own copy of it. */
 .dino {
   display: flex;
   flex-direction: column;

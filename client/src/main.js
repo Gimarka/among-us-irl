@@ -494,10 +494,11 @@ let interferenceTimer = null;
 function drawStaticNoise(canvas) {
   const width = canvas.clientWidth || canvas.parentElement.clientWidth;
   const height = canvas.clientHeight || canvas.parentElement.clientHeight;
-  // Kept small and scaled up via CSS image-rendering:pixelated - a full-
-  // resolution random fill would look like grey mush, not blocky TV static.
-  canvas.width = Math.max(1, Math.round(width / 4));
-  canvas.height = Math.max(1, Math.round(height / 4));
+  // Downscaled and stretched back up via CSS image-rendering:pixelated for
+  // a blocky TV-static look rather than full-resolution grey mush - kept
+  // small enough that individual pixels are still visible as pixels.
+  canvas.width = Math.max(1, Math.round(width / 2));
+  canvas.height = Math.max(1, Math.round(height / 2));
 
   const ctx = canvas.getContext('2d');
   const imageData = ctx.createImageData(canvas.width, canvas.height);
