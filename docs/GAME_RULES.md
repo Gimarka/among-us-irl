@@ -80,6 +80,22 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Game sessions. The first "JOUER" creates a session (numbered 1, 2, 3...,
+  counting up for as long as the server runs) and sends everyone in the
+  lobby at that moment to the role reveal together. The session holds all
+  game state (chat, roles, tasks, alert, interference), reset at every new
+  session. It lasts until every player has left: either on purpose, or
+  15 min after their phone lost its connection. While it runs, the lobby
+  button reads "CONTINUER" and brings in just that player, always as a
+  crewmate. A player who was already in the session and comes back (after
+  a disconnect, a reload, or a trip back to the character screen) skips
+  the lobby and keeps their role and tasks. On opening the app: no session
+  goes to the character screen, a running session goes to the lobby
+  (newcomer) or straight to the menu (already in it). Characters (name,
+  colour, hat, selfie) are stored on the server per phone, outside any
+  session, and pre-fill the character screen. Everything is in server
+  memory only: a restart (deploy, or the free host going to sleep) ends
+  the session and forgets characters.
 - Code entry is now the universal door mechanic: required to open any of
   the 3 gated doors, not just a Bedroom 1 task. Lock door simplified to a
   flat 15 s hard lock with no early-unlock mini-game (dropped Door unlock).

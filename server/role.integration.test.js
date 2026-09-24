@@ -4,8 +4,8 @@ import assert from 'node:assert/strict';
 import { io as ioClient } from 'socket.io-client';
 import { createGameServer } from './index.js';
 import { clearPlayers } from './gameState.js';
-import { clearRoles } from './roleState.js';
-import { clearTasks, assignTasks, TASK_POOL } from './taskState.js';
+import { endSession } from './sessionState.js';
+import { TASK_POOL } from './taskState.js';
 
 function listenOnRandomPort(server) {
   return new Promise((resolve) => {
@@ -24,9 +24,9 @@ function closeGameServer({ httpServer, io }) {
   httpServer.closeAllConnections();
 }
 
-test('starting the game sends a player their own role only, never broadcast', async () => {
+test('JOUER gives every lobby player their own role privately, exactly one traitor', async () => {
   clearPlayers();
-  clearRoles();
+  endSession();
   const { httpServer, io } = createGameServer();
   const port = await listenOnRandomPort(httpServer);
   const url = `http://localhost:${port}`;
@@ -45,53 +45,15 @@ test('starting the game sends a player their own role only, never broadcast', as
     bob.emit('join', { name: 'Bob' });
     await bobJoined;
 
-    // Bob must never see a 'role' event meant for Alice.
-    let bobSawARole = false;
-    bob.on('role', () => { bobSawARole = true; });
-
-    const aliceRole = waitForEvent(alice, 'role');
+    // Only Alice presses JOUER, but both are in the lobby, so both start.
+    const roles = Promise.all([waitForEvent(alice, 'role'), waitForEvent(bob, 'role')]);
     alice.emit('startGame');
-    const { role } = await aliceRole;
+    const [aliceStart, bobStart] = await roles;
 
-    assert.ok(role === 'crewmate' || role === 'imposter');
-    assert.equal(bobSawARole, false, "Alice's role must not reach Bob");
-  } finally {
-    alice.close();
-    bob.close();
-    closeGameServer({ httpServer, io });
-  }
-});
-
-test('two players starting the game together get exactly one traitor between them', async () => {
-  clearPlayers();
-  clearRoles();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const alice = ioClient(url);
-  const bob = ioClient(url);
-
-  try {
-    await Promise.all([waitForEvent(alice, 'connect'), waitForEvent(bob, 'connect')]);
-
-    const aliceJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    alice.emit('join', { name: 'Alice' });
-    await aliceJoined;
-
-    const bobJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    bob.emit('join', { name: 'Bob' });
-    await bobJoined;
-
-    const aliceRole = waitForEvent(alice, 'role');
-    alice.emit('startGame');
-    const { role: aliceRoleValue } = await aliceRole;
-
-    const bobRole = waitForEvent(bob, 'role');
-    bob.emit('startGame');
-    const { role: bobRoleValue } = await bobRole;
-
-    const imposterCount = [aliceRoleValue, bobRoleValue].filter((role) => role === 'imposter').length;
+    // Nothing in the payload about anyone else - just this player's own role and tasks.
+    assert.deepEqual(Object.keys(aliceStart).sort(), ['role', 'tasks']);
+    assert.deepEqual(Object.keys(bobStart).sort(), ['role', 'tasks']);
+    const imposterCount = [aliceStart.role, bobStart.role].filter((role) => role === 'imposter').length;
     assert.equal(imposterCount, 1, 'exactly one of the two players must be the traitor');
   } finally {
     alice.close();
@@ -100,9 +62,9 @@ test('two players starting the game together get exactly one traitor between the
   }
 });
 
-test('a reconnecting player is told the same role they were already given', async () => {
+test('pressing JOUER a second time does not replay the role reveal', async () => {
   clearPlayers();
-  clearRoles();
+  endSession();
   const { httpServer, io } = createGameServer();
   const port = await listenOnRandomPort(httpServer);
   const url = `http://localhost:${port}`;
@@ -117,13 +79,18 @@ test('a reconnecting player is told the same role they were already given', asyn
 
     const firstRole = waitForEvent(alice, 'role');
     alice.emit('startGame');
-    const { role: firstRoleValue } = await firstRole;
+    await firstRole;
 
-    const secondRole = waitForEvent(alice, 'role');
+    let roleCount = 0;
+    alice.on('role', () => { roleCount += 1; });
     alice.emit('startGame');
-    const { role: secondRoleValue } = await secondRole;
+    // hello/welcome is answered in order, so once it's back the second
+    // startGame has definitely been handled.
+    const roundTrip = waitForEvent(alice, 'welcome');
+    alice.emit('hello', { clientId: 'alice-client' });
+    await roundTrip;
 
-    assert.equal(firstRoleValue, secondRoleValue);
+    assert.equal(roleCount, 0);
   } finally {
     alice.close();
     closeGameServer({ httpServer, io });
@@ -132,8 +99,7 @@ test('a reconnecting player is told the same role they were already given', asyn
 
 test('starting the game also sends the player 6 unique tasks from the task pool', async () => {
   clearPlayers();
-  clearRoles();
-  clearTasks();
+  endSession();
   const { httpServer, io } = createGameServer();
   const port = await listenOnRandomPort(httpServer);
   const url = `http://localhost:${port}`;
@@ -162,8 +128,7 @@ test('starting the game also sends the player 6 unique tasks from the task pool'
 
 test('completing a task that is in the player\'s list marks it done privately', async () => {
   clearPlayers();
-  clearRoles();
-  clearTasks();
+  endSession();
   const { httpServer, io } = createGameServer();
   const port = await listenOnRandomPort(httpServer);
   const url = `http://localhost:${port}`;
@@ -201,8 +166,7 @@ test('completing a task that is in the player\'s list marks it done privately', 
 
 test('completing a task that is not in the player\'s list changes nothing', async () => {
   clearPlayers();
-  clearRoles();
-  clearTasks();
+  endSession();
   const { httpServer, io } = createGameServer();
   const port = await listenOnRandomPort(httpServer);
   const url = `http://localhost:${port}`;
@@ -224,11 +188,10 @@ test('completing a task that is not in the player\'s list changes nothing', asyn
     alice.on('tasks', () => { sawTasksUpdate = true; });
 
     alice.emit('completeTask', { taskId: missingTaskId });
-    // Nothing to wait on for an event that should never arrive - a second
-    // startGame/role round trip on the same connection (which doesn't
-    // disturb the already-drawn task list) is enough to know it didn't.
-    const roundTrip = waitForEvent(alice, 'role');
-    alice.emit('startGame');
+    // Nothing to wait on for an event that should never arrive - a
+    // hello/welcome round trip on the same connection is enough to know it didn't.
+    const roundTrip = waitForEvent(alice, 'welcome');
+    alice.emit('hello', {});
     await roundTrip;
 
     assert.equal(sawTasksUpdate, false, "completing a task outside the player's list must not emit an update");

@@ -3,10 +3,20 @@ import express from 'express';
 import { Server } from 'socket.io';
 import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, resolveColor } from './gameState.js';
 import { addMessage, listMessages } from './chatState.js';
-import { getRole } from './roleState.js';
-import { getTasks, completeTask, TASK_POOL } from './taskState.js';
+import { getRole, assignRoles } from './roleState.js';
+import { getTasks, assignTasks, completeTask, TASK_POOL } from './taskState.js';
 import { isAlertActive, setAlertActive } from './alertState.js';
 import { isInterferenceActive, startInterference } from './interferenceState.js';
+import {
+  startSession,
+  endSession,
+  getSessionId,
+  isMember,
+  addMember,
+  hasSeenRole,
+  markRoleSeen,
+} from './sessionState.js';
+import { saveCharacter, getCharacter } from './characterStore.js';
 
 const INTERFERENCE_DURATION_MS = 10_000;
 
@@ -103,6 +113,39 @@ export function createGameServer({
     pendingRemovals.delete(clientId);
   }
 
+  // Everything a phone shows that depends on which session is running. Sent
+  // to everyone whenever a session starts or ends, since both wipe the chat,
+  // alert and interference (see sessionState.js).
+  function broadcastSessionState() {
+    io.emit('session', { sessionId: getSessionId() });
+    io.emit('chatHistory', listMessages());
+    io.emit('alert', { active: isAlertActive() });
+    io.emit('interference', { active: isInterferenceActive() });
+  }
+
+  // Private, like before sessions existed: only ever to that player's own
+  // socket. Skipped for a player whose phone isn't connected right now -
+  // roleSeen stays false, so they get the reveal when they come back instead.
+  function sendRole(clientId) {
+    const player = findPlayerByClientId(clientId);
+    const playerSocket = player && io.sockets.sockets.get(player.socketId);
+    if (!playerSocket) return;
+    const players = listPlayers();
+    playerSocket.emit('role', { role: getRole(clientId, players), tasks: getTasks(clientId, players) });
+    markRoleSeen(clientId);
+  }
+
+  // The session ends once nobody is left in the roster at all - everyone
+  // either left on purpose or ran out their disconnect grace period.
+  function removeFromRoster(clientId, socketId) {
+    const players = removePlayer(clientId, socketId);
+    io.emit('players', players);
+    if (players.length === 0 && getSessionId() !== null) {
+      endSession();
+      broadcastSessionState();
+    }
+  }
+
   io.on('connection', (socket) => {
     // Sent right away, before this socket has joined anything, so a
     // freshly opened join screen knows which colours are already taken
@@ -111,6 +154,18 @@ export function createGameServer({
     socket.emit('chatHistory', listMessages());
     socket.emit('alert', { active: isAlertActive() });
     socket.emit('interference', { active: isInterferenceActive() });
+
+    // The first thing a phone asks, before joining: is a session running,
+    // is this phone already part of it, and what did its character look
+    // like last time. That's all the phone needs to pick its starting screen.
+    socket.on('hello', ({ clientId } = {}) => {
+      const id = cleanClientId(clientId, socket.id);
+      socket.emit('welcome', {
+        sessionId: getSessionId(),
+        member: isMember(id),
+        character: getCharacter(id),
+      });
+    });
 
     socket.on('join', ({ clientId, name, photo, color, hat } = {}) => {
       const id = cleanClientId(clientId, socket.id);
@@ -133,18 +188,25 @@ export function createGameServer({
       cancelPendingRemoval(id);
 
       socket.data.clientId = id;
-      const players = addPlayer(
-        id,
-        socket.id,
-        cleanName,
-        cleanPhoto(photo),
-        resolveColor(id, cleanColor(color)),
-        cleanHat(hat),
-      );
+      const character = {
+        name: cleanName,
+        photo: cleanPhoto(photo),
+        color: resolveColor(id, cleanColor(color)),
+        hat: cleanHat(hat),
+      };
+      saveCharacter(id, character);
+      const players = addPlayer(id, socket.id, character.name, character.photo, character.color, character.hat);
       io.emit('players', players);
 
       if (previousSocketId) {
         io.sockets.sockets.get(previousSocketId)?.disconnect(true);
+      }
+
+      // A returning session member skips the lobby: their role reveal if
+      // they never got it, otherwise just their task list to pick up from.
+      if (isMember(id)) {
+        if (hasSeenRole(id)) socket.emit('tasks', getTasks(id, listPlayers()));
+        else sendRole(id);
       }
     });
 
@@ -172,14 +234,28 @@ export function createGameServer({
       io.emit('chatMessage', message);
     });
 
-    // Sent privately (socket.emit, never io.emit) - a player's role is
-    // never anyone else's business but their own and the server's.
+    // JOUER (no session yet) starts a session for everyone in the lobby at
+    // once. CONTINUER (a session is already running) brings in just the
+    // player who pressed it, as a crewmate (see getRole in roleState.js).
     socket.on('startGame', () => {
       const id = socket.data.clientId;
       if (!id) return; // hasn't joined - shouldn't happen, play is only reachable post-join
-      const role = getRole(id, listPlayers());
-      const tasks = getTasks(id, listPlayers());
-      socket.emit('role', { role, tasks });
+
+      if (getSessionId() === null) {
+        startSession();
+        const lobby = listPlayers();
+        assignRoles(lobby);
+        assignTasks(lobby);
+        lobby.forEach((player) => addMember(player.id));
+        broadcastSessionState();
+        lobby.forEach((player) => sendRole(player.id));
+        return;
+      }
+
+      addMember(id);
+      // A second tap (or two players pressing JOUER at the same moment)
+      // must not replay a reveal the player already got.
+      if (!hasSeenRole(id)) sendRole(id);
     });
 
     // A minigame reports its own completion without knowing whether it's
@@ -217,15 +293,13 @@ export function createGameServer({
       cancelPendingRemoval(id);
 
       if (IMMEDIATE_DISCONNECT_REASONS.has(reason)) {
-        const players = removePlayer(id, socket.id);
-        io.emit('players', players);
+        removeFromRoster(id, socket.id);
         return;
       }
 
       const timer = setTimeout(() => {
         pendingRemovals.delete(id);
-        const players = removePlayer(id, socket.id);
-        io.emit('players', players);
+        removeFromRoster(id, socket.id);
       }, disconnectGraceMs);
       pendingRemovals.set(id, timer);
     });

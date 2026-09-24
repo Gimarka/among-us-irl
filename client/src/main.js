@@ -1271,7 +1271,6 @@ function renderLobby(players) {
   const self = players.find((player) => player.id === clientId);
   if (self && currentIdentity && self.color && self.color !== currentIdentity.color) {
     currentIdentity = { ...currentIdentity, color: self.color };
-    saveIdentity(currentIdentity);
   }
 
   lobbySlots.forEach((slot, index) => {
@@ -1315,10 +1314,20 @@ function openLobby() {
 }
 
 function openMenuFromLobby() {
+  inSession = true;
   lobbyScreen.classList.add('hidden');
   lobbyBackButton.classList.add('hidden');
   homeScreen.classList.remove('hidden');
   fitActiveScreen();
+}
+
+// For a player already in the running session: skips the lobby entirely.
+function openMenuDirect() {
+  inSession = true;
+  joinScreen.classList.add('hidden');
+  titlePanel.classList.add('hidden');
+  homeScreen.classList.remove('hidden');
+  syncLayout();
 }
 
 const roleRevealScreen = document.querySelector('#role-reveal-screen');
@@ -1378,15 +1387,14 @@ function renderTasks(tasks) {
   });
 }
 
+// JOUER starts the session for the whole lobby, CONTINUER joins the running
+// one - either way the role reveal arrives as a 'role' event (see handleRole),
+// which is also how every other lobby player gets moved along by JOUER.
 function handlePlayClick() {
   if (!socket) {
     openMenuFromLobby(); // shouldn't happen once joined, but never get stuck on the lobby
     return;
   }
-  socket.once('role', ({ role, tasks }) => {
-    renderTasks(tasks);
-    showRoleReveal(role);
-  });
   socket.emit('startGame');
 }
 
@@ -1405,31 +1413,6 @@ let socket = null;
 let selfieStream = null;
 let photoDataUrl = null;
 let suitColor = DEFAULT_SUIT_COLOR;
-
-// Remembers who we are across a page refresh, and lets a dropped connection
-// (phone locked, tab backgrounded, brief network loss) silently rejoin as
-// the same character instead of bouncing the player back to the join
-// screen. This is a convenience for the browser tab, not a real account -
-// nothing server-side ties back to it.
-const IDENTITY_STORAGE_KEY = 'amongUsIrl.player';
-
-function saveIdentity(identity) {
-  try {
-    localStorage.setItem(IDENTITY_STORAGE_KEY, JSON.stringify(identity));
-  } catch {
-    // Storage can be blocked (private browsing, full quota) - resuming
-    // across a refresh is a nicety, not a requirement, so just skip it.
-  }
-}
-
-function loadIdentity() {
-  try {
-    const raw = localStorage.getItem(IDENTITY_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
 
 // A stable id for this browser, separate from the chosen name/photo/colour:
 // it's what lets the server recognise "this is the same player reconnecting"
@@ -1461,6 +1444,12 @@ const clientId = getOrCreateClientId();
 
 let currentIdentity = null; // { name, photo, color, hat } once we know who we are
 let hasEnteredGame = false; // true once we've left the join screen this page load
+let inSession = false; // true once we're past the lobby, in the running session's menu
+// Mirrors of what the server last told us (see 'welcome'/'session'/'role'):
+// which session is running, if any, and whether this phone is part of it.
+let sessionId = null;
+let isMember = false;
+let welcomed = false; // the first welcome of a page load is the one that picks the starting screen
 let latestPlayers = []; // last roster we heard from the server, for the colour picker
 
 function selectColor(color, swatch) {
@@ -1588,15 +1577,62 @@ async function handleSelfieClick() {
 }
 
 // Sends our identity to the server and, the first time this page load does
-// so, moves on from the join screen into the lobby.
+// so, moves on from the join screen: straight to the menu for a player
+// already in the running session (the server sends their tasks back, or
+// their role reveal if they never got it), the lobby for everyone else.
 function sendJoin() {
   socket.emit('join', { ...currentIdentity, clientId });
 
   if (!hasEnteredGame) {
     hasEnteredGame = true;
     stopSelfieCamera(); // release the camera before leaving the join screen
-    openLobby();
+    if (isMember) openMenuDirect();
+    else openLobby();
   }
+}
+
+function updatePlayButton() {
+  playButton.textContent = sessionId === null ? texts.playButton : texts.continueButton;
+}
+
+function handleWelcome({ sessionId: currentSessionId, member, character }) {
+  sessionId = currentSessionId;
+  isMember = member;
+  updatePlayButton();
+
+  if (hasEnteredGame) {
+    // Came back from a dropped connection. If the session we were playing
+    // in is gone (everyone left, or the server restarted), a fresh page load
+    // puts us wherever a newcomer belongs, with our character pre-filled.
+    if (inSession && !member) {
+      window.location.reload();
+      return;
+    }
+    sendJoin(); // quietly reappear wherever we already were
+    return;
+  }
+
+  // REJOINDRE was pressed while the connection was still (re)opening.
+  if (currentIdentity) {
+    sendJoin();
+    return;
+  }
+
+  if (welcomed) return; // a reconnect while on the join screen shouldn't undo edits in progress
+  welcomed = true;
+  if (!character) return; // never played on this phone - just the blank character screen
+  fillJoinForm(character);
+  // No session: stay on the character screen. A session running: skip it.
+  if (sessionId !== null) {
+    currentIdentity = character;
+    sendJoin();
+  }
+}
+
+function handleRole({ role, tasks }) {
+  isMember = true;
+  renderTasks(tasks);
+  showRoleReveal(role);
 }
 
 // One persistent connection, opened as soon as this page loads (even before
@@ -1626,9 +1662,18 @@ function connectSocket() {
   socket.on('tasks', renderTasks);
   socket.on('alert', ({ active }) => alertOverlay.classList.toggle('active', active));
   socket.on('interference', ({ active }) => setInterferenceActive(active));
+  socket.on('welcome', handleWelcome);
+  socket.on('role', handleRole);
+  socket.on('session', ({ sessionId: currentSessionId }) => {
+    if (currentSessionId !== sessionId) isMember = false; // a new session's members hear 'role' right after
+    sessionId = currentSessionId;
+    updatePlayButton();
+  });
 
+  // Every connect, the first and every reconnect, starts by asking the
+  // server where we stand - see handleWelcome.
   socket.on('connect', () => {
-    if (currentIdentity) sendJoin();
+    socket.emit('hello', { clientId });
   });
 
   socket.on('connect_error', () => {
@@ -1667,7 +1712,6 @@ function handleJoinClick() {
   toggleAppFullscreen();
   joinButton.disabled = true;
   currentIdentity = { name, photo: photoDataUrl, color: suitColor, hat: HATS[hatIndex].id };
-  saveIdentity(currentIdentity);
   const activeSocket = connectSocket();
   if (activeSocket.connected) sendJoin();
 }
@@ -1687,26 +1731,43 @@ function resetJoinForm() {
   joinButton.disabled = false;
 }
 
+// The character screen, filled in with a character the server remembers
+// (see server/characterStore.js) rather than starting blank.
+function fillJoinForm({ name, photo, color, hat }) {
+  resetJoinForm();
+  joinNameInput.value = name || '';
+  photoDataUrl = photo || null;
+  if (photoDataUrl) {
+    setVisorPhoto('join', photoDataUrl);
+    setSelfieButtonState(RETAKE_ICON, texts.retakeSelfieButton);
+  }
+  hatIndex = Math.max(0, HATS.findIndex((item) => item.id === hat));
+  setHat(joinCharacter, HATS[hatIndex].id);
+  const swatch = colorPicker.querySelector(`.color-swatch[data-color="${color}"]`);
+  if (swatch) selectColor(color, swatch);
+  updateColorAvailability(latestPlayers); // steps off the saved colour if someone else holds it now
+}
+
 function handleDisconnectClick() {
   // A deliberate disconnect - not one Socket.IO should try to paper over by
   // silently reconnecting us, which is exactly why connectSocket() leaves a
-  // disconnected socket alone instead of reopening it right away.
+  // disconnected socket alone instead of reopening it right away. The server
+  // keeps our place in the session, so rejoining later picks it back up.
   if (socket) socket.disconnect();
 
-  try {
-    localStorage.removeItem(IDENTITY_STORAGE_KEY);
-  } catch {
-    // Storage can be blocked; nothing to clean up in that case.
-  }
+  // What we last sent the server is exactly what it has stored for us.
+  const lastIdentity = currentIdentity;
   currentIdentity = null;
   hasEnteredGame = false;
+  inSession = false;
 
   // Reachable from either the menu's "SE DECONNECTER" or the lobby's back
   // button, so hide both regardless of which one is actually showing.
   homeScreen.classList.add('hidden');
   lobbyScreen.classList.add('hidden');
   lobbyBackButton.classList.add('hidden');
-  resetJoinForm();
+  if (lastIdentity) fillJoinForm(lastIdentity);
+  else resetJoinForm();
   titlePanel.classList.remove('hidden');
   joinScreen.classList.remove('hidden');
   syncLayout();
@@ -1723,16 +1784,7 @@ joinNameInput.addEventListener('input', () => {
   }
 });
 
-// Resume automatically if this browser already joined before (a refresh, or
-// coming back after the page was fully reloaded rather than just
-// backgrounded). Reveal the lobby right away instead of the join screen, so
-// there's no flash of the join form while we reconnect.
-const savedIdentity = loadIdentity();
-if (savedIdentity) {
-  currentIdentity = savedIdentity;
-  openLobby();
-}
-// Connects either way: with a saved identity, straight into the lobby as
-// above; without one, just to listen for the roster so the join screen's
-// colour picker knows what's already taken.
+// Connects right away: the server's 'welcome' decides the starting screen
+// (see handleWelcome), and until then the roster keeps the join screen's
+// colour picker up to date.
 connectSocket();
