@@ -307,6 +307,12 @@ textarea {
 .lobby-slot-empty .lobby-slot-name {
   color: rgba(255, 255, 255, 0.5);
   text-shadow: none;
+  animation: waiting-flash 2s ease-in-out infinite;
+}
+
+@keyframes waiting-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
 }
 
 /* No character for a slot nobody has taken yet - visibility:hidden rather

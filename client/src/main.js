@@ -1122,29 +1122,6 @@ const lobbySlots = Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => ({
   hasPhoto: false,
 }));
 
-// Loops "En attente" -> "En attente." -> "En attente.." -> "En attente..."
-// for every still-empty slot, all in step with each other.
-const WAITING_DOTS_FRAMES = ['', '.', '..', '...'];
-const WAITING_DOTS_INTERVAL_MS = 500;
-let waitingDotsFrame = 0;
-
-function emptySlotText() {
-  return texts.emptySlot + WAITING_DOTS_FRAMES[waitingDotsFrame];
-}
-
-function updateWaitingDots() {
-  lobbySlots.forEach((slot) => {
-    if (slot.root.classList.contains('lobby-slot-empty')) {
-      slot.nameEl.textContent = emptySlotText();
-    }
-  });
-}
-
-setInterval(() => {
-  waitingDotsFrame = (waitingDotsFrame + 1) % WAITING_DOTS_FRAMES.length;
-  updateWaitingDots();
-}, WAITING_DOTS_INTERVAL_MS);
-
 // Renders the current player list into the fixed lobby slots. Slots are
 // filled in server order (the order players joined in) and any slot past
 // the last player is shown empty; a slot that previously held a photo but
@@ -1166,7 +1143,7 @@ function renderLobby(players) {
     const player = players[index];
     if (!player) {
       slot.root.classList.add('lobby-slot-empty');
-      slot.nameEl.textContent = emptySlotText();
+      slot.nameEl.textContent = texts.emptySlot;
       setSuitColor(slot.frame, DEFAULT_SUIT_COLOR);
       setHat(slot.frame, DEFAULT_HAT);
       if (slot.hasPhoto) {
