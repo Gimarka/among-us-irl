@@ -107,6 +107,7 @@ app.innerHTML = `
     </div>
 
     <div id="home-screen" class="screen hidden">
+      <p class="build-id">${BUILD_ID}</p>
       <div class="screen-fit home-buttons">
         <div class="tasks-panel">
           <ul class="tasks-list" id="tasks-list"></ul>
@@ -117,10 +118,6 @@ app.innerHTML = `
         <button id="test-chat-button" class="test-button">${texts.testChatButton}</button>
 
         <button id="scan-button" class="test-button">${texts.scanButton}</button>
-
-        <button id="alert-start-button" class="test-button test-button-danger">${texts.alertStartButton}</button>
-
-        <button id="alert-stop-button" class="test-button">${texts.alertStopButton}</button>
 
         <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
       </div>
@@ -135,6 +132,10 @@ app.innerHTML = `
         <button id="test-sort-button" class="test-button">${texts.testSortButton}</button>
 
         <button id="test-dino-button" class="test-button">${texts.testDinoButton}</button>
+
+        <button id="alert-start-button" class="test-button test-button-danger">${texts.alertStartButton}</button>
+
+        <button id="alert-stop-button" class="test-button">${texts.alertStopButton}</button>
       </div>
     </div>
 
