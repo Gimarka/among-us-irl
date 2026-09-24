@@ -42,6 +42,9 @@ const NAME_MAX_LENGTH = 20;
 // Matches the server's own cap (see MAX_CHAT_LENGTH in server/index.js).
 const CHAT_MAX_LENGTH = 300;
 
+// How many obstacles the jump game requires to win.
+const DINO_TARGET_COUNT = 12;
+
 function lobbySlotMarkup(index) {
   return `
     <div class="lobby-slot" id="lobby-slot-${index}">
@@ -121,6 +124,8 @@ app.innerHTML = `
         <button id="test-button" class="test-button">${texts.testButton}</button>
 
         <button id="test-sort-button" class="test-button">${texts.testSortButton}</button>
+
+        <button id="test-dino-button" class="test-button">${texts.testDinoButton}</button>
       </div>
     </div>
 
@@ -147,6 +152,18 @@ app.innerHTML = `
         <div class="counter-dot"></div>
         <div class="counter-dot"></div>
         <div class="counter-dot"></div>
+      </div>
+    </div>
+
+    <div id="dino-screen" class="screen dino hidden">
+      <div class="dino-instruction">
+        <p class="minigame-instruction-label">${texts.dinoInstruction}</p>
+        <p class="dino-counter" id="dino-counter">0 / ${DINO_TARGET_COUNT}</p>
+      </div>
+      <div class="dino-track-panel">
+        <div class="dino-track" id="dino-track">
+          <div class="dino-character" id="dino-character"></div>
+        </div>
       </div>
     </div>
 
@@ -195,10 +212,11 @@ const SCREEN_BOTTOM_GAP_PX = 16;
 
 // Screens that get shrunk to fit rather than sized with vh units, because
 // their content is a flat stack (character, buttons, a keypad) with no
-// pixel math that a scale transform could throw off. The colorgame screen
-// is deliberately left out: its drag-and-drop reads real, untransformed
-// pointer positions, so it's sized with vh-relative CSS instead (see
-// .colorgame-board in style.css).
+// pixel math that a scale transform could throw off. The colorgame and dino
+// screens are deliberately left out: they read/animate real, untransformed
+// pixel positions (drag-and-drop, jump physics), so they're sized with
+// fixed/vh-relative CSS instead (see .colorgame-board and .dino-track in
+// style.css).
 const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #home-screen, #minigames-screen, #minigame-screen';
 
 // The title only shows on the join screen (see openLobby/handleDisconnectClick
@@ -606,6 +624,145 @@ function closeColorGame() {
 
 testSortButton.addEventListener('click', openColorGame);
 
+const dinoScreen = document.querySelector('#dino-screen');
+const dinoTrack = document.querySelector('#dino-track');
+const dinoCharacter = document.querySelector('#dino-character');
+const dinoCounter = document.querySelector('#dino-counter');
+const testDinoButton = document.querySelector('#test-dino-button');
+
+// Must match .dino-character/.dino-obstacle's own width/height in style.css -
+// the jump physics below work in these same units, not measured from the
+// DOM, so a mismatch would make the visuals and the actual hit-test disagree.
+const DINO_SIZE = 34;
+const OBSTACLE_WIDTH = 20;
+const OBSTACLE_HEIGHT = 34;
+const DINO_X = 30; // matches .dino-character's fixed `left`
+
+const DINO_GRAVITY = 2200; // px/s^2, pulls the jump back down
+const DINO_JUMP_SPEED = 650; // px/s, upward speed set at the moment of a tap
+const OBSTACLE_SPEED = 220; // px/s, constant left-ward speed
+const OBSTACLE_MIN_INTERVAL_MS = 900;
+const OBSTACLE_MAX_INTERVAL_MS = 1600;
+
+let dinoGameActive = false;
+let dinoAnimationFrame = null;
+let dinoLastFrameTime = 0;
+let dinoBottom = 0;
+let dinoVelocity = 0;
+let dinoClearedCount = 0;
+let dinoObstacles = [];
+let dinoNextObstacleAt = 0;
+
+function updateDinoCounter() {
+  dinoCounter.textContent = `${dinoClearedCount} / ${DINO_TARGET_COUNT}`;
+}
+
+function scheduleNextDinoObstacle(now) {
+  dinoNextObstacleAt = now + OBSTACLE_MIN_INTERVAL_MS + Math.random() * (OBSTACLE_MAX_INTERVAL_MS - OBSTACLE_MIN_INTERVAL_MS);
+}
+
+function spawnDinoObstacle(trackWidth) {
+  const el = document.createElement('div');
+  el.className = 'dino-obstacle';
+  dinoTrack.appendChild(el);
+  dinoObstacles.push({ el, x: trackWidth, resolved: false, hit: false });
+}
+
+function dinoJump() {
+  if (!dinoGameActive || dinoBottom > 0) return; // no double-jumping mid-air
+  dinoVelocity = DINO_JUMP_SPEED;
+}
+
+function dinoWin() {
+  dinoGameActive = false;
+  cancelAnimationFrame(dinoAnimationFrame);
+  // TODO: swap sounds.success for a dedicated general-task sound once provided.
+  showPopup('success', texts.taskSuccess);
+  playSuccessSoundThenClose();
+}
+
+function dinoStep(now) {
+  if (!dinoGameActive) return;
+  // Clamped so a dropped/backgrounded tab resuming doesn't take one giant
+  // physics step and teleport the dino or an obstacle across the whole track.
+  const dt = Math.min((now - dinoLastFrameTime) / 1000, 0.05);
+  dinoLastFrameTime = now;
+
+  dinoVelocity -= DINO_GRAVITY * dt;
+  dinoBottom = Math.max(0, dinoBottom + dinoVelocity * dt);
+  if (dinoBottom === 0) dinoVelocity = 0;
+  dinoCharacter.style.bottom = `${dinoBottom}px`;
+
+  if (now >= dinoNextObstacleAt) {
+    spawnDinoObstacle(dinoTrack.clientWidth);
+    scheduleNextDinoObstacle(now);
+  }
+
+  dinoObstacles.forEach((obstacle) => {
+    obstacle.x -= OBSTACLE_SPEED * dt;
+    obstacle.el.style.left = `${obstacle.x}px`;
+
+    // No fail state (see docs/MINIGAMES.md's design rules): a mistimed jump
+    // just costs the point for this one obstacle, the run keeps going.
+    const horizontalOverlap = obstacle.x < DINO_X + DINO_SIZE && obstacle.x + OBSTACLE_WIDTH > DINO_X;
+    if (horizontalOverlap && dinoBottom < OBSTACLE_HEIGHT) {
+      obstacle.hit = true;
+    }
+
+    if (!obstacle.resolved && obstacle.x + OBSTACLE_WIDTH < DINO_X) {
+      obstacle.resolved = true;
+      obstacle.el.remove();
+      if (!obstacle.hit) {
+        dinoClearedCount += 1;
+        updateDinoCounter();
+      }
+    }
+  });
+  dinoObstacles = dinoObstacles.filter((obstacle) => !obstacle.resolved);
+
+  if (dinoClearedCount >= DINO_TARGET_COUNT) {
+    dinoWin();
+    return;
+  }
+
+  dinoAnimationFrame = requestAnimationFrame(dinoStep);
+}
+
+function openDinoGame() {
+  minigamesScreen.classList.add('hidden');
+  dinoScreen.classList.remove('hidden');
+  pushOverlayState();
+  activeGameClose = closeDinoGame;
+
+  dinoObstacles.forEach((obstacle) => obstacle.el.remove());
+  dinoObstacles = [];
+  dinoClearedCount = 0;
+  dinoBottom = 0;
+  dinoVelocity = 0;
+  dinoCharacter.style.bottom = '0px';
+  updateDinoCounter();
+
+  dinoGameActive = true;
+  dinoLastFrameTime = performance.now();
+  scheduleNextDinoObstacle(dinoLastFrameTime);
+  dinoAnimationFrame = requestAnimationFrame(dinoStep);
+}
+
+function closeDinoGame() {
+  hidePopup();
+  dinoGameActive = false;
+  cancelAnimationFrame(dinoAnimationFrame);
+  dinoObstacles.forEach((obstacle) => obstacle.el.remove());
+  dinoObstacles = [];
+  dinoScreen.classList.add('hidden');
+  minigamesScreen.classList.remove('hidden');
+  fitActiveScreen();
+  closeOverlayState();
+}
+
+dinoTrack.addEventListener('pointerdown', dinoJump);
+testDinoButton.addEventListener('click', openDinoGame);
+
 const testChatButton = document.querySelector('#test-chat-button');
 const chatScreen = document.querySelector('#chat-screen');
 const chatMessages = document.querySelector('#chat-messages');
@@ -808,6 +965,8 @@ window.addEventListener('popstate', () => {
     closeScanPopup();
   } else if (!colorGameScreen.classList.contains('hidden')) {
     closeColorGame();
+  } else if (!dinoScreen.classList.contains('hidden')) {
+    closeDinoGame();
   } else if (!chatScreen.classList.contains('hidden')) {
     closeChat();
   } else if (!minigamesScreen.classList.contains('hidden')) {

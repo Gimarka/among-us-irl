@@ -984,6 +984,91 @@ body {
   cursor: default;
 }
 
+.dino {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+
+/* Bordered/glowing panel, same as everywhere else - holds the instruction
+   label and the live obstacle counter together as one unit. */
+.dino-instruction {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 320px;
+  max-width: 88vw;
+  padding: 16px 20px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
+.dino-counter {
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+}
+
+/* Same panel treatment wrapped around the track itself - see the note on
+   .colorgame-board-panel for why the padding/border live on this outer
+   wrapper rather than on .dino-track: the jump game's physics read the
+   track's own clientWidth/offsetLeft as the real play field, and padding
+   it directly would shrink that without the game logic knowing. */
+.dino-track-panel {
+  width: 320px;
+  max-width: 88vw;
+  padding: 10px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
+.dino-track {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  border-bottom: 2px solid rgba(0, 240, 255, 0.4);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Sizes here must match DINO_SIZE/OBSTACLE_WIDTH/OBSTACLE_HEIGHT/DINO_X in
+   main.js - the jump physics and hit-testing are computed in those same
+   units rather than measured back off the DOM. */
+.dino-character {
+  position: absolute;
+  left: 30px;
+  bottom: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #00f0ff;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.8);
+}
+
+.dino-obstacle {
+  position: absolute;
+  bottom: 0;
+  width: 20px;
+  height: 34px;
+  background: #ff3b3b;
+  border: 2px solid #101419;
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(255, 59, 59, 0.7);
+}
+
 /* Same bordered/glowing panel look as .character-panel, .color-picker,
    .chat-messages, etc. - the keypad grid used to float loose over the
    animated background wall with nothing setting it apart. */

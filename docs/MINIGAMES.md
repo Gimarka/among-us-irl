@@ -35,3 +35,11 @@ door/event mini-games below instead.
 | Mini-game | Nom (FR) | When | What | Length |
 | --- | --- | --- | --- | --- |
 | Emergency fix | Réparation d'urgence | Emergency event | Scan the event room QR, then hold a button until the bar fills. 2-player version: both hold at the same time in two rooms | ~15 s within the 90 s timer |
+
+## In progress / not yet assigned
+Prototyped in the client but not yet slotted into a room or the task pool -
+reachable only from the "TEST MINIGAMES" test menu for now.
+
+| Mini-game | Nom (FR) | What | Length |
+| --- | --- | --- | --- |
+| Dino jump | Saute par-dessus | Tap to jump a circle over random boxes running at it; clear 12 to win. Placeholder shapes (circle/boxes) until real art exists | Until 12 clears |
