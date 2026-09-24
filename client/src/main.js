@@ -630,19 +630,22 @@ const dinoCharacter = document.querySelector('#dino-character');
 const dinoCounter = document.querySelector('#dino-counter');
 const testDinoButton = document.querySelector('#test-dino-button');
 
-// Must match .dino-character/.dino-obstacle's own width/height in style.css -
-// the jump physics below work in these same units, not measured from the
-// DOM, so a mismatch would make the visuals and the actual hit-test disagree.
+// Must match .dino-character's own width/height in style.css - the jump
+// physics below work in these same units, not measured from the DOM, so a
+// mismatch would make the visuals and the actual hit-test disagree.
+// Obstacles vary in height per spawnDinoObstacle below, so unlike the dino's
+// own size there's no single OBSTACLE_HEIGHT constant to match against.
 const DINO_SIZE = 34;
 const OBSTACLE_WIDTH = 20;
-const OBSTACLE_HEIGHT = 34;
 const DINO_X = 30; // matches .dino-character's fixed `left`
 
 const DINO_GRAVITY = 2200; // px/s^2, pulls the jump back down
 const DINO_JUMP_SPEED = 650; // px/s, upward speed set at the moment of a tap
 const OBSTACLE_SPEED = 220; // px/s, constant left-ward speed
-const OBSTACLE_MIN_INTERVAL_MS = 900;
-const OBSTACLE_MAX_INTERVAL_MS = 1600;
+const OBSTACLE_MIN_INTERVAL_MS = 700;
+const OBSTACLE_MAX_INTERVAL_MS = 2000;
+const OBSTACLE_MIN_HEIGHT = 24;
+const OBSTACLE_MAX_HEIGHT = 54; // still well under the ~96px a full jump clears
 
 let dinoGameActive = false;
 let dinoAnimationFrame = null;
@@ -664,13 +667,34 @@ function scheduleNextDinoObstacle(now) {
 function spawnDinoObstacle(trackWidth) {
   const el = document.createElement('div');
   el.className = 'dino-obstacle';
+  const height = OBSTACLE_MIN_HEIGHT + Math.random() * (OBSTACLE_MAX_HEIGHT - OBSTACLE_MIN_HEIGHT);
+  el.style.height = `${height}px`;
   dinoTrack.appendChild(el);
-  dinoObstacles.push({ el, x: trackWidth, resolved: false, hit: false });
+  dinoObstacles.push({ el, x: trackWidth, height, resolved: false });
 }
 
 function dinoJump() {
   if (!dinoGameActive || dinoBottom > 0) return; // no double-jumping mid-air
   dinoVelocity = DINO_JUMP_SPEED;
+}
+
+// Resets a run's state without touching whether the game is open - shared
+// by both the very first start and every restart after a fail below.
+function resetDinoRun() {
+  dinoObstacles.forEach((obstacle) => obstacle.el.remove());
+  dinoObstacles = [];
+  dinoClearedCount = 0;
+  dinoBottom = 0;
+  dinoVelocity = 0;
+  dinoCharacter.style.bottom = '0px';
+  updateDinoCounter();
+}
+
+function startDinoRun() {
+  dinoGameActive = true;
+  dinoLastFrameTime = performance.now();
+  scheduleNextDinoObstacle(dinoLastFrameTime);
+  dinoAnimationFrame = requestAnimationFrame(dinoStep);
 }
 
 function dinoWin() {
@@ -679,6 +703,23 @@ function dinoWin() {
   // TODO: swap sounds.success for a dedicated general-task sound once provided.
   showPopup('success', texts.taskSuccess);
   playSuccessSoundThenClose();
+}
+
+// Unlike the other minigames (see docs/MINIGAMES.md's "no fail state"
+// design rule), touching an obstacle here does end the run: show the same
+// error-popup-then-retry pattern the door keypad uses for a wrong digit,
+// then start over from 0 rather than exiting back to the submenu.
+function dinoFail() {
+  dinoGameActive = false;
+  cancelAnimationFrame(dinoAnimationFrame);
+  showPopup('error', texts.dinoFail);
+  sounds.error.currentTime = 0;
+  sounds.error.play().catch(() => {}); // browser may block autoplay in edge cases; sound is non-essential
+  setTimeout(() => {
+    hidePopup();
+    resetDinoRun();
+    startDinoRun();
+  }, ERROR_POPUP_DURATION_MS);
 }
 
 function dinoStep(now) {
@@ -698,26 +739,26 @@ function dinoStep(now) {
     scheduleNextDinoObstacle(now);
   }
 
-  dinoObstacles.forEach((obstacle) => {
+  for (const obstacle of dinoObstacles) {
+    if (obstacle.resolved) continue;
     obstacle.x -= OBSTACLE_SPEED * dt;
     obstacle.el.style.left = `${obstacle.x}px`;
 
-    // No fail state (see docs/MINIGAMES.md's design rules): a mistimed jump
-    // just costs the point for this one obstacle, the run keeps going.
     const horizontalOverlap = obstacle.x < DINO_X + DINO_SIZE && obstacle.x + OBSTACLE_WIDTH > DINO_X;
-    if (horizontalOverlap && dinoBottom < OBSTACLE_HEIGHT) {
-      obstacle.hit = true;
+    if (horizontalOverlap && dinoBottom < obstacle.height) {
+      obstacle.resolved = true;
+      dinoFail();
+      break; // dinoFail already stopped the run; nothing else here matters now
     }
 
-    if (!obstacle.resolved && obstacle.x + OBSTACLE_WIDTH < DINO_X) {
+    if (obstacle.x + OBSTACLE_WIDTH < DINO_X) {
       obstacle.resolved = true;
       obstacle.el.remove();
-      if (!obstacle.hit) {
-        dinoClearedCount += 1;
-        updateDinoCounter();
-      }
+      dinoClearedCount += 1;
+      updateDinoCounter();
     }
-  });
+  }
+  if (!dinoGameActive) return; // dinoFail fired mid-loop above
   dinoObstacles = dinoObstacles.filter((obstacle) => !obstacle.resolved);
 
   if (dinoClearedCount >= DINO_TARGET_COUNT) {
@@ -733,19 +774,8 @@ function openDinoGame() {
   dinoScreen.classList.remove('hidden');
   pushOverlayState();
   activeGameClose = closeDinoGame;
-
-  dinoObstacles.forEach((obstacle) => obstacle.el.remove());
-  dinoObstacles = [];
-  dinoClearedCount = 0;
-  dinoBottom = 0;
-  dinoVelocity = 0;
-  dinoCharacter.style.bottom = '0px';
-  updateDinoCounter();
-
-  dinoGameActive = true;
-  dinoLastFrameTime = performance.now();
-  scheduleNextDinoObstacle(dinoLastFrameTime);
-  dinoAnimationFrame = requestAnimationFrame(dinoStep);
+  resetDinoRun();
+  startDinoRun();
 }
 
 function closeDinoGame() {
@@ -760,7 +790,8 @@ function closeDinoGame() {
   closeOverlayState();
 }
 
-dinoTrack.addEventListener('pointerdown', dinoJump);
+// The whole screen is the tap target, not just the track itself.
+dinoScreen.addEventListener('pointerdown', dinoJump);
 testDinoButton.addEventListener('click', openDinoGame);
 
 const testChatButton = document.querySelector('#test-chat-button');

@@ -6,6 +6,7 @@ export const texts = {
   testSortButton: 'TEST TRI',
   testDinoButton: 'TEST SAUT',
   dinoInstruction: 'SAUTE PAR-DESSUS',
+  dinoFail: 'RATÉ !',
   miniGameInstruction: "CODE D'ACCÈS",
   miniGameSuccess: 'OUVERTURE PORTE',
   miniGameFail: 'CODE ERRONÉ',

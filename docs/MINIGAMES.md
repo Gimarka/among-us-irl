@@ -42,4 +42,8 @@ reachable only from the "TEST MINIGAMES" test menu for now.
 
 | Mini-game | Nom (FR) | What | Length |
 | --- | --- | --- | --- |
-| Dino jump | Saute par-dessus | Tap to jump a circle over random boxes running at it; clear 12 to win. Placeholder shapes (circle/boxes) until real art exists | Until 12 clears |
+| Dino jump | Saute par-dessus | Tap anywhere to jump a circle over boxes (random height and spacing) running at it; clear 12 to win. Placeholder shapes (circle/boxes) until real art exists | Until 12 clears |
+
+Dino jump is the one exception to the "no fail state" design rule above:
+touching an obstacle ends the run and restarts it from 0, the same
+error-popup-then-retry pattern Code entry uses for a wrong digit.

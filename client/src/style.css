@@ -984,12 +984,15 @@ body {
   cursor: default;
 }
 
+/* The tap-to-jump listener is on the whole screen, not just the track
+   below, so the cursor affordance matches that everywhere. */
 .dino {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 20px;
+  cursor: pointer;
 }
 
 /* Bordered/glowing panel, same as everywhere else - holds the instruction
@@ -1044,9 +1047,9 @@ body {
   touch-action: manipulation;
 }
 
-/* Sizes here must match DINO_SIZE/OBSTACLE_WIDTH/OBSTACLE_HEIGHT/DINO_X in
-   main.js - the jump physics and hit-testing are computed in those same
-   units rather than measured back off the DOM. */
+/* Sizes here must match DINO_SIZE/OBSTACLE_WIDTH/DINO_X in main.js - the
+   jump physics and hit-testing are computed in those same units rather
+   than measured back off the DOM. */
 .dino-character {
   position: absolute;
   left: 30px;
@@ -1062,7 +1065,7 @@ body {
   position: absolute;
   bottom: 0;
   width: 20px;
-  height: 34px;
+  height: 34px; /* fallback only - main.js sets a random height per obstacle inline */
   background: #ff3b3b;
   border: 2px solid #101419;
   border-radius: 4px;
