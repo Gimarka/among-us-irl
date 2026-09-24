@@ -31,13 +31,14 @@ Target game length: 15–30 minutes.
 - Each crewmate gets a task list (default 6). Scanning the right room's QR opens a 30–60 s mini-game.
 - Players see only their own tasks. A shared task progress bar is shown to everyone,
   updated only at meetings.
-- Gated doors (Bathroom, Bedroom 1, Bedroom 2): real doors, kept closed; scan the door QR before opening.
+- Gated doors (Bathroom, Bedroom 1, Bedroom 2): real doors, kept closed; scan the
+  door QR then solve the Code entry mini-game to open (see MINIGAMES.md).
 
 ## Imposter abilities
 | Ability | Effect |
 | --- | --- |
 | Kill | Touch a crewmate; they tap "I'm dead" and lie down. Cooldown 60 s |
-| Lock door | A gated door cannot be opened for 30 s; scanning it shows "Locked". An unlock mini-game (~10 s) opens it early |
+| Lock door | A gated door cannot be opened at all for 15 s, no matter what; scanning it just shows "Locked" |
 | Phone disruption | All phones (imposters' too, to avoid tells) scramble and cannot scan for 20 s |
 | Emergency event | Crewmates must fix it in a given room within 90 s or imposters win. 1 fixer at 4 players; at 5–6 players 2 fixers in two rooms at the same time |
 
@@ -79,6 +80,10 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Code entry is now the universal door mechanic: required to open any of
+  the 3 gated doors, not just a Bedroom 1 task. Lock door simplified to a
+  flat 15 s hard lock with no early-unlock mini-game (dropped Door unlock).
+  Task mini-games now have French display names (see MINIGAMES.md/texts.fr.js).
 - Simplified to always exactly 1 imposter, picked at random, dropping the
   1-or-2 odds table (and the now-pointless "imposters know each other").
 - Roles are drawn once per round, on the first "Jouer" click from whoever's

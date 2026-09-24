@@ -38,4 +38,18 @@ export const texts = {
   chatEmpty: 'Aucun message pour le moment.',
   roleInnocent: 'INNOCENT',
   roleTraitor: 'TRAÎTRE',
+  tasksTitle: 'Tâches',
+  // Keyed by the task ids the server hands out (see server/taskState.js) -
+  // the id itself never appears on screen, only this French label.
+  taskNames: {
+    wires: 'Câblage',
+    'card-swipe': 'Carte magnétique',
+    download: 'Téléchargement',
+    fuel: "Plein d'essence",
+    calibrate: 'Calibrage',
+    simon: 'Séquence',
+    clean: 'Nettoyage',
+    sort: 'Tri',
+    'steady-hand': 'Main stable',
+  },
 };

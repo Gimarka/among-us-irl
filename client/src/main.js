@@ -100,6 +100,11 @@ app.innerHTML = `
 
     <div id="home-screen" class="screen hidden">
       <div class="screen-fit home-buttons">
+        <div class="tasks-panel">
+          <p class="tasks-title">${texts.tasksTitle}</p>
+          <ul class="tasks-list" id="tasks-list"></ul>
+        </div>
+
         <button id="test-button" class="test-button">${texts.testButton}</button>
 
         <button id="scan-button" class="test-button">${texts.scanButton}</button>
@@ -897,12 +902,42 @@ function showRoleReveal(role) {
   }, ROLE_REVEAL_DURATION_MS);
 }
 
+const tasksList = document.querySelector('#tasks-list');
+
+// Tasks arrive from the server all-pending (see taskState.js) - there's no
+// mini-game hooked up yet to actually mark one done, so every symbol shown
+// here is the empty box for now; the done/green-check styling is already
+// wired up for whenever a mini-game starts reporting completion.
+function renderTasks(tasks) {
+  tasksList.innerHTML = '';
+  tasks.forEach((task) => {
+    const item = document.createElement('li');
+    item.className = 'task-item';
+    item.classList.toggle('task-done', task.done);
+
+    const box = document.createElement('span');
+    box.className = 'task-checkbox';
+    box.textContent = task.done ? '✅' : '⬜';
+
+    const label = document.createElement('span');
+    label.className = 'task-label';
+    label.textContent = texts.taskNames[task.id] || task.id;
+
+    item.appendChild(box);
+    item.appendChild(label);
+    tasksList.appendChild(item);
+  });
+}
+
 function handlePlayClick() {
   if (!socket) {
     openMenuFromLobby(); // shouldn't happen once joined, but never get stuck on the lobby
     return;
   }
-  socket.once('role', ({ role }) => showRoleReveal(role));
+  socket.once('role', ({ role, tasks }) => {
+    renderTasks(tasks);
+    showRoleReveal(role);
+  });
   socket.emit('startGame');
 }
 

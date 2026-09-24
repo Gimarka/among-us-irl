@@ -9,21 +9,29 @@
   but shows as completed on their own screen.
 
 ## Task mini-games
-| Mini-game | What the player does | Length | Room |
+Every player (crewmate or imposter) is assigned 6 of these 9 at random each
+game, no repeats - see `server/taskState.js`. Code entry, Door unlock and
+Emergency fix are never assigned as a personal task; they're the shared
+door/event mini-games below instead.
+
+| id | Nom (FR) | What the player does | Length | Room |
+| --- | --- | --- | --- | --- |
+| wires | Câblage | Drag 4 coloured wires to the matching colour | ~30 s | Garage |
+| card-swipe | Carte magnétique | Swipe a card at the right speed; too fast/slow retries | ~30 s | Bedroom 1 |
+| download | Téléchargement | Hold a button while a bar fills; releasing pauses it | ~45 s | Garden |
+| fuel | Plein d'essence | Hold to fill a tank to the line without overflowing | ~40 s | Bathroom |
+| calibrate | Calibrage | Tap when a moving marker crosses the target, 3 times | ~30 s | Bedroom 2 |
+| simon | Séquence | Repeat a growing sequence of 4 coloured buttons, 5 steps | ~45 s | Bedroom 2 |
+| clean | Nettoyage | Tap 15 dust spots as they appear | ~30 s | Kitchen |
+| sort | Tri | Drag 10 items into 3 bins | ~45 s | Kitchen |
+| steady-hand | Main stable | Keep a dot inside a drifting circle by dragging it with a finger (no tilt) | ~40 s | Garage |
+
+## Door mini-games
+| Mini-game | Nom (FR) | What | Length |
 | --- | --- | --- | --- |
-| Wires | Drag 4 coloured wires to the matching colour | ~30 s | Garage |
-| Card swipe | Swipe a card at the right speed; too fast/slow retries | ~30 s | Bedroom 1 |
-| Download | Hold a button while a bar fills; releasing pauses it | ~45 s | Garden |
-| Fuel | Hold to fill a tank to the line without overflowing | ~40 s | Bathroom |
-| Calibrate | Tap when a moving marker crosses the target, 3 times | ~30 s | Bedroom 2 |
-| Code entry | Memorise a 5-digit code shown 3 s, then type it | ~30 s | Bedroom 1 |
-| Simon | Repeat a growing sequence of 4 coloured buttons, 5 steps | ~45 s | Bedroom 2 |
-| Clean | Tap 15 dust spots as they appear | ~30 s | Kitchen |
-| Sort | Drag 10 items into 3 bins | ~45 s | Kitchen |
-| Steady hand | Keep a dot inside a drifting circle by dragging it with a finger (no tilt) | ~40 s | Garage |
+| Code entry | Code d'accès | Required to open any of the 3 gated doors (Bathroom, Bedroom 1, Bedroom 2): scan the door QR, then type the 4-digit code shown on screen (digits 0-9 plus * and #, 12-key pad) | ~15 s |
 
 ## Special mini-games
-| Mini-game | When | What | Length |
-| --- | --- | --- | --- |
-| Emergency fix | Emergency event | Scan the event room QR, then hold a button until the bar fills. 2-player version: both hold at the same time in two rooms | ~15 s within the 90 s timer |
-| Door unlock | Door locked by imposter | Scan the door, tap 5 numbered tiles in order | ~10 s |
+| Mini-game | Nom (FR) | When | What | Length |
+| --- | --- | --- | --- | --- |
+| Emergency fix | Réparation d'urgence | Emergency event | Scan the event room QR, then hold a button until the bar fills. 2-player version: both hold at the same time in two rooms | ~15 s within the 90 s timer |

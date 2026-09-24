@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, resolveColor } from './gameState.js';
 import { addMessage, listMessages } from './chatState.js';
 import { getRole } from './roleState.js';
+import { getTasks } from './taskState.js';
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -168,7 +169,8 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
       const id = socket.data.clientId;
       if (!id) return; // hasn't joined - shouldn't happen, play is only reachable post-join
       const role = getRole(id, listPlayers());
-      socket.emit('role', { role });
+      const tasks = getTasks(id, listPlayers());
+      socket.emit('role', { role, tasks });
     });
 
     socket.on('disconnect', (reason) => {

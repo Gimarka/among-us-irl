@@ -5,6 +5,7 @@ import { io as ioClient } from 'socket.io-client';
 import { createGameServer } from './index.js';
 import { clearPlayers } from './gameState.js';
 import { clearRoles } from './roleState.js';
+import { clearTasks, TASK_POOL } from './taskState.js';
 
 function listenOnRandomPort(server) {
   return new Promise((resolve) => {
@@ -123,6 +124,36 @@ test('a reconnecting player is told the same role they were already given', asyn
     const { role: secondRoleValue } = await secondRole;
 
     assert.equal(firstRoleValue, secondRoleValue);
+  } finally {
+    alice.close();
+    closeGameServer({ httpServer, io });
+  }
+});
+
+test('starting the game also sends the player 6 unique tasks from the task pool', async () => {
+  clearPlayers();
+  clearRoles();
+  clearTasks();
+  const { httpServer, io } = createGameServer();
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const alice = ioClient(url);
+
+  try {
+    await waitForEvent(alice, 'connect');
+    const joined = waitForEvent(alice, 'players');
+    alice.emit('join', { name: 'Alice' });
+    await joined;
+
+    const started = waitForEvent(alice, 'role');
+    alice.emit('startGame');
+    const { tasks } = await started;
+
+    assert.equal(tasks.length, 6);
+    assert.ok(tasks.every((task) => task.done === false));
+    assert.ok(tasks.every((task) => TASK_POOL.includes(task.id)));
+    assert.equal(new Set(tasks.map((task) => task.id)).size, 6, 'no task should repeat');
   } finally {
     alice.close();
     closeGameServer({ httpServer, io });
