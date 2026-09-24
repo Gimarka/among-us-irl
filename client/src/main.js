@@ -111,13 +111,17 @@ app.innerHTML = `
       <div class="screen-fit home-buttons">
         <div class="tasks-panel">
           <ul class="tasks-list" id="tasks-list"></ul>
+          <canvas class="interference-canvas hidden" id="tasks-interference-canvas"></canvas>
         </div>
 
         <button id="test-minigames-button" class="test-button">${texts.testMinigamesButton}</button>
 
         <button id="test-chat-button" class="test-button">${texts.testChatButton}</button>
 
-        <button id="scan-button" class="test-button">${texts.scanButton}</button>
+        <div class="scan-button-wrap">
+          <button id="scan-button" class="test-button">${texts.scanButton}</button>
+          <canvas class="interference-canvas hidden" id="scan-interference-canvas"></canvas>
+        </div>
 
         <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
       </div>
@@ -136,6 +140,8 @@ app.innerHTML = `
         <button id="alert-start-button" class="test-button test-button-danger">${texts.alertStartButton}</button>
 
         <button id="alert-stop-button" class="test-button">${texts.alertStopButton}</button>
+
+        <button id="interference-button" class="test-button test-button-danger">${texts.interferenceButton}</button>
       </div>
     </div>
 
@@ -475,6 +481,56 @@ const alertStopButton = document.querySelector('#alert-stop-button');
 
 alertStartButton.addEventListener('click', () => { if (socket) socket.emit('alertStart'); });
 alertStopButton.addEventListener('click', () => { if (socket) socket.emit('alertStop'); });
+
+// Broadcast, same as alert - blanks the scanner and task list on every
+// phone at once with procedural static (canvas, not the reference image -
+// see interference-canvas in style.css) until the server says it's over.
+const interferenceButton = document.querySelector('#interference-button');
+const tasksInterferenceCanvas = document.querySelector('#tasks-interference-canvas');
+const scanInterferenceCanvas = document.querySelector('#scan-interference-canvas');
+const INTERFERENCE_REDRAW_MS = 100;
+let interferenceTimer = null;
+
+function drawStaticNoise(canvas) {
+  const width = canvas.clientWidth || canvas.parentElement.clientWidth;
+  const height = canvas.clientHeight || canvas.parentElement.clientHeight;
+  // Kept small and scaled up via CSS image-rendering:pixelated - a full-
+  // resolution random fill would look like grey mush, not blocky TV static.
+  canvas.width = Math.max(1, Math.round(width / 4));
+  canvas.height = Math.max(1, Math.round(height / 4));
+
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.createImageData(canvas.width, canvas.height);
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    const shade = Math.floor(Math.random() * 256);
+    imageData.data[i] = shade;
+    imageData.data[i + 1] = shade;
+    imageData.data[i + 2] = shade;
+    imageData.data[i + 3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function setInterferenceActive(active) {
+  tasksInterferenceCanvas.classList.toggle('hidden', !active);
+  scanInterferenceCanvas.classList.toggle('hidden', !active);
+  scanButton.disabled = active;
+
+  if (interferenceTimer) {
+    clearInterval(interferenceTimer);
+    interferenceTimer = null;
+  }
+  if (active) {
+    drawStaticNoise(tasksInterferenceCanvas);
+    drawStaticNoise(scanInterferenceCanvas);
+    interferenceTimer = setInterval(() => {
+      drawStaticNoise(tasksInterferenceCanvas);
+      drawStaticNoise(scanInterferenceCanvas);
+    }, INTERFERENCE_REDRAW_MS);
+  }
+}
+
+interferenceButton.addEventListener('click', () => { if (socket) socket.emit('interferenceStart'); });
 
 const colorGameScreen = document.querySelector('#colorgame-screen');
 const colorGameBoard = document.querySelector('#colorgame-board');
@@ -1433,6 +1489,7 @@ function connectSocket() {
   socket.on('chatMessage', appendChatMessage);
   socket.on('tasks', renderTasks);
   socket.on('alert', ({ active }) => alertOverlay.classList.toggle('active', active));
+  socket.on('interference', ({ active }) => setInterferenceActive(active));
 
   socket.on('connect', () => {
     if (currentIdentity) sendJoin();

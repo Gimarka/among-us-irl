@@ -6,6 +6,9 @@ import { addMessage, listMessages } from './chatState.js';
 import { getRole } from './roleState.js';
 import { getTasks, completeTask, TASK_POOL } from './taskState.js';
 import { isAlertActive, setAlertActive } from './alertState.js';
+import { isInterferenceActive, startInterference } from './interferenceState.js';
+
+const INTERFERENCE_DURATION_MS = 10_000;
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -75,7 +78,10 @@ const IMMEDIATE_DISCONNECT_REASONS = new Set([
   'server namespace disconnect',
 ]);
 
-export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {}) {
+export function createGameServer({
+  disconnectGraceMs = DISCONNECT_GRACE_MS,
+  interferenceDurationMs = INTERFERENCE_DURATION_MS,
+} = {}) {
   const app = express();
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
@@ -104,6 +110,7 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
     socket.emit('players', listPlayers());
     socket.emit('chatHistory', listMessages());
     socket.emit('alert', { active: isAlertActive() });
+    socket.emit('interference', { active: isInterferenceActive() });
 
     socket.on('join', ({ clientId, name, photo, color, hat } = {}) => {
       const id = cleanClientId(clientId, socket.id);
@@ -193,6 +200,14 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
 
     socket.on('alertStop', () => {
       io.emit('alert', { active: setAlertActive(false) });
+    });
+
+    // Broadcast, same as alert - every phone loses its scanner/task list at
+    // once. Auto-expires on the server's own timer rather than needing a
+    // second button press to turn off.
+    socket.on('interferenceStart', () => {
+      startInterference(() => io.emit('interference', { active: false }), interferenceDurationMs);
+      io.emit('interference', { active: true });
     });
 
     socket.on('disconnect', (reason) => {

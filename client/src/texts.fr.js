@@ -9,6 +9,7 @@ export const texts = {
   dinoFail: 'RATÉ !',
   alertStartButton: 'ALERT START',
   alertStopButton: 'ALERT STOP',
+  interferenceButton: 'INTERFÉRENCE',
   miniGameInstruction: "CODE D'ACCÈS",
   miniGameSuccess: 'OUVERTURE PORTE',
   miniGameFail: 'CODE ERRONÉ',
