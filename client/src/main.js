@@ -35,6 +35,33 @@ const RETAKE_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://
 preloadAssets();
 initBackground();
 
+// Keeps the screen from locking, no matter which screen the app is showing -
+// requested once up front and re-requested whenever the tab comes back into
+// view, since the lock auto-releases the moment it's hidden (screen off,
+// app switched away). Not supported everywhere (iOS Safari only from 16.4),
+// so this silently does nothing on a browser without it.
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => {
+      wakeLock = null;
+    });
+  } catch {
+    // Denied, unsupported, or the page wasn't visible - nothing to do.
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && !wakeLock) {
+    requestWakeLock();
+  }
+});
+
+requestWakeLock();
+
 // The waiting room between joining and the menu: one slot per possible
 // player, filled in as people join (see renderLobby below).
 const LOBBY_SLOT_COUNT = 10;
