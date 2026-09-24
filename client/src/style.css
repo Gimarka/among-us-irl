@@ -296,8 +296,17 @@ textarea {
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
 }
 
+/* Solid black rather than opacity, which let the animated tile background
+   show through the panel - a pending slot should look empty, not see-through. */
 .lobby-slot-empty {
-  opacity: 0.4;
+  background: #000;
+  border-color: rgba(0, 240, 255, 0.35);
+  box-shadow: none;
+}
+
+.lobby-slot-empty .lobby-slot-name {
+  color: rgba(255, 255, 255, 0.5);
+  text-shadow: none;
 }
 
 /* No character for a slot nobody has taken yet - visibility:hidden rather

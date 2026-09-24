@@ -35,7 +35,7 @@ export const texts = {
   noPlayers: 'Aucun joueur pour le moment.',
   disconnected: 'Connexion perdue, nouvelle tentative…',
   playButton: 'JOUER',
-  emptySlot: 'En attente…',
+  emptySlot: 'En attente',
   disconnectButton: 'SE DÉCONNECTER',
   backButtonLabel: 'Retour à la connexion',
   backToMenuLabel: 'Retour au menu',
