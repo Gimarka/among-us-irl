@@ -15,6 +15,7 @@ export const texts = {
   mortConfirmTitle: 'Es-tu sûr de vouloir te déclarer mort ?',
   mortConfirmYes: 'OUI, JE SUIS MORT',
   mortConfirmCancel: 'ANNULER',
+  fullscreenButton: 'Plein écran',
   miniGameInstruction: "CODE D'ACCÈS",
   miniGameSuccess: 'OUVERTURE PORTE',
   miniGameFail: 'CODE ERRONÉ',

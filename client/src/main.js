@@ -219,17 +219,6 @@ app.innerHTML = `
       </div>
     </div>
 
-    <div class="mort-overlay hidden" id="mort-overlay">
-      <button id="mort-close-button" class="mort-close-button" aria-label="${texts.closeButtonLabel}">×</button>
-      <span class="mort-skull mort-skull-tl" aria-hidden="true">💀</span>
-      <span class="mort-skull mort-skull-tr" aria-hidden="true">💀</span>
-      <span class="mort-skull mort-skull-bl" aria-hidden="true">💀</span>
-      <span class="mort-skull mort-skull-br" aria-hidden="true">💀</span>
-      <div class="mort-qr-panel">
-        <canvas id="mort-qr-canvas"></canvas>
-      </div>
-    </div>
-
     <div class="confirm-popup hidden" id="mort-confirm-popup">
       <div class="confirm-panel">
         <p class="confirm-text">${texts.mortConfirmTitle}</p>
@@ -241,6 +230,61 @@ app.innerHTML = `
     </div>
   </div>
 `;
+
+// Sibling of #app (like #alert-overlay in index.html), not nested inside it -
+// #app is a positioned stacking context (z-index:1, see style.css), so any
+// z-index set on something living *inside* it is only ever compared against
+// other things inside it, never against #alert-overlay outside it. That
+// trapped the mort screen under the alert flash (z-index:3) no matter how
+// high its own z-index was set. Living at the same level as #alert-overlay
+// lets its z-index (45, in style.css) actually win against it.
+document.querySelector('#alert-overlay').insertAdjacentHTML(
+  'afterend',
+  `
+    <div class="mort-overlay hidden" id="mort-overlay">
+      <button id="mort-close-button" class="mort-close-button" aria-label="${texts.closeButtonLabel}">×</button>
+      <span class="mort-skull mort-skull-tl" aria-hidden="true">💀</span>
+      <span class="mort-skull mort-skull-tr" aria-hidden="true">💀</span>
+      <span class="mort-skull mort-skull-bl" aria-hidden="true">💀</span>
+      <span class="mort-skull mort-skull-br" aria-hidden="true">💀</span>
+      <div class="mort-qr-panel">
+        <canvas id="mort-qr-canvas"></canvas>
+      </div>
+    </div>
+  `,
+);
+
+// Independent of any single screen's buttons - fixed in the corner, present
+// no matter which screen is showing, so a player can always get back into
+// fullscreen after their phone slept and dropped it (see toggleAppFullscreen
+// further down).
+document.body.insertAdjacentHTML(
+  'beforeend',
+  `
+    <button id="fullscreen-button" class="fullscreen-button" aria-label="${texts.fullscreenButton}">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="fsV1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#a3f3ff"/>
+            <stop offset="100%" stop-color="#38b6ff"/>
+          </linearGradient>
+        </defs>
+        <path d="M 70 35 L 45 35 C 39 35, 35 39, 35 45 L 35 70" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 70 35 L 45 35 C 39 35, 35 39, 35 45 L 35 70" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 130 35 L 155 35 C 161 35, 165 39, 165 45 L 165 70" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 130 35 L 155 35 C 161 35, 165 39, 165 45 L 165 70" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 35 130 L 35 155 C 35 161, 39 165, 45 165 L 70 165" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 35 130 L 35 155 C 35 161, 39 165, 45 165 L 70 165" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 165 130 L 165 155 C 165 161, 161 165, 155 165 L 130 165" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M 165 130 L 165 155 C 165 161, 161 165, 155 165 L 130 165" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        <polygon points="40,40 65,42 42,65" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
+        <polygon points="160,40 135,42 158,65" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
+        <polygon points="40,160 65,158 42,135" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
+        <polygon points="160,160 135,158 158,135" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  `,
+);
 
 // The title sits in a fixed panel, outside the flow, so the screens below it
 // don't know how tall it is and tall content (a hat, for instance) slides
@@ -1580,21 +1624,29 @@ function connectSocket() {
 }
 
 // Best-effort only: the Fullscreen API needs a direct user gesture to work
-// at all (this click is one), and iOS Safari doesn't support it regardless
-// - it just silently does nothing there, joining continues normally either way.
-function requestAppFullscreen() {
+// at all (a click is one), and iOS Safari doesn't support it regardless -
+// it just silently does nothing there. A toggle rather than a one-way
+// request, so the same corner button (see fullscreenButton below) both
+// enters and leaves it.
+function toggleAppFullscreen() {
   try {
-    document.documentElement.requestFullscreen?.().catch(() => {});
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    } else {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+    }
   } catch {
     // Some browsers throw synchronously rather than rejecting the promise.
   }
 }
 
+document.querySelector('#fullscreen-button').addEventListener('click', toggleAppFullscreen);
+
 function handleJoinClick() {
   const name = joinNameInput.value.trim();
   if (!name) return;
 
-  requestAppFullscreen();
+  toggleAppFullscreen();
   joinButton.disabled = true;
   currentIdentity = { name, photo: photoDataUrl, color: suitColor, hat: HATS[hatIndex].id };
   saveIdentity(currentIdentity);
