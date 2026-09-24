@@ -646,7 +646,8 @@ const DINO_X = 30; // matches .dino-character's fixed `left`
 
 const DINO_GRAVITY = 2200; // px/s^2, pulls the jump back down
 const DINO_JUMP_SPEED = 650; // px/s, upward speed set at the moment of a tap
-const OBSTACLE_SPEED = 220; // px/s, constant left-ward speed
+const OBSTACLE_BASE_SPEED = 220; // px/s at the start of a run
+const OBSTACLE_MAX_SPEED_MULTIPLIER = 1.3; // 30% faster once all 12 are cleared
 const OBSTACLE_MIN_INTERVAL_MS = 700;
 const OBSTACLE_MAX_INTERVAL_MS = 2000;
 const OBSTACLE_MIN_HEIGHT = 24;
@@ -663,6 +664,15 @@ let dinoNextObstacleAt = 0;
 
 function updateDinoCounter() {
   dinoCounter.textContent = `${dinoClearedCount} / ${DINO_TARGET_COUNT}`;
+}
+
+// Ramps linearly from the base speed up to 30% faster as the run
+// progresses towards its 12 clears, so every obstacle already on screen
+// speeds up together rather than each one keeping whatever speed it
+// spawned at.
+function currentObstacleSpeed() {
+  const progress = Math.min(dinoClearedCount / DINO_TARGET_COUNT, 1);
+  return OBSTACLE_BASE_SPEED * (1 + (OBSTACLE_MAX_SPEED_MULTIPLIER - 1) * progress);
 }
 
 function scheduleNextDinoObstacle(now) {
@@ -744,9 +754,10 @@ function dinoStep(now) {
     scheduleNextDinoObstacle(now);
   }
 
+  const obstacleSpeed = currentObstacleSpeed();
   for (const obstacle of dinoObstacles) {
     if (obstacle.resolved) continue;
-    obstacle.x -= OBSTACLE_SPEED * dt;
+    obstacle.x -= obstacleSpeed * dt;
     obstacle.el.style.left = `${obstacle.x}px`;
 
     const horizontalOverlap = obstacle.x < DINO_X + DINO_SIZE && obstacle.x + OBSTACLE_WIDTH > DINO_X;
