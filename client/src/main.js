@@ -1767,6 +1767,12 @@ function handleDisconnectClick() {
   hasEnteredGame = false;
   inSession = false;
 
+  // With the connection closed, this phone won't hear the server switch
+  // these off (for instance when leaving ends the session), so it switches
+  // them off itself. The next connection sends their real state anyway.
+  alertOverlay.classList.remove('active');
+  setInterferenceActive(false);
+
   // Reachable from either the menu's "SE DECONNECTER" or the lobby's back
   // button, so hide both regardless of which one is actually showing.
   homeScreen.classList.add('hidden');

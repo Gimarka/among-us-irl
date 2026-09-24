@@ -53,20 +53,17 @@ textarea {
   display: block;
 }
 
-/* Above #app (z-index:1) rather than tucked behind it with the tile
-   background - sitting below the UI made the flash only visible in the
-   gaps between buttons/panels, easy to miss entirely. pointer-events:none
-   still lets every tap reach the real UI through it regardless of stacking
-   order. Stays below actual popups (title/back buttons at 5, popups at
-   10-40) so those still take priority if something else is showing too.
-   A global overlay rather than something drawn per-screen, since an alert
-   has to show no matter which screen a phone happens to be on. Invisible
-   and inert until .active; the flashing itself is the keyframe animation
-   below, only running while active. */
+/* Sandwiched between the tile background and the UI: same z-index as
+   #background-fx but later in index.html, so it paints over the tiles, and
+   below #app (z-index:1), so every panel and button stays on top of the
+   flash. A global overlay rather than something drawn per-screen, since an
+   alert has to show no matter which screen a phone happens to be on.
+   Invisible and inert until .active; the flashing itself is the keyframe
+   animation below, only running while active. */
 #alert-overlay {
   position: fixed;
   inset: 0;
-  z-index: 3;
+  z-index: 0;
   background: #ff0000;
   opacity: 0;
   pointer-events: none;
