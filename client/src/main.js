@@ -137,6 +137,8 @@ app.innerHTML = `
     <div id="home-screen" class="screen hidden">
       <p class="build-id">${BUILD_ID}</p>
       <div class="screen-fit home-buttons">
+        <p class="session-label" id="session-label"></p>
+
         <div class="tasks-panel">
           <ul class="tasks-list" id="tasks-list"></ul>
           <canvas class="interference-canvas hidden" id="tasks-interference-canvas"></canvas>
@@ -1591,14 +1593,18 @@ function sendJoin() {
   }
 }
 
-function updatePlayButton() {
+const sessionLabel = document.querySelector('#session-label');
+
+// Everything on screen that depends on which session is running.
+function updateSessionDisplay() {
   playButton.textContent = sessionId === null ? texts.playButton : texts.continueButton;
+  sessionLabel.textContent = sessionId === null ? '' : `${texts.sessionLabel} ${sessionId}`;
 }
 
 function handleWelcome({ sessionId: currentSessionId, member, character }) {
   sessionId = currentSessionId;
   isMember = member;
-  updatePlayButton();
+  updateSessionDisplay();
 
   if (hasEnteredGame) {
     // Came back from a dropped connection. If the session we were playing
@@ -1667,7 +1673,7 @@ function connectSocket() {
   socket.on('session', ({ sessionId: currentSessionId }) => {
     if (currentSessionId !== sessionId) isMember = false; // a new session's members hear 'role' right after
     sessionId = currentSessionId;
-    updatePlayButton();
+    updateSessionDisplay();
   });
 
   // Every connect, the first and every reconnect, starts by asking the

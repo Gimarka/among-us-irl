@@ -127,6 +127,16 @@ textarea {
   z-index: 1;
 }
 
+.session-label {
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #00f0ff;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.7);
+}
+
 /* The actual content of join/home/minigame screens, wrapped so it can be
    scaled down (by fitActiveScreen in main.js) without also shrinking the
    fixed .screen viewport it's centred in - transforming .screen itself would
