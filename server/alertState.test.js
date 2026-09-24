@@ -18,15 +18,14 @@ test('starting an alert makes it active with a full countdown, stopping clears b
   assert.equal(getAlertRemainingMs(), 0);
 });
 
-test('the countdown running out calls onCountdownEnd once and leaves the alert on', async () => {
+test('the countdown running out stops the alert and calls onCountdownEnd once', async () => {
   stopAlert();
   let ended = 0;
   startAlert(() => { ended += 1; }, 20);
   await wait(40);
   assert.equal(ended, 1);
-  assert.equal(isAlertActive(), true, 'only the bar ends - the alert keeps flashing');
+  assert.equal(isAlertActive(), false);
   assert.equal(getAlertRemainingMs(), 0);
-  stopAlert();
 });
 
 test('restarting refills the countdown, and stopping cancels it', async () => {

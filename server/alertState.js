@@ -5,8 +5,7 @@
 // Starting an alert also starts a countdown, shown on every phone as a
 // depleting bar. The server owns it: phones are only ever told how much time
 // is left, never a clock time, since their own clocks can't be trusted.
-// The countdown running out only hides the bar - the alert itself keeps
-// flashing until someone stops it.
+// The countdown running out ends the alert entirely, same as ALERT STOP.
 
 let alertActive = false;
 let countdownEndsAt = null; // server clock, ms
@@ -22,15 +21,14 @@ export function getAlertRemainingMs() {
 }
 
 // Starts (or restarts, if already running) the alert with a full countdown.
-// onCountdownEnd is called once, when the countdown naturally runs out -
-// never after a stop or a restart.
+// When the countdown naturally runs out the alert stops, then onCountdownEnd
+// is called once - never after a manual stop or a restart.
 export function startAlert(onCountdownEnd, durationMs) {
   alertActive = true;
   countdownEndsAt = Date.now() + durationMs;
   if (countdownTimer) clearTimeout(countdownTimer);
   countdownTimer = setTimeout(() => {
-    countdownTimer = null;
-    countdownEndsAt = null;
+    stopAlert();
     onCountdownEnd();
   }, durationMs);
 }

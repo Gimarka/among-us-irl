@@ -279,7 +279,7 @@ export function createGameServer({
     // Broadcast (io.emit), not private - unlike role/tasks, an alert is
     // meant for every connected phone at once, triggering player included.
     // Restarts the countdown from full if an alert is already running. When
-    // it runs out, the server itself tells everyone to hide the bar.
+    // it runs out, the server itself ends the alert for everyone.
     socket.on('alertStart', () => {
       startAlert(() => io.emit('alert', alertPayload()), alertCountdownMs);
       io.emit('alert', alertPayload());

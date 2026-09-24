@@ -790,6 +790,7 @@ function newColorRound() {
 }
 
 function openColorGame() {
+  document.body.classList.add('no-alert-flash');
   minigamesScreen.classList.add('hidden');
   colorGameScreen.classList.remove('hidden');
   pushOverlayState();
@@ -799,6 +800,7 @@ function openColorGame() {
 }
 
 function closeColorGame() {
+  document.body.classList.remove('no-alert-flash');
   hidePopup();
   colorGameScreen.classList.add('hidden');
   minigamesScreen.classList.remove('hidden');
@@ -965,6 +967,7 @@ function dinoStep(now) {
 }
 
 function openDinoGame() {
+  document.body.classList.add('no-alert-flash');
   minigamesScreen.classList.add('hidden');
   dinoScreen.classList.remove('hidden');
   pushOverlayState();
@@ -974,6 +977,7 @@ function openDinoGame() {
 }
 
 function closeDinoGame() {
+  document.body.classList.remove('no-alert-flash');
   hidePopup();
   dinoGameActive = false;
   cancelAnimationFrame(dinoAnimationFrame);

@@ -59,7 +59,7 @@ test('alertStart/alertStop broadcast to every connected socket, and a new connec
   }
 });
 
-test('the countdown bar is shared, and the server itself says when it has run out', async () => {
+test('the countdown is shared, and the server itself ends the alert when it runs out', async () => {
   stopAlert();
   const { httpServer, io } = createGameServer({ alertCountdownMs: 60 });
   const port = await listenOnRandomPort(httpServer);
@@ -83,7 +83,8 @@ test('the countdown bar is shared, and the server itself says when it has run ou
     const [aliceEnd, bobEnd] = await bothRanOut;
     assert.equal(aliceEnd.remainingMs, 0);
     assert.equal(bobEnd.remainingMs, 0);
-    assert.equal(aliceEnd.active, true, 'the alert keeps flashing after the bar runs out');
+    assert.equal(aliceEnd.active, false, 'the alert ends with the bar');
+    assert.equal(bobEnd.active, false);
   } finally {
     stopAlert();
     alice.close();
