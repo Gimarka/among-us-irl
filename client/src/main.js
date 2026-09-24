@@ -101,17 +101,16 @@ app.innerHTML = `
     <div id="home-screen" class="screen hidden">
       <div class="screen-fit home-buttons">
         <div class="tasks-panel">
-          <p class="tasks-title">${texts.tasksTitle}</p>
           <ul class="tasks-list" id="tasks-list"></ul>
         </div>
 
         <button id="test-button" class="test-button">${texts.testButton}</button>
 
-        <button id="scan-button" class="test-button">${texts.scanButton}</button>
-
         <button id="test-minigame1-button" class="test-button">${texts.testMinigame1Button}</button>
 
         <button id="test-chat-button" class="test-button">${texts.testChatButton}</button>
+
+        <button id="scan-button" class="test-button">${texts.scanButton}</button>
 
         <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
       </div>
@@ -915,9 +914,11 @@ function renderTasks(tasks) {
     item.className = 'task-item';
     item.classList.toggle('task-done', task.done);
 
+    // Empty until done rather than an unchecked-box glyph - the check
+    // mark is the only symbol this list ever shows.
     const box = document.createElement('span');
     box.className = 'task-checkbox';
-    box.textContent = task.done ? '✅' : '⬜';
+    box.textContent = task.done ? '✓' : '';
 
     const label = document.createElement('span');
     label.className = 'task-label';

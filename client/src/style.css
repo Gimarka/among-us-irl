@@ -477,7 +477,7 @@ body {
 .tasks-panel {
   width: 300px;
   max-width: 85vw;
-  padding: 14px 18px;
+  padding: 4px 18px;
   box-sizing: border-box;
   border: 2px solid #00f0ff;
   border-radius: 16px;
@@ -485,21 +485,9 @@ body {
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
 }
 
-.tasks-title {
-  margin: 0 0 10px;
-  font-family: 'Orbitron', system-ui, sans-serif;
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: #fff;
-  text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
-  text-align: center;
-}
-
 .tasks-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -511,22 +499,39 @@ body {
 .task-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(0, 240, 255, 0.15);
 }
 
+.task-item:last-child {
+  border-bottom: none;
+}
+
+/* A fixed-width slot rather than an unchecked-box glyph - empty until a
+   task is done, so nothing but a plain label shows for a pending task,
+   while every row's label still lines up in the same column. */
 .task-checkbox {
   flex-shrink: 0;
-  font-size: 1.1rem;
+  width: 18px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
   line-height: 1;
+  color: #22ff88;
+  text-shadow: 0 0 6px rgba(34, 255, 136, 0.8);
 }
 
 .task-label {
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
   color: #fff;
-  font-size: 0.9rem;
 }
 
 .task-item.task-done .task-label {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.45);
   text-decoration: line-through;
 }
 
