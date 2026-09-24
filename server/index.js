@@ -4,7 +4,7 @@ import { Server } from 'socket.io';
 import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, resolveColor } from './gameState.js';
 import { addMessage, listMessages } from './chatState.js';
 import { getRole } from './roleState.js';
-import { getTasks } from './taskState.js';
+import { getTasks, completeTask, TASK_POOL } from './taskState.js';
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -171,6 +171,16 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
       const role = getRole(id, listPlayers());
       const tasks = getTasks(id, listPlayers());
       socket.emit('role', { role, tasks });
+    });
+
+    // A minigame reports its own completion without knowing whether it's
+    // actually one of this player's assigned tasks - completeTask is a
+    // no-op if it isn't, so nothing else needs to check that here.
+    socket.on('completeTask', ({ taskId } = {}) => {
+      const id = socket.data.clientId;
+      if (!id || !TASK_POOL.includes(taskId)) return;
+      const tasks = completeTask(id, taskId);
+      if (tasks) socket.emit('tasks', tasks);
     });
 
     socket.on('disconnect', (reason) => {

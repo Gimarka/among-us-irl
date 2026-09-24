@@ -52,6 +52,21 @@ export function getTasks(clientId, currentPlayers) {
   return tasks.get(clientId);
 }
 
+// Marks one task done for a player, if it's actually one of their assigned
+// tasks - a no-op otherwise (a minigame reporting completion has no way of
+// knowing whether its task was in that particular player's 6, and it
+// shouldn't need to). Returns the player's updated task list, or null if
+// there was nothing to update - no task list yet, or this task isn't in
+// it - so the caller only tells the player about a real change.
+export function completeTask(clientId, taskId) {
+  const list = tasks?.get(clientId);
+  if (!list) return null;
+  const task = list.find((item) => item.id === taskId);
+  if (!task) return null;
+  task.done = true;
+  return list;
+}
+
 export function clearTasks() {
   tasks = null;
 }

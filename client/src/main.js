@@ -104,15 +104,23 @@ app.innerHTML = `
           <ul class="tasks-list" id="tasks-list"></ul>
         </div>
 
-        <button id="test-button" class="test-button">${texts.testButton}</button>
-
-        <button id="test-minigame1-button" class="test-button">${texts.testMinigame1Button}</button>
+        <button id="test-minigames-button" class="test-button">${texts.testMinigamesButton}</button>
 
         <button id="test-chat-button" class="test-button">${texts.testChatButton}</button>
 
         <button id="scan-button" class="test-button">${texts.scanButton}</button>
 
         <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
+      </div>
+    </div>
+
+    <div id="minigames-screen" class="screen hidden">
+      <div class="screen-fit home-buttons">
+        <button id="minigames-back-button" class="minigames-back-button" aria-label="${texts.backToMenuLabel}">‹</button>
+
+        <button id="test-button" class="test-button">${texts.testButton}</button>
+
+        <button id="test-sort-button" class="test-button">${texts.testSortButton}</button>
       </div>
     </div>
 
@@ -191,7 +199,7 @@ const SCREEN_BOTTOM_GAP_PX = 16;
 // is deliberately left out: its drag-and-drop reads real, untransformed
 // pointer positions, so it's sized with vh-relative CSS instead (see
 // .colorgame-board in style.css).
-const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #home-screen, #minigame-screen';
+const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #home-screen, #minigames-screen, #minigame-screen';
 
 // The title only shows on the join screen (see openLobby/handleDisconnectClick
 // below); everywhere else it's hidden so the game screens get the full
@@ -268,6 +276,28 @@ if (document.fonts && document.fonts.ready) {
 }
 
 const homeScreen = document.querySelector('#home-screen');
+
+const minigamesScreen = document.querySelector('#minigames-screen');
+const testMinigamesButton = document.querySelector('#test-minigames-button');
+const minigamesBackButton = document.querySelector('#minigames-back-button');
+
+function openMinigamesMenu() {
+  homeScreen.classList.add('hidden');
+  minigamesScreen.classList.remove('hidden');
+  pushOverlayState();
+  fitActiveScreen();
+}
+
+function closeMinigamesMenu() {
+  minigamesScreen.classList.add('hidden');
+  homeScreen.classList.remove('hidden');
+  fitActiveScreen();
+  closeOverlayState();
+}
+
+testMinigamesButton.addEventListener('click', openMinigamesMenu);
+minigamesBackButton.addEventListener('click', closeMinigamesMenu);
+
 const testButton = document.querySelector('#test-button');
 
 const minigameScreen = document.querySelector('#minigame-screen');
@@ -337,7 +367,7 @@ function newRound() {
 let activeGameClose = closeMiniGame;
 
 function openMiniGame() {
-  homeScreen.classList.add('hidden');
+  minigamesScreen.classList.add('hidden');
   minigameScreen.classList.remove('hidden');
   pushOverlayState();
   activeGameClose = closeMiniGame;
@@ -350,7 +380,7 @@ function openMiniGame() {
 function closeMiniGame() {
   hidePopup();
   minigameScreen.classList.add('hidden');
-  homeScreen.classList.remove('hidden');
+  minigamesScreen.classList.remove('hidden');
   fitActiveScreen();
   closeOverlayState();
 }
@@ -404,7 +434,7 @@ function handleDigitTap(symbol) {
 
 testButton.addEventListener('click', openMiniGame);
 
-const testMinigame1Button = document.querySelector('#test-minigame1-button');
+const testSortButton = document.querySelector('#test-sort-button');
 
 const disconnectButton = document.querySelector('#disconnect-button');
 disconnectButton.addEventListener('click', handleDisconnectClick);
@@ -524,6 +554,10 @@ function checkMatch(square) {
   if (roundsCompleted < TOTAL_ROUNDS) {
     setTimeout(newColorRound, ROUND_RESET_DELAY_MS);
   } else {
+    // This minigame is the "Tri" task - tell the server in case it's one
+    // of this player's 6 assigned tasks, so their task list can update.
+    // No-op server-side (and no visible effect here) if it isn't.
+    if (socket) socket.emit('completeTask', { taskId: 'sort' });
     setTimeout(() => {
       // TODO: swap sounds.success for a dedicated general-task sound once provided.
       showPopup('success', texts.taskSuccess);
@@ -554,7 +588,7 @@ function newColorRound() {
 }
 
 function openColorGame() {
-  homeScreen.classList.add('hidden');
+  minigamesScreen.classList.add('hidden');
   colorGameScreen.classList.remove('hidden');
   pushOverlayState();
   activeGameClose = closeColorGame;
@@ -565,12 +599,12 @@ function openColorGame() {
 function closeColorGame() {
   hidePopup();
   colorGameScreen.classList.add('hidden');
-  homeScreen.classList.remove('hidden');
+  minigamesScreen.classList.remove('hidden');
   fitActiveScreen();
   closeOverlayState();
 }
 
-testMinigame1Button.addEventListener('click', openColorGame);
+testSortButton.addEventListener('click', openColorGame);
 
 const testChatButton = document.querySelector('#test-chat-button');
 const chatScreen = document.querySelector('#chat-screen');
@@ -776,6 +810,8 @@ window.addEventListener('popstate', () => {
     closeColorGame();
   } else if (!chatScreen.classList.contains('hidden')) {
     closeChat();
+  } else if (!minigamesScreen.classList.contains('hidden')) {
+    closeMinigamesMenu();
   }
   closingFromPopState = false;
 });
@@ -1175,6 +1211,7 @@ function connectSocket() {
   socket.on('players', renderLobby);
   socket.on('chatHistory', renderChatHistory);
   socket.on('chatMessage', appendChatMessage);
+  socket.on('tasks', renderTasks);
 
   socket.on('connect', () => {
     if (currentIdentity) sendJoin();

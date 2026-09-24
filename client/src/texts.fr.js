@@ -2,7 +2,8 @@
 export const texts = {
   homeTitle: 'AMONG HOUSE',
   testButton: 'TEST PORTE',
-  testMinigame1Button: 'TEST MINIGAME1',
+  testMinigamesButton: 'TEST MINIGAMES',
+  testSortButton: 'TEST TRI',
   miniGameInstruction: "CODE D'ACCÈS",
   miniGameSuccess: 'OUVERTURE PORTE',
   miniGameFail: 'CODE ERRONÉ',
@@ -31,6 +32,7 @@ export const texts = {
   emptySlot: 'En attente…',
   disconnectButton: 'SE DÉCONNECTER',
   backButtonLabel: 'Retour à la connexion',
+  backToMenuLabel: 'Retour au menu',
   testChatButton: 'TEST CHAT',
   chatTitle: 'Chat',
   chatPlaceholder: 'Message…',

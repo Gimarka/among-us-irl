@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assignTasks, getTasks, clearTasks, TASK_POOL } from './taskState.js';
+import { assignTasks, getTasks, completeTask, clearTasks, TASK_POOL } from './taskState.js';
 
 function players(count) {
   return Array.from({ length: count }, (_, i) => ({ id: `client${i}` }));
@@ -53,4 +53,29 @@ test('clearTasks resets the draw for the next round', () => {
   clearTasks();
   const tasks = assignTasks(players(2));
   assert.equal(tasks.size, 2);
+});
+
+test('completeTask marks a task done when it is in the player\'s list', () => {
+  clearTasks();
+  const roster = players(1);
+  const list = getTasks('client0', roster);
+  const someTaskId = list[0].id;
+  const updated = completeTask('client0', someTaskId);
+  assert.equal(updated.find((task) => task.id === someTaskId).done, true);
+});
+
+test('completeTask returns null (and changes nothing) when the task is not in the player\'s list', () => {
+  clearTasks();
+  const roster = players(1);
+  const list = getTasks('client0', roster);
+  const missingTaskId = TASK_POOL.find((id) => !list.some((task) => task.id === id));
+  const result = completeTask('client0', missingTaskId);
+  assert.equal(result, null);
+  assert.ok(getTasks('client0', roster).every((task) => task.done === false));
+});
+
+test('completeTask returns null for a player with no tasks yet', () => {
+  clearTasks();
+  const result = completeTask('nobody-yet', 'sort');
+  assert.equal(result, null);
 });

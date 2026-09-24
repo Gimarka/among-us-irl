@@ -105,6 +105,33 @@ body {
   filter: brightness(1.4);
 }
 
+/* Same look as .lobby-back-button, but sitting in normal flow at the top
+   of this screen's own button stack rather than fixed to the viewport -
+   this screen (unlike the lobby) isn't the kind of destination other
+   screens need a consistent corner button to get back out of. */
+.minigames-back-button {
+  align-self: flex-start;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #00f0ff;
+  background: #050a0f;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+  color: #00f0ff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+  font-size: 1.6rem;
+  line-height: 1;
+  padding: 0 0 2px;
+  cursor: pointer;
+}
+
+.minigames-back-button:active {
+  filter: brightness(1.4);
+}
+
 .home-buttons {
   display: flex;
   flex-direction: column;
