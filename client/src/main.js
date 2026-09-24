@@ -1682,7 +1682,10 @@ function connectSocket() {
     return socket;
   }
 
-  socket = io(SERVER_URL);
+  // WebSocket straight away, skipping Socket.IO's default start on HTTP
+  // long-polling: behind a hosting proxy, polling replies can be held back,
+  // which delayed lobby updates by seconds.
+  socket = io(SERVER_URL, { transports: ['websocket'] });
   // Kept for the whole session, not just the join handshake, so the lobby
   // (and the join screen's colour picker, before that) stay live as other
   // players join or leave while everyone waits.
