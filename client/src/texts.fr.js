@@ -7,6 +7,8 @@ export const texts = {
   testDinoButton: 'TEST SAUT',
   dinoInstruction: 'SAUTE PAR-DESSUS',
   dinoFail: 'RATÉ !',
+  alertStartButton: 'ALERT START',
+  alertStopButton: 'ALERT STOP',
   miniGameInstruction: "CODE D'ACCÈS",
   miniGameSuccess: 'OUVERTURE PORTE',
   miniGameFail: 'CODE ERRONÉ',

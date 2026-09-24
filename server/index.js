@@ -5,6 +5,7 @@ import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, resolveColo
 import { addMessage, listMessages } from './chatState.js';
 import { getRole } from './roleState.js';
 import { getTasks, completeTask, TASK_POOL } from './taskState.js';
+import { isAlertActive, setAlertActive } from './alertState.js';
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -102,6 +103,7 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
     // instead of only finding out from the next player to join or leave.
     socket.emit('players', listPlayers());
     socket.emit('chatHistory', listMessages());
+    socket.emit('alert', { active: isAlertActive() });
 
     socket.on('join', ({ clientId, name, photo, color, hat } = {}) => {
       const id = cleanClientId(clientId, socket.id);
@@ -181,6 +183,16 @@ export function createGameServer({ disconnectGraceMs = DISCONNECT_GRACE_MS } = {
       if (!id || !TASK_POOL.includes(taskId)) return;
       const tasks = completeTask(id, taskId);
       if (tasks) socket.emit('tasks', tasks);
+    });
+
+    // Broadcast (io.emit), not private - unlike role/tasks, an alert is
+    // meant for every connected phone at once, triggering player included.
+    socket.on('alertStart', () => {
+      io.emit('alert', { active: setAlertActive(true) });
+    });
+
+    socket.on('alertStop', () => {
+      io.emit('alert', { active: setAlertActive(false) });
     });
 
     socket.on('disconnect', (reason) => {

@@ -30,6 +30,34 @@ body {
   display: block;
 }
 
+/* Sits right on top of the tile background (same z-index, later in the
+   DOM so it paints over it) and below every actual screen/button (#app is
+   z-index:1) - a global overlay rather than something drawn per-screen,
+   since an alert has to show no matter which screen a phone happens to be
+   on. Invisible and inert until .active; the flashing itself is the
+   keyframe animation below, only running while active. */
+#alert-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #ff0000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#alert-overlay.active {
+  animation: alert-flash 1s ease-in-out infinite;
+}
+
+@keyframes alert-flash {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 .home {
   position: relative;
   height: 100%;

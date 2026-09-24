@@ -118,6 +118,10 @@ app.innerHTML = `
 
         <button id="scan-button" class="test-button">${texts.scanButton}</button>
 
+        <button id="alert-start-button" class="test-button test-button-danger">${texts.alertStartButton}</button>
+
+        <button id="alert-stop-button" class="test-button">${texts.alertStopButton}</button>
+
         <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
       </div>
     </div>
@@ -461,6 +465,15 @@ const testSortButton = document.querySelector('#test-sort-button');
 
 const disconnectButton = document.querySelector('#disconnect-button');
 disconnectButton.addEventListener('click', handleDisconnectClick);
+
+// Broadcast to every connected phone (see the 'alert' listener in
+// connectSocket below) - not just this one, unlike role/tasks.
+const alertOverlay = document.querySelector('#alert-overlay');
+const alertStartButton = document.querySelector('#alert-start-button');
+const alertStopButton = document.querySelector('#alert-stop-button');
+
+alertStartButton.addEventListener('click', () => { if (socket) socket.emit('alertStart'); });
+alertStopButton.addEventListener('click', () => { if (socket) socket.emit('alertStop'); });
 
 const colorGameScreen = document.querySelector('#colorgame-screen');
 const colorGameBoard = document.querySelector('#colorgame-board');
@@ -1418,6 +1431,7 @@ function connectSocket() {
   socket.on('chatHistory', renderChatHistory);
   socket.on('chatMessage', appendChatMessage);
   socket.on('tasks', renderTasks);
+  socket.on('alert', ({ active }) => alertOverlay.classList.toggle('active', active));
 
   socket.on('connect', () => {
     if (currentIdentity) sendJoin();
