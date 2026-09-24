@@ -567,6 +567,26 @@ const alertOverlay = document.querySelector('#alert-overlay');
 const alertStartButton = document.querySelector('#alert-start-button');
 const alertStopButton = document.querySelector('#alert-stop-button');
 
+const alertTimer = document.querySelector('#alert-timer');
+const alertTimerFill = document.querySelector('#alert-timer-fill');
+
+// The server sends how much of the countdown is left, never a clock time
+// (phone clocks disagree): the bar jumps to that fraction, then a CSS
+// transition empties it over exactly that long. The server also says when
+// it has run out, which is what actually hides it.
+function setAlertState({ active, remainingMs = 0, durationMs = 1 }) {
+  alertOverlay.classList.toggle('active', active);
+  const showTimer = active && remainingMs > 0;
+  alertTimer.classList.toggle('hidden', !showTimer);
+  if (!showTimer) return;
+
+  alertTimerFill.style.transition = 'none';
+  alertTimerFill.style.transform = `scaleX(${remainingMs / durationMs})`;
+  alertTimerFill.getBoundingClientRect(); // commit that starting width before animating from it
+  alertTimerFill.style.transition = `transform ${remainingMs}ms linear`;
+  alertTimerFill.style.transform = 'scaleX(0)';
+}
+
 alertStartButton.addEventListener('click', () => { if (socket) socket.emit('alertStart'); });
 alertStopButton.addEventListener('click', () => { if (socket) socket.emit('alertStop'); });
 
@@ -1666,7 +1686,7 @@ function connectSocket() {
   socket.on('chatHistory', renderChatHistory);
   socket.on('chatMessage', appendChatMessage);
   socket.on('tasks', renderTasks);
-  socket.on('alert', ({ active }) => alertOverlay.classList.toggle('active', active));
+  socket.on('alert', setAlertState);
   socket.on('interference', ({ active }) => setInterferenceActive(active));
   socket.on('welcome', handleWelcome);
   socket.on('role', handleRole);
@@ -1770,7 +1790,7 @@ function handleDisconnectClick() {
   // With the connection closed, this phone won't hear the server switch
   // these off (for instance when leaving ends the session), so it switches
   // them off itself. The next connection sends their real state anyway.
-  alertOverlay.classList.remove('active');
+  setAlertState({ active: false });
   setInterferenceActive(false);
 
   // Reachable from either the menu's "SE DECONNECTER" or the lobby's back

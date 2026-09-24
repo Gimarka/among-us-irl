@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { io as ioClient } from 'socket.io-client';
 import { createGameServer } from './index.js';
-import { setAlertActive } from './alertState.js';
+import { stopAlert } from './alertState.js';
 
 function listenOnRandomPort(server) {
   return new Promise((resolve) => {
@@ -24,7 +24,7 @@ function closeGameServer({ httpServer, io }) {
 }
 
 test('alertStart/alertStop broadcast to every connected socket, and a new connection gets the current state', async () => {
-  setAlertActive(false);
+  stopAlert();
   const { httpServer, io } = createGameServer();
   const port = await listenOnRandomPort(httpServer);
   const url = `http://localhost:${port}`;
@@ -53,6 +53,39 @@ test('alertStart/alertStop broadcast to every connected socket, and a new connec
     assert.equal(aliceStop.active, false);
     assert.equal(bobStop.active, false);
   } finally {
+    alice.close();
+    bob.close();
+    closeGameServer({ httpServer, io });
+  }
+});
+
+test('the countdown bar is shared, and the server itself says when it has run out', async () => {
+  stopAlert();
+  const { httpServer, io } = createGameServer({ alertCountdownMs: 60 });
+  const port = await listenOnRandomPort(httpServer);
+  const url = `http://localhost:${port}`;
+
+  const alice = ioClient(url);
+  const bob = ioClient(url);
+
+  try {
+    await Promise.all([waitForEvent(alice, 'connect'), waitForEvent(bob, 'connect')]);
+
+    const bothStarted = Promise.all([waitForEvent(alice, 'alert'), waitForEvent(bob, 'alert')]);
+    alice.emit('alertStart');
+    const [aliceStart, bobStart] = await bothStarted;
+    assert.equal(aliceStart.durationMs, 60);
+    assert.ok(aliceStart.remainingMs > 0 && aliceStart.remainingMs <= 60);
+    assert.ok(bobStart.remainingMs > 0);
+
+    // No one presses anything: the server's own timer ends the bar for everyone.
+    const bothRanOut = Promise.all([waitForEvent(alice, 'alert'), waitForEvent(bob, 'alert')]);
+    const [aliceEnd, bobEnd] = await bothRanOut;
+    assert.equal(aliceEnd.remainingMs, 0);
+    assert.equal(bobEnd.remainingMs, 0);
+    assert.equal(aliceEnd.active, true, 'the alert keeps flashing after the bar runs out');
+  } finally {
+    stopAlert();
     alice.close();
     bob.close();
     closeGameServer({ httpServer, io });

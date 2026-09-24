@@ -5,7 +5,7 @@ import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, resolveColo
 import { addMessage, listMessages } from './chatState.js';
 import { getRole, assignRoles } from './roleState.js';
 import { getTasks, assignTasks, completeTask, TASK_POOL } from './taskState.js';
-import { isAlertActive, setAlertActive } from './alertState.js';
+import { isAlertActive, getAlertRemainingMs, startAlert, stopAlert } from './alertState.js';
 import { isInterferenceActive, startInterference } from './interferenceState.js';
 import {
   startSession,
@@ -19,6 +19,7 @@ import {
 import { saveCharacter, getCharacter } from './characterStore.js';
 
 const INTERFERENCE_DURATION_MS = 10_000;
+const ALERT_COUNTDOWN_MS = 60_000;
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -91,6 +92,7 @@ const IMMEDIATE_DISCONNECT_REASONS = new Set([
 export function createGameServer({
   disconnectGraceMs = DISCONNECT_GRACE_MS,
   interferenceDurationMs = INTERFERENCE_DURATION_MS,
+  alertCountdownMs = ALERT_COUNTDOWN_MS,
 } = {}) {
   const app = express();
   const httpServer = createServer(app);
@@ -113,13 +115,19 @@ export function createGameServer({
     pendingRemovals.delete(clientId);
   }
 
+  // What every phone needs to show the alert: whether it's flashing, and the
+  // countdown bar's time left (0 once it's run out) out of its full length.
+  function alertPayload() {
+    return { active: isAlertActive(), remainingMs: getAlertRemainingMs(), durationMs: alertCountdownMs };
+  }
+
   // Everything a phone shows that depends on which session is running. Sent
   // to everyone whenever a session starts or ends, since both wipe the chat,
   // alert and interference (see sessionState.js).
   function broadcastSessionState() {
     io.emit('session', { sessionId: getSessionId() });
     io.emit('chatHistory', listMessages());
-    io.emit('alert', { active: isAlertActive() });
+    io.emit('alert', alertPayload());
     io.emit('interference', { active: isInterferenceActive() });
   }
 
@@ -152,7 +160,7 @@ export function createGameServer({
     // instead of only finding out from the next player to join or leave.
     socket.emit('players', listPlayers());
     socket.emit('chatHistory', listMessages());
-    socket.emit('alert', { active: isAlertActive() });
+    socket.emit('alert', alertPayload());
     socket.emit('interference', { active: isInterferenceActive() });
 
     // The first thing a phone asks, before joining: is a session running,
@@ -270,12 +278,16 @@ export function createGameServer({
 
     // Broadcast (io.emit), not private - unlike role/tasks, an alert is
     // meant for every connected phone at once, triggering player included.
+    // Restarts the countdown from full if an alert is already running. When
+    // it runs out, the server itself tells everyone to hide the bar.
     socket.on('alertStart', () => {
-      io.emit('alert', { active: setAlertActive(true) });
+      startAlert(() => io.emit('alert', alertPayload()), alertCountdownMs);
+      io.emit('alert', alertPayload());
     });
 
     socket.on('alertStop', () => {
-      io.emit('alert', { active: setAlertActive(false) });
+      stopAlert();
+      io.emit('alert', alertPayload());
     });
 
     // Broadcast, same as alert - every phone loses its scanner/task list at

@@ -9,7 +9,7 @@
 import { clearMessages } from './chatState.js';
 import { clearRoles } from './roleState.js';
 import { clearTasks } from './taskState.js';
-import { setAlertActive } from './alertState.js';
+import { stopAlert } from './alertState.js';
 import { clearInterference } from './interferenceState.js';
 
 // Counts up for the life of the server process, never reused within it.
@@ -25,7 +25,7 @@ function resetSessionData() {
   clearMessages();
   clearRoles();
   clearTasks();
-  setAlertActive(false);
+  stopAlert();
   clearInterference();
 }
 

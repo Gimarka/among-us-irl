@@ -10,7 +10,7 @@ import {
   markRoleSeen,
 } from './sessionState.js';
 import { addMessage, listMessages } from './chatState.js';
-import { isAlertActive, setAlertActive } from './alertState.js';
+import { isAlertActive, startAlert } from './alertState.js';
 
 test('each new session gets the next id, and none is running after it ends', () => {
   endSession();
@@ -26,7 +26,7 @@ test('each new session gets the next id, and none is running after it ends', () 
 test('starting a session wipes the previous one\'s chat and alert', () => {
   endSession();
   addMessage({ clientId: 'a', name: 'A', text: 'hi' });
-  setAlertActive(true);
+  startAlert(() => {}, 60_000);
   startSession();
   assert.deepEqual(listMessages(), []);
   assert.equal(isAlertActive(), false);
