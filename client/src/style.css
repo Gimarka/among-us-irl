@@ -53,17 +53,17 @@ textarea {
   display: block;
 }
 
-/* Sandwiched between the tile background and the UI: same z-index as
-   #background-fx but later in index.html, so it paints over the tiles, and
-   below #app (z-index:1), so every panel and button stays on top of the
-   flash. A global overlay rather than something drawn per-screen, since an
-   alert has to show no matter which screen a phone happens to be on.
-   Invisible and inert until .active; the flashing itself is the keyframe
-   animation below, only running while active. */
+/* Above #app (z-index:1), so the flash washes over the buttons and panels
+   too; pointer-events:none still lets every tap reach them. Stays below the
+   popups (5 and up) and the mort screen. A global overlay rather than
+   something drawn per-screen, since an alert has to show no matter which
+   screen a phone happens to be on. Invisible and inert until .active; the
+   flashing itself is the keyframe animation below. Its peak is kept at
+   half opacity so the UI underneath stays readable. */
 #alert-overlay {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: 3;
   background: #ff0000;
   opacity: 0;
   pointer-events: none;
@@ -75,10 +75,10 @@ textarea {
 
 @keyframes alert-flash {
   0%, 100% {
-    opacity: 0.25;
+    opacity: 0.18;
   }
   50% {
-    opacity: 0.7;
+    opacity: 0.5;
   }
 }
 
