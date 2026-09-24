@@ -1363,6 +1363,83 @@ textarea {
   filter: brightness(1.4);
 }
 
+/* A personal "I'm dead" screen, meant to take over everything else on the
+   phone - above even the role reveal (z-index:40). The QR sits in its own
+   white panel since a red background would otherwise sit right behind the
+   code's white modules and make it unreadable. */
+.mort-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #a80000;
+}
+
+.mort-qr-panel {
+  display: flex;
+  padding: 16px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.mort-qr-panel canvas {
+  display: block;
+}
+
+.mort-skull {
+  position: fixed;
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.7));
+}
+
+.mort-skull-tl {
+  top: 16px;
+  left: 16px;
+}
+
+.mort-skull-tr {
+  top: 16px;
+  right: 16px;
+}
+
+.mort-skull-bl {
+  bottom: 16px;
+  left: 16px;
+}
+
+.mort-skull-br {
+  bottom: 16px;
+  right: 16px;
+}
+
+.mort-close-button {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mort-close-button:active {
+  filter: brightness(1.4);
+}
+
 #app {
   position: relative;
   z-index: 1;

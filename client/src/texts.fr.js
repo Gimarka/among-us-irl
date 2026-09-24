@@ -10,6 +10,8 @@ export const texts = {
   alertStartButton: 'ALERT START',
   alertStopButton: 'ALERT STOP',
   interferenceButton: 'INTERFÉRENCE',
+  mortButton: 'MORT 💀',
+  mortQrPayload: 'MORT',
   miniGameInstruction: "CODE D'ACCÈS",
   miniGameSuccess: 'OUVERTURE PORTE',
   miniGameFail: 'CODE ERRONÉ',

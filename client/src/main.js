@@ -1,5 +1,6 @@
 import { io } from 'socket.io-client';
 import { Html5Qrcode } from 'html5-qrcode';
+import QRCode from 'qrcode';
 import { texts } from './texts.fr.js';
 import { sounds, preloadAssets } from './assets.js';
 import { initBackground } from './background.js';
@@ -116,12 +117,12 @@ app.innerHTML = `
 
         <button id="test-minigames-button" class="test-button">${texts.testMinigamesButton}</button>
 
-        <button id="test-chat-button" class="test-button">${texts.testChatButton}</button>
-
         <div class="scan-button-wrap">
           <button id="scan-button" class="test-button">${texts.scanButton}</button>
           <canvas class="interference-canvas hidden" id="scan-interference-canvas"></canvas>
         </div>
+
+        <button id="mort-button" class="test-button test-button-danger">${texts.mortButton}</button>
 
         <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
       </div>
@@ -132,6 +133,8 @@ app.innerHTML = `
         <button id="minigames-back-button" class="minigames-back-button" aria-label="${texts.backToMenuLabel}">‹</button>
 
         <button id="test-button" class="test-button">${texts.testButton}</button>
+
+        <button id="test-chat-button" class="test-button">${texts.testChatButton}</button>
 
         <button id="test-sort-button" class="test-button">${texts.testSortButton}</button>
 
@@ -213,6 +216,17 @@ app.innerHTML = `
         </div>
         <p class="test-result hidden" id="scan-result"></p>
         <button id="scan-again-button" class="test-button hidden">${texts.scanAgainButton}</button>
+      </div>
+    </div>
+
+    <div class="mort-overlay hidden" id="mort-overlay">
+      <button id="mort-close-button" class="mort-close-button" aria-label="${texts.closeButtonLabel}">×</button>
+      <span class="mort-skull mort-skull-tl" aria-hidden="true">💀</span>
+      <span class="mort-skull mort-skull-tr" aria-hidden="true">💀</span>
+      <span class="mort-skull mort-skull-bl" aria-hidden="true">💀</span>
+      <span class="mort-skull mort-skull-br" aria-hidden="true">💀</span>
+      <div class="mort-qr-panel">
+        <canvas id="mort-qr-canvas"></canvas>
       </div>
     </div>
   </div>
@@ -961,7 +975,7 @@ function renderChatHistory(messages) {
 }
 
 function openChat() {
-  homeScreen.classList.add('hidden');
+  minigamesScreen.classList.add('hidden');
   chatScreen.classList.remove('hidden');
   pushOverlayState();
   chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -970,7 +984,7 @@ function openChat() {
 
 function closeChat() {
   chatScreen.classList.add('hidden');
-  homeScreen.classList.remove('hidden');
+  minigamesScreen.classList.remove('hidden');
   fitActiveScreen();
   closeOverlayState();
 }
@@ -1047,6 +1061,29 @@ scanButton.addEventListener('click', openScanPopup);
 scanCloseButton.addEventListener('click', closeScanPopup);
 scanAgainButton.addEventListener('click', startScan);
 
+// A local, personal "I'm dead" screen - not broadcast to anyone else. The
+// QR code carries this player's name so another phone could scan it later
+// (e.g. reporting the body), but nothing here talks to the server.
+const mortButton = document.querySelector('#mort-button');
+const mortOverlay = document.querySelector('#mort-overlay');
+const mortCloseButton = document.querySelector('#mort-close-button');
+const mortQrCanvas = document.querySelector('#mort-qr-canvas');
+
+function openMortScreen() {
+  const name = (currentIdentity && currentIdentity.name) || '';
+  QRCode.toCanvas(mortQrCanvas, `${name} ${texts.mortQrPayload}`, { width: 220, margin: 1 });
+  mortOverlay.classList.remove('hidden');
+  pushOverlayState();
+}
+
+function closeMortScreen() {
+  mortOverlay.classList.add('hidden');
+  closeOverlayState();
+}
+
+mortButton.addEventListener('click', openMortScreen);
+mortCloseButton.addEventListener('click', closeMortScreen);
+
 // The phone's OS suspends the camera when the screen locks or the tab
 // is backgrounded; the video feed stays frozen on the last frame when
 // the page comes back unless we restart the camera stream ourselves.
@@ -1081,6 +1118,8 @@ window.addEventListener('popstate', () => {
     closeMiniGame();
   } else if (!scanPopup.classList.contains('hidden')) {
     closeScanPopup();
+  } else if (!mortOverlay.classList.contains('hidden')) {
+    closeMortScreen();
   } else if (!colorGameScreen.classList.contains('hidden')) {
     closeColorGame();
   } else if (!dinoScreen.classList.contains('hidden')) {
