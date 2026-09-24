@@ -1579,10 +1579,22 @@ function connectSocket() {
   return socket;
 }
 
+// Best-effort only: the Fullscreen API needs a direct user gesture to work
+// at all (this click is one), and iOS Safari doesn't support it regardless
+// - it just silently does nothing there, joining continues normally either way.
+function requestAppFullscreen() {
+  try {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  } catch {
+    // Some browsers throw synchronously rather than rejecting the promise.
+  }
+}
+
 function handleJoinClick() {
   const name = joinNameInput.value.trim();
   if (!name) return;
 
+  requestAppFullscreen();
   joinButton.disabled = true;
   currentIdentity = { name, photo: photoDataUrl, color: suitColor, hat: HATS[hatIndex].id };
   saveIdentity(currentIdentity);
