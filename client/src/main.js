@@ -125,6 +125,29 @@ app.innerHTML = `
         <button id="mort-button" class="test-button test-button-danger">${texts.mortButton}</button>
 
         <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
+
+        <button id="fullscreen-button" class="test-button fullscreen-button" aria-label="${texts.fullscreenButton}">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="fsV1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#a3f3ff"/>
+                <stop offset="100%" stop-color="#38b6ff"/>
+              </linearGradient>
+            </defs>
+            <path d="M 70 35 L 45 35 C 39 35, 35 39, 35 45 L 35 70" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 70 35 L 45 35 C 39 35, 35 39, 35 45 L 35 70" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 130 35 L 155 35 C 161 35, 165 39, 165 45 L 165 70" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 130 35 L 155 35 C 161 35, 165 39, 165 45 L 165 70" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 35 130 L 35 155 C 35 161, 39 165, 45 165 L 70 165" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 35 130 L 35 155 C 35 161, 39 165, 45 165 L 70 165" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 165 130 L 165 155 C 165 161, 161 165, 155 165 L 130 165" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M 165 130 L 165 155 C 165 161, 161 165, 155 165 L 130 165" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <polygon points="40,40 65,42 42,65" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
+            <polygon points="160,40 135,42 158,65" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
+            <polygon points="40,160 65,158 42,135" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
+            <polygon points="160,160 135,158 158,135" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -251,38 +274,6 @@ document.querySelector('#alert-overlay').insertAdjacentHTML(
         <canvas id="mort-qr-canvas"></canvas>
       </div>
     </div>
-  `,
-);
-
-// Independent of any single screen's buttons - fixed in the corner, present
-// no matter which screen is showing, so a player can always get back into
-// fullscreen after their phone slept and dropped it (see toggleAppFullscreen
-// further down).
-document.body.insertAdjacentHTML(
-  'beforeend',
-  `
-    <button id="fullscreen-button" class="fullscreen-button" aria-label="${texts.fullscreenButton}">
-      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
-        <defs>
-          <linearGradient id="fsV1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#a3f3ff"/>
-            <stop offset="100%" stop-color="#38b6ff"/>
-          </linearGradient>
-        </defs>
-        <path d="M 70 35 L 45 35 C 39 35, 35 39, 35 45 L 35 70" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M 70 35 L 45 35 C 39 35, 35 39, 35 45 L 35 70" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M 130 35 L 155 35 C 161 35, 165 39, 165 45 L 165 70" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M 130 35 L 155 35 C 161 35, 165 39, 165 45 L 165 70" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M 35 130 L 35 155 C 35 161, 39 165, 45 165 L 70 165" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M 35 130 L 35 155 C 35 161, 39 165, 45 165 L 70 165" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M 165 130 L 165 155 C 165 161, 161 165, 155 165 L 130 165" fill="none" stroke="#101419" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M 165 130 L 165 155 C 165 161, 161 165, 155 165 L 130 165" fill="none" stroke="url(#fsV1Grad)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-        <polygon points="40,40 65,42 42,65" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
-        <polygon points="160,40 135,42 158,65" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
-        <polygon points="40,160 65,158 42,135" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
-        <polygon points="160,160 135,158 158,135" fill="url(#fsV1Grad)" stroke="#101419" stroke-width="6" stroke-linejoin="round"/>
-      </svg>
-    </button>
   `,
 );
 
