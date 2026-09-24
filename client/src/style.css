@@ -1486,12 +1486,31 @@ textarea {
   gap: 12px;
 }
 
-/* Just an icon instead of text inside the same .test-button shape as every
-   other main-menu button. */
+/* Its own bordered/glowing container, same look as the rest of the app's
+   panels, rather than the other main-menu buttons' background-SVG shape -
+   last in the button list, but visually its own thing. */
+.fullscreen-button {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
+  cursor: pointer;
+}
+
 .fullscreen-button svg {
   width: 34px;
   height: 34px;
   display: block;
+}
+
+.fullscreen-button:active {
+  filter: brightness(1.3);
 }
 
 #app {

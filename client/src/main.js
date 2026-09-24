@@ -126,7 +126,7 @@ app.innerHTML = `
 
         <button id="disconnect-button" class="test-button test-button-danger">${texts.disconnectButton}</button>
 
-        <button id="fullscreen-button" class="test-button fullscreen-button" aria-label="${texts.fullscreenButton}">
+        <button id="fullscreen-button" class="fullscreen-button" aria-label="${texts.fullscreenButton}">
           <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
             <defs>
               <linearGradient id="fsV1Grad" x1="0%" y1="0%" x2="100%" y2="100%">
