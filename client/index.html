@@ -3,7 +3,21 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <meta name="theme-color" content="#0a1018" />
+    <!-- Lets a phone that added this to its home screen launch without the
+         browser's address bar/tab UI - see docs/TECH.md. Regular Android
+         Chrome tabs also get a best-effort true-fullscreen nudge from the
+         join button (see requestAppFullscreen in main.js); iOS Safari has
+         no equivalent for a page that hasn't been added to the home
+         screen, which is why the manifest/home-screen route is the one
+         that actually works everywhere. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Among House" />
     <title>Among Us IRL</title>
   </head>
   <body>

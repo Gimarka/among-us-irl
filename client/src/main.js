@@ -1579,10 +1579,24 @@ function connectSocket() {
   return socket;
 }
 
+// Best-effort only: the Fullscreen API needs a direct user gesture to work
+// at all, and iOS Safari doesn't support it on a plain (non-home-screen)
+// page regardless - that's what the manifest/apple-mobile-web-app meta tags
+// in index.html are for instead. Never blocks the join itself.
+function requestAppFullscreen() {
+  try {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  } catch {
+    // Some browsers throw synchronously rather than rejecting; either way
+    // the player still joins normally, just without hiding the browser UI.
+  }
+}
+
 function handleJoinClick() {
   const name = joinNameInput.value.trim();
   if (!name) return;
 
+  requestAppFullscreen();
   joinButton.disabled = true;
   currentIdentity = { name, photo: photoDataUrl, color: suitColor, hat: HATS[hatIndex].id };
   saveIdentity(currentIdentity);
