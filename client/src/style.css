@@ -1530,6 +1530,7 @@ body.no-alert-flash .alert-timer {
 .confirm-buttons {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
 }
 
