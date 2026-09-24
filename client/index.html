@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <!-- Tells Chrome for Android's "auto-darken web pages" feature that this
+         page is already dark-themed by design, so it doesn't try to
+         heuristically recolor elements on top of our own colors - which is
+         the likely cause of the scan button rendering as a flat purple
+         instead of its real SVG background on some phones. The CSS
+         `color-scheme: dark` in style.css alone isn't enough, since Chrome's
+         heuristic checks before the stylesheet has even loaded. -->
+    <meta name="color-scheme" content="dark" />
     <title>Among Us IRL</title>
   </head>
   <body>
