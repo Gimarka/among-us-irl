@@ -229,6 +229,16 @@ app.innerHTML = `
         <canvas id="mort-qr-canvas"></canvas>
       </div>
     </div>
+
+    <div class="confirm-popup hidden" id="mort-confirm-popup">
+      <div class="confirm-panel">
+        <p class="confirm-text">${texts.mortConfirmTitle}</p>
+        <div class="confirm-buttons">
+          <button id="mort-confirm-yes" class="test-button test-button-danger">${texts.mortConfirmYes}</button>
+          <button id="mort-confirm-cancel" class="test-button">${texts.mortConfirmCancel}</button>
+        </div>
+      </div>
+    </div>
   </div>
 `;
 
@@ -1068,7 +1078,14 @@ const mortButton = document.querySelector('#mort-button');
 const mortOverlay = document.querySelector('#mort-overlay');
 const mortCloseButton = document.querySelector('#mort-close-button');
 const mortQrCanvas = document.querySelector('#mort-qr-canvas');
+const mortConfirmPopup = document.querySelector('#mort-confirm-popup');
+const mortConfirmYesButton = document.querySelector('#mort-confirm-yes');
+const mortConfirmCancelButton = document.querySelector('#mort-confirm-cancel');
 
+// One accidental tap shouldn't end someone's game - a confirmation step
+// comes first (see openMortConfirm below), same depth-stacking pattern as
+// the minigames menu opening a sub-game (push once per screen, no
+// closeOverlayState in between - see openMiniGame for the same shape).
 function openMortScreen() {
   const name = (currentIdentity && currentIdentity.name) || '';
   QRCode.toCanvas(mortQrCanvas, `${name} ${texts.mortQrPayload}`, { width: 220, margin: 1 });
@@ -1081,7 +1098,22 @@ function closeMortScreen() {
   closeOverlayState();
 }
 
-mortButton.addEventListener('click', openMortScreen);
+function openMortConfirm() {
+  mortConfirmPopup.classList.remove('hidden');
+  pushOverlayState();
+}
+
+function closeMortConfirm() {
+  mortConfirmPopup.classList.add('hidden');
+  closeOverlayState();
+}
+
+mortButton.addEventListener('click', openMortConfirm);
+mortConfirmCancelButton.addEventListener('click', closeMortConfirm);
+mortConfirmYesButton.addEventListener('click', () => {
+  mortConfirmPopup.classList.add('hidden');
+  openMortScreen();
+});
 mortCloseButton.addEventListener('click', closeMortScreen);
 
 // The phone's OS suspends the camera when the screen locks or the tab
@@ -1120,6 +1152,8 @@ window.addEventListener('popstate', () => {
     closeScanPopup();
   } else if (!mortOverlay.classList.contains('hidden')) {
     closeMortScreen();
+  } else if (!mortConfirmPopup.classList.contains('hidden')) {
+    closeMortConfirm();
   } else if (!colorGameScreen.classList.contains('hidden')) {
     closeColorGame();
   } else if (!dinoScreen.classList.contains('hidden')) {

@@ -1391,7 +1391,7 @@ textarea {
 
 .mort-skull {
   position: fixed;
-  font-size: 2.6rem;
+  font-size: 4.5rem;
   line-height: 1;
   filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.7));
 }
@@ -1438,6 +1438,52 @@ textarea {
 
 .mort-close-button:active {
   filter: brightness(1.4);
+}
+
+/* A yes/no guard in front of anything that can't be undone from the app
+   itself (declaring yourself dead) - same dim-backdrop-plus-panel look as
+   the other popups, sitting below the mort screen it leads into. */
+.confirm-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.confirm-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 24px 20px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
+.confirm-text {
+  margin: 0;
+  max-width: 240px;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.7);
+}
+
+.confirm-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 #app {
