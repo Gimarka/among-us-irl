@@ -22,11 +22,8 @@ body {
 /* Without these, holding a tap a little too long anywhere (not just a real
    button/input) makes mobile Chrome/Safari treat it as a long-press: a
    text-selection highlight, the native copy/paste callout, or Chrome's own
-   blue/purple tap-highlight flash (the same one it puts on links). Applied
-   to every element (not just body) since -webkit-tap-highlight-color in
-   particular isn't reliably inherited. The keyword `transparent` is known
-   to not reliably suppress that highlight on some Android Chrome versions -
-   an explicit zero-alpha rgba() is the documented, more reliable value.
+   blue tap-highlight flash. Applied to every element (not just body) since
+   -webkit-tap-highlight-color in particular isn't reliably inherited.
    Text inputs are the one place selection/typing must still work normally,
    so they opt back in below. */
 body,
@@ -1557,12 +1554,6 @@ input[type='text'] {
 }
 
 button {
-  /* Without this, Android Chrome draws its own native pressed-state
-     highlight over a button's real background using the phone's system
-     accent colour (a solid purple/violet wash on Material You phones) -
-     it overrides even a custom background-image, which is why buttons
-     styled with menu-button.svg would flash purple on tap despite the
-     tap-highlight-color reset above already being in place. */
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
@@ -1574,10 +1565,6 @@ button {
   background: #6c5ce7;
   color: #fff;
   cursor: pointer;
-}
-
-button:active {
-  background: #5849c4;
 }
 
 .players {
