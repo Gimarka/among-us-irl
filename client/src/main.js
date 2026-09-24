@@ -47,7 +47,7 @@ const NAME_MAX_LENGTH = 20;
 const CHAT_MAX_LENGTH = 300;
 
 // How many obstacles the jump game requires to win.
-const DINO_TARGET_COUNT = 12;
+const DINO_TARGET_COUNT = 15;
 
 function lobbySlotMarkup(index) {
   return `
@@ -647,7 +647,7 @@ const DINO_X = 30; // matches .dino-character's fixed `left`
 const DINO_GRAVITY = 2200; // px/s^2, pulls the jump back down
 const DINO_JUMP_SPEED = 650; // px/s, upward speed set at the moment of a tap
 const OBSTACLE_BASE_SPEED = 220; // px/s at the start of a run
-const OBSTACLE_MAX_SPEED_MULTIPLIER = 1.3; // 30% faster once all 12 are cleared
+const OBSTACLE_MAX_SPEED_MULTIPLIER = 1.6; // 60% faster once all are cleared
 const OBSTACLE_MIN_INTERVAL_MS = 700;
 const OBSTACLE_MAX_INTERVAL_MS = 2000;
 const OBSTACLE_MIN_HEIGHT = 24;
@@ -667,7 +667,7 @@ function updateDinoCounter() {
 }
 
 // Ramps linearly from the base speed up to 30% faster as the run
-// progresses towards its 12 clears, so every obstacle already on screen
+// progresses towards its target clear count, so every obstacle already on screen
 // speeds up together rather than each one keeping whatever speed it
 // spawned at.
 function currentObstacleSpeed() {
