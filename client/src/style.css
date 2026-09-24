@@ -727,6 +727,12 @@ body.no-alert-flash .alert-timer {
   text-decoration: line-through;
 }
 
+/* The emergency row added while the alert is on (see renderTasks). */
+.task-item.task-alert .task-label {
+  color: #ff4d4d;
+  text-shadow: 0 0 6px rgba(255, 77, 77, 0.8);
+}
+
 /* The chat screen fills its .screen box top to bottom (header, then the
    scrollable log, then the input row) instead of the centred stack every
    other screen uses, since a message log needs to grow and scroll rather

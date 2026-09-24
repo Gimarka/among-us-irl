@@ -56,6 +56,7 @@ export const texts = {
   roleTraitor: 'TRAÎTRE',
   // Keyed by the task ids the server hands out (see server/taskState.js) -
   // the id itself never appears on screen, only this French label.
+  oxygenTask: 'Oxygène',
   taskNames: {
     wires: 'Câblage',
     'card-swipe': 'Carte magnétique',

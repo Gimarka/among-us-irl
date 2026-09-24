@@ -576,6 +576,10 @@ const alertTimerFill = document.querySelector('#alert-timer-fill');
 // it has run out, which is what actually hides it.
 function setAlertState({ active, remainingMs = 0, durationMs = 1 }) {
   alertOverlay.classList.toggle('active', active);
+  if (active !== alertIsActive) {
+    alertIsActive = active;
+    renderTasks(lastTasks);
+  }
   const showTimer = active && remainingMs > 0;
   alertTimer.classList.toggle('hidden', !showTimer);
   if (!showTimer) return;
@@ -1390,27 +1394,37 @@ const tasksList = document.querySelector('#tasks-list');
 // mini-game hooked up yet to actually mark one done, so every symbol shown
 // here is the empty box for now; the done/green-check styling is already
 // wired up for whenever a mini-game starts reporting completion.
+let lastTasks = []; // kept so the list can be redrawn when the alert starts or stops
+let alertIsActive = false;
+
+function appendTaskItem(labelText, { done = false, alert = false } = {}) {
+  const item = document.createElement('li');
+  item.className = 'task-item';
+  item.classList.toggle('task-done', done);
+  item.classList.toggle('task-alert', alert);
+
+  // Empty until done rather than an unchecked-box glyph - the check
+  // mark is the only symbol this list ever shows.
+  const box = document.createElement('span');
+  box.className = 'task-checkbox';
+  box.textContent = done ? '✓' : '';
+
+  const label = document.createElement('span');
+  label.className = 'task-label';
+  label.textContent = labelText;
+
+  item.appendChild(box);
+  item.appendChild(label);
+  tasksList.appendChild(item);
+}
+
+// While the alert is on, every player's list gets a red "Oxygène" row on
+// top of their own tasks.
 function renderTasks(tasks) {
+  lastTasks = tasks;
   tasksList.innerHTML = '';
-  tasks.forEach((task) => {
-    const item = document.createElement('li');
-    item.className = 'task-item';
-    item.classList.toggle('task-done', task.done);
-
-    // Empty until done rather than an unchecked-box glyph - the check
-    // mark is the only symbol this list ever shows.
-    const box = document.createElement('span');
-    box.className = 'task-checkbox';
-    box.textContent = task.done ? '✓' : '';
-
-    const label = document.createElement('span');
-    label.className = 'task-label';
-    label.textContent = texts.taskNames[task.id] || task.id;
-
-    item.appendChild(box);
-    item.appendChild(label);
-    tasksList.appendChild(item);
-  });
+  if (alertIsActive) appendTaskItem(texts.oxygenTask, { alert: true });
+  tasks.forEach((task) => appendTaskItem(texts.taskNames[task.id] || task.id, { done: task.done }));
 }
 
 // JOUER starts the session for the whole lobby, CONTINUER joins the running
