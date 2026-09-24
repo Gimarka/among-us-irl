@@ -15,6 +15,22 @@ export const TASK_POOL = [
   'steady-hand',
 ];
 
+// Where each task is played, fixed by the house layout (see
+// docs/MINIGAMES.md and docs/HOUSE_MAP.md) - not drawn, so the same for every
+// player and every session. Ids match the room QR codes (`room-kitchen`...);
+// the French names live in the client's texts.fr.js.
+export const TASK_ROOMS = {
+  wires: 'garage',
+  'card-swipe': 'bedroom-1',
+  download: 'garden',
+  fuel: 'bathroom',
+  calibrate: 'bedroom-2',
+  simon: 'bedroom-2',
+  clean: 'kitchen',
+  sort: 'kitchen',
+  'steady-hand': 'garage',
+};
+
 const TASKS_PER_PLAYER = 6;
 
 let tasks = null; // clientId -> [{ id, done }], or null before a round has started
@@ -31,7 +47,7 @@ function shuffled(array) {
 function drawTaskList() {
   return shuffled(TASK_POOL)
     .slice(0, TASKS_PER_PLAYER)
-    .map((id) => ({ id, done: false }));
+    .map((id) => ({ id, room: TASK_ROOMS[id], done: false }));
 }
 
 // Draws task lists for the given roster and remembers them for the round.

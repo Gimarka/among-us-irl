@@ -1424,7 +1424,11 @@ function renderTasks(tasks) {
   lastTasks = tasks;
   tasksList.innerHTML = '';
   if (alertIsActive) appendTaskItem(texts.oxygenTask, { alert: true });
-  tasks.forEach((task) => appendTaskItem(texts.taskNames[task.id] || task.id, { done: task.done }));
+  tasks.forEach((task) => {
+    const name = texts.taskNames[task.id] || task.id;
+    const room = texts.roomNames[task.room];
+    appendTaskItem(room ? `${name} | ${room}` : name, { done: task.done });
+  });
 }
 
 // JOUER starts the session for the whole lobby, CONTINUER joins the running

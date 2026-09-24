@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assignTasks, getTasks, completeTask, clearTasks, TASK_POOL } from './taskState.js';
+import { assignTasks, getTasks, completeTask, clearTasks, TASK_POOL, TASK_ROOMS } from './taskState.js';
 
 function players(count) {
   return Array.from({ length: count }, (_, i) => ({ id: `client${i}` }));
@@ -78,4 +78,10 @@ test('completeTask returns null for a player with no tasks yet', () => {
   clearTasks();
   const result = completeTask('nobody-yet', 'sort');
   assert.equal(result, null);
+});
+
+test('every task in the pool has a fixed room, and drawn tasks carry it', () => {
+  TASK_POOL.forEach((id) => assert.ok(TASK_ROOMS[id], `${id} has no room`));
+  const [list] = assignTasks(players(1)).values();
+  list.forEach((task) => assert.equal(task.room, TASK_ROOMS[task.id]));
 });

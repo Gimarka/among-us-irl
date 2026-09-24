@@ -57,6 +57,16 @@ export const texts = {
   // Keyed by the task ids the server hands out (see server/taskState.js) -
   // the id itself never appears on screen, only this French label.
   oxygenTask: 'Oxygène',
+  // Keyed by the room ids the server attaches to each task (see TASK_ROOMS
+  // in server/taskState.js).
+  roomNames: {
+    kitchen: 'Cuisine',
+    bathroom: 'Salle de bain',
+    'bedroom-1': 'Chambre 1',
+    'bedroom-2': 'Chambre 2',
+    garage: 'Garage',
+    garden: 'Jardin',
+  },
   taskNames: {
     wires: 'Câblage',
     'card-swipe': 'Carte magnétique',
