@@ -993,6 +993,14 @@ body {
   justify-content: center;
   gap: 20px;
   cursor: pointer;
+  /* Without these, holding a tap a little too long on a plain div (rather
+     than a real button/input) makes mobile Chrome/Safari treat it as a
+     long-press: text-selection highlight or the native callout menu pops
+     up over the game instead of just registering the jump. */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 /* Bordered/glowing panel, same as everywhere else - holds the instruction
