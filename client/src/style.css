@@ -1231,8 +1231,8 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
 
 .dishgame-dish {
   position: absolute;
-  width: 96px; /* keep in sync with DISH_WIDTH/DISH_HEIGHT in main.js */
-  height: 64px;
+  width: 76.8px; /* keep in sync with DISH_WIDTH/DISH_HEIGHT in main.js */
+  height: 51.2px;
   color: #00f0ff;
   filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.8));
   pointer-events: none;

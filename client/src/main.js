@@ -1020,11 +1020,11 @@ const dish = document.querySelector('#dishgame-dish');
 const dishSpeed = document.querySelector('#dishgame-speed');
 const testDishButton = document.querySelector('#test-dish-button');
 
-const DISH_WIDTH = 96;
-const DISH_HEIGHT = 64;
+const DISH_WIDTH = 76.8;
+const DISH_HEIGHT = 51.2;
 const DISH_MIN_MBPS = 2;
 const DISH_MAX_MBPS = 5000;
-const DISH_WIN_RADIUS = 12.6; // px from the hidden spot that counts as full speed
+const DISH_WIN_RADIUS = 10; // px from the hidden spot that counts as full speed
 const DISH_HOLD_MS = 1000; // how long full speed must be held to win
 const DISH_MIN_START_DISTANCE = 0.3; // of the board's diagonal, so it never starts next to the spot
 const DISH_FALLOFF = 0.6; // of the board's diagonal: any farther than this is the slowest speed
