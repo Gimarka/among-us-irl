@@ -80,6 +80,9 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Each task has a fixed room (from the house map), shown in the task list as
+  "Tri | Cuisine". During an alert, every player's list shows a red
+  "Oxygène | Terrasse" row on top; the Terrace is a new room for it.
 - Game sessions. The first "JOUER" creates a session (numbered 1, 2, 3...,
   counting up for as long as the server runs) and sends everyone in the
   lobby at that moment to the role reveal together. The session holds all

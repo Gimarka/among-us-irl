@@ -12,6 +12,7 @@ One specific house, possibly several floors. Stairs have no special rules.
 | Bedroom 2 | Task room, isolated | Gated | Simon, Calibrate |
 | Garage | Task room, far | Open | Wires, Steady hand |
 | Garden | Task room, outdoor | Open | Download |
+| Terrace | Where the Oxygène emergency is fixed during an alert | Open | Oxygène (alert only) |
 
 ## Emergency event locations
 | Version | Fix location |

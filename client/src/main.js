@@ -1418,12 +1418,12 @@ function appendTaskItem(labelText, { done = false, alert = false } = {}) {
   tasksList.appendChild(item);
 }
 
-// While the alert is on, every player's list gets a red "Oxygène" row on
-// top of their own tasks.
+// While the alert is on, every player's list gets a red "Oxygène | Terrasse"
+// row on top of their own tasks.
 function renderTasks(tasks) {
   lastTasks = tasks;
   tasksList.innerHTML = '';
-  if (alertIsActive) appendTaskItem(texts.oxygenTask, { alert: true });
+  if (alertIsActive) appendTaskItem(`${texts.oxygenTask} | ${texts.roomNames.terrace}`, { alert: true });
   tasks.forEach((task) => {
     const name = texts.taskNames[task.id] || task.id;
     const room = texts.roomNames[task.room];

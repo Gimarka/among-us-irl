@@ -66,6 +66,7 @@ export const texts = {
     'bedroom-2': 'Chambre 2',
     garage: 'Garage',
     garden: 'Jardin',
+    terrace: 'Terrasse',
   },
   taskNames: {
     wires: 'Câblage',
