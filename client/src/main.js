@@ -1069,6 +1069,7 @@ function updateDish() {
   dishSpeed.textContent = formatSpeed(mbps);
   dishSpeed.style.color = color;
   dishSpeed.style.textShadow = `0 0 8px ${color}`;
+  dishSpeed.classList.toggle('at-max', signal === 1); // fast flash: "hold it here"
 
   if (dishWon) return;
   if (signal === 1 && !dishHoldTimer) {

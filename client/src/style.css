@@ -1212,6 +1212,18 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
   font-weight: 800;
 }
 
+/* At 5 Gb/s the readout flashes fast, telling the player they've found the
+   spot and just need to hold still. */
+.dishgame-speed.at-max {
+  animation: dish-speed-flash 0.25s steps(1, end) infinite;
+}
+
+@keyframes dish-speed-flash {
+  50% {
+    opacity: 0.15;
+  }
+}
+
 .dishgame-board {
   touch-action: none; /* the finger drags the dish, never scrolls the page */
   cursor: pointer;
