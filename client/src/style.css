@@ -1049,7 +1049,8 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
   margin: 0;
 }
 
-.colorgame {
+.colorgame,
+.dishgame {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1077,7 +1078,8 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
    directly, since its drag-and-drop math reads its own getBoundingClientRect
    as the full draggable area; padding the board would shrink that area
    without the position math knowing, letting shapes drift into the border. */
-.colorgame-board-panel {
+.colorgame-board-panel,
+.dishgame-board-panel {
   padding: 12px;
   box-sizing: border-box;
   border: 2px solid #00f0ff;
@@ -1086,7 +1088,8 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
 }
 
-.colorgame-board {
+.colorgame-board,
+.dishgame-board {
   position: relative;
   width: 300px;
   max-width: 85vw;
@@ -1175,7 +1178,8 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
 
 /* Bordered/glowing panel, same as everywhere else - holds the instruction
    label and the live obstacle counter together as one unit. */
-.dino-instruction {
+.dino-instruction,
+.dishgame-instruction {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1197,6 +1201,35 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
   font-weight: 800;
   color: #fff;
   text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+}
+
+/* The live speed readout. Its colour (red at 2 Mb/s to green at 5 Gb/s) is
+   set from main.js as the dish moves. */
+.dishgame-speed {
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.dishgame-board {
+  touch-action: none; /* the finger drags the dish, never scrolls the page */
+  cursor: pointer;
+}
+
+.dishgame-dish {
+  position: absolute;
+  width: 120px; /* keep in sync with DISH_WIDTH/DISH_HEIGHT in main.js */
+  height: 80px;
+  color: #00f0ff;
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.8));
+  pointer-events: none;
+}
+
+.dishgame-dish svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* Same panel treatment wrapped around the track itself - see the note on

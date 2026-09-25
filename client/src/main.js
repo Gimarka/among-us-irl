@@ -32,6 +32,10 @@ const CAMERA_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://
 const SHUTTER_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="5.2" fill="currentColor"/></svg>`;
 const RETAKE_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>`;
 
+// The satellite dish for the signal minigame. Drawn with currentColor so CSS
+// gives it the app's cyan (see .dishgame-dish).
+const DISH_ICON = `<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><g transform="translate(0,400) scale(0.05,-0.05)" fill="currentColor"><path d="M4165 7859 c-971 -173 -1177 -1693 -420 -3091 49 -89 108 -191 133 -226 51 -70 53 -63 -75 -210 -300 -343 -229 -885 142 -1074 55 -29 74 -50 67 -74 -35 -114 -354 -1253 -376 -1340 -26 -104 -29 -107 -142 -153 -187 -76 -181 -67 -381 -601 -136 -365 -146 -407 -107 -482 268 -518 2868 -608 3577 -124 181 123 182 173 15 582 -253 619 -271 636 -743 716 -126 21 -157 33 -168 67 -17 58 -436 1090 -484 1195 -52 114 -47 115 101 17 914 -607 2153 -767 2964 -384 518 245 675 546 563 1079 -75 354 -359 953 -616 1298 l-48 64 46 276 c25 152 46 305 46 340 1 56 12 69 86 103 99 45 622 466 684 550 292 399 -570 1213 -1025 967 -51 -28 -444 -580 -509 -715 -3 -6 -112 -54 -242 -105 l-237 -94 -113 108 c-885 846 -2095 1425 -2738 1311z m506 -190 c510 -105 1271 -538 1946 -1107 l226 -191 -56 -25 c-32 -14 -466 -188 -967 -387 -500 -199 -962 -385 -1025 -414 -64 -28 -119 -47 -123 -43 -138 153 -482 709 -622 1003 -430 907 -202 1334 621 1164z m-894 -869 c509 -1576 3084 -3906 4338 -3925 456 -7 -375 -220 -865 -222 -761 -2 -1725 359 -2251 842 l-104 96 24 116 c86 413 -209 777 -638 785 l-168 4 -99 157 c-549 875 -719 2081 -370 2627 l45 70 14 -180 c8 -114 36 -250 74 -370z m4681 358 c301 -151 530 -536 401 -674 -181 -195 -740 190 -809 558 -34 180 166 237 408 116z m-499 -273 c87 -244 337 -477 606 -565 l98 -32 -167 -130 c-270 -212 -261 -208 -387 -180 -195 44 -399 234 -461 430 l-32 103 98 149 c54 83 119 184 144 225 25 41 52 75 60 75 8 0 26 -34 41 -75z m-487 -454 c20 -80 7 -90 -223 -184 -449 -184 -1097 -461 -1705 -730 -344 -152 -633 -277 -641 -277 -18 0 -151 160 -140 168 4 2 444 179 977 393 534 213 1128 452 1320 531 405 165 395 163 412 99z m90 -236 c12 -25 54 -78 92 -117 l69 -73 -47 -92 c-25 -50 -50 -92 -56 -92 -23 -2 -307 327 -290 333 11 4 56 24 100 45 104 49 105 49 132 -4z m-57 -527 c10 -17 -107 -241 -327 -622 -188 -328 -425 -742 -525 -920 -101 -178 -190 -325 -200 -325 -106 -6 -1516 1288 -1459 1340 19 17 558 254 1476 650 l660 285 180 -191 c99 -105 187 -202 195 -217z m400 240 c49 -18 49 -18 -98 -281 -184 -329 -472 -863 -797 -1477 -319 -604 -279 -543 -335 -512 -112 61 -126 80 -96 127 40 65 906 1575 1089 1901 94 166 165 272 179 265 13 -6 39 -17 58 -23z m250 -98 c3 -2 -15 -128 -39 -280 l-43 -276 -63 75 -63 74 34 174 c51 264 81 305 174 233z m-212 -685 c662 -927 924 -1765 630 -2011 -267 -222 -849 -105 -1562 315 l-191 112 119 225 c109 205 294 556 686 1299 80 151 150 275 155 275 6 0 79 -97 163 -215z m-3496 -797 c264 -90 408 -430 291 -688 -230 -508 -990 -326 -954 229 22 353 336 570 663 459z m396 -921 c56 -50 45 -67 -43 -67 -89 0 -96 10 -47 63 41 45 45 45 90 4z m-173 -777 c51 -286 114 -641 141 -788 71 -389 95 -350 -206 -334 -327 18 -845 107 -845 145 0 5 78 286 172 624 95 337 191 683 213 768 l40 155 112 1 c62 1 145 12 183 26 87 30 71 78 190 -597z m190 590 l95 0 46 -115 c25 -63 62 -152 82 -198 133 -303 515 -1274 507 -1288 -19 -29 -621 -138 -639 -115 -3 3 -21 105 -40 226 -38 242 -246 1391 -265 1468 -11 45 -8 47 54 35 36 -7 108 -13 160 -13z m1072 -1619 c666 -125 -20 -341 -1085 -341 -687 0 -1347 108 -1347 220 0 63 99 85 195 44 569 -244 2172 -175 2071 89 -9 24 -3 29 26 20 21 -7 84 -21 140 -32z m-2412 -251 c415 -215 2089 -227 2612 -18 157 62 140 70 216 -97 142 -313 216 -530 195 -570 -54 -101 -488 -235 -953 -297 -963 -126 -2430 76 -2430 335 0 52 198 556 244 622 45 64 41 64 116 25z"/></g></svg>`;
+
 preloadAssets();
 initBackground();
 
@@ -192,6 +196,8 @@ app.innerHTML = `
 
         <button id="test-dino-button" class="test-button">${texts.testDinoButton}</button>
 
+        <button id="test-dish-button" class="test-button">${texts.testDishButton}</button>
+
         <button id="alert-start-button" class="test-button test-button-danger">${texts.alertStartButton}</button>
 
         <button id="alert-stop-button" class="test-button">${texts.alertStopButton}</button>
@@ -234,6 +240,18 @@ app.innerHTML = `
       <div class="dino-track-panel">
         <div class="dino-track" id="dino-track">
           <div class="dino-character" id="dino-character"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="dishgame-screen" class="screen dishgame hidden">
+      <div class="dishgame-instruction">
+        <p class="minigame-instruction-label">${texts.dishInstruction}</p>
+        <p class="dishgame-speed" id="dishgame-speed"></p>
+      </div>
+      <div class="dishgame-board-panel">
+        <div class="dishgame-board" id="dishgame-board">
+          <div class="dishgame-dish" id="dishgame-dish">${DISH_ICON}</div>
         </div>
       </div>
     </div>
@@ -993,6 +1011,133 @@ function closeDinoGame() {
 dinoScreen.addEventListener('pointerdown', dinoJump);
 testDinoButton.addEventListener('click', openDinoGame);
 
+// Signal minigame: drag the dish around the board to find the one hidden
+// spot with the best connection. The spot is random every time and never
+// shown - only the speed readout tells the player they're getting closer.
+const dishScreen = document.querySelector('#dishgame-screen');
+const dishBoard = document.querySelector('#dishgame-board');
+const dish = document.querySelector('#dishgame-dish');
+const dishSpeed = document.querySelector('#dishgame-speed');
+const testDishButton = document.querySelector('#test-dish-button');
+
+const DISH_WIDTH = 120;
+const DISH_HEIGHT = 80;
+const DISH_MIN_MBPS = 2;
+const DISH_MAX_MBPS = 5000;
+const DISH_WIN_RADIUS = 18; // px from the hidden spot that counts as full speed
+const DISH_HOLD_MS = 1000; // how long full speed must be held to win
+const DISH_MIN_START_DISTANCE = 0.3; // of the board's diagonal, so it never starts next to the spot
+const DISH_FALLOFF = 0.6; // of the board's diagonal: any farther than this is the slowest speed
+
+let dishPosition = { x: 0, y: 0 }; // the dish's centre, in board pixels
+let dishTarget = { x: 0, y: 0 };
+let dishDiagonal = 1;
+let dishHoldTimer = null;
+let dishWon = false;
+
+function randomDishPoint(width, height) {
+  return {
+    x: DISH_WIDTH / 2 + Math.random() * (width - DISH_WIDTH),
+    y: DISH_HEIGHT / 2 + Math.random() * (height - DISH_HEIGHT),
+  };
+}
+
+// 0 far away, 1 on the spot. Squared, so most of the board reads slow and
+// red and it only turns green close in; the speed then follows it on a log
+// scale (2 Mb/s -> 5 Gb/s), climbing faster and faster the closer you get.
+function dishSignal() {
+  const distance = Math.hypot(dishPosition.x - dishTarget.x, dishPosition.y - dishTarget.y);
+  if (distance <= DISH_WIN_RADIUS) return 1;
+  const reach = dishDiagonal * DISH_FALLOFF - DISH_WIN_RADIUS;
+  const closeness = Math.max(0, 1 - (distance - DISH_WIN_RADIUS) / reach);
+  return closeness ** 2;
+}
+
+function formatSpeed(mbps) {
+  if (mbps < 10) return `${mbps.toFixed(1).replace('.', ',')} Mb/s`; // so small moves still show a change
+  if (mbps < 1000) return `${Math.round(mbps)} Mb/s`;
+  return `${(mbps / 1000).toFixed(1).replace('.', ',')} Gb/s`;
+}
+
+function updateDish() {
+  dish.style.left = `${dishPosition.x - DISH_WIDTH / 2}px`;
+  dish.style.top = `${dishPosition.y - DISH_HEIGHT / 2}px`;
+
+  const signal = dishSignal();
+  const mbps = DISH_MIN_MBPS * (DISH_MAX_MBPS / DISH_MIN_MBPS) ** signal;
+  const color = `hsl(${Math.round(signal * 120)}, 100%, 55%)`; // red -> green
+  dishSpeed.textContent = formatSpeed(mbps);
+  dishSpeed.style.color = color;
+  dishSpeed.style.textShadow = `0 0 8px ${color}`;
+
+  if (dishWon) return;
+  if (signal === 1 && !dishHoldTimer) {
+    dishHoldTimer = setTimeout(winDishGame, DISH_HOLD_MS);
+  } else if (signal < 1 && dishHoldTimer) {
+    clearTimeout(dishHoldTimer);
+    dishHoldTimer = null;
+  }
+}
+
+function winDishGame() {
+  dishHoldTimer = null;
+  dishWon = true;
+  showPopup('success', texts.taskSuccess);
+  playSuccessSoundThenClose();
+}
+
+function moveDishTo(event) {
+  const rect = dishBoard.getBoundingClientRect();
+  dishPosition = {
+    x: Math.max(DISH_WIDTH / 2, Math.min(event.clientX - rect.left, rect.width - DISH_WIDTH / 2)),
+    y: Math.max(DISH_HEIGHT / 2, Math.min(event.clientY - rect.top, rect.height - DISH_HEIGHT / 2)),
+  };
+  updateDish();
+}
+
+// The dish jumps to the finger anywhere on the board and follows it, rather
+// than having to grab the dish itself first.
+dishBoard.addEventListener('pointerdown', (event) => {
+  if (dishWon) return;
+  dishBoard.setPointerCapture(event.pointerId);
+  moveDishTo(event);
+});
+dishBoard.addEventListener('pointermove', (event) => {
+  if (dishWon || !dishBoard.hasPointerCapture(event.pointerId)) return;
+  moveDishTo(event);
+});
+
+function newDishRound() {
+  const { width, height } = dishBoard.getBoundingClientRect();
+  dishDiagonal = Math.hypot(width - DISH_WIDTH, height - DISH_HEIGHT);
+  dishPosition = { x: width / 2, y: height / 2 };
+  do {
+    dishTarget = randomDishPoint(width, height);
+  } while (Math.hypot(dishTarget.x - dishPosition.x, dishTarget.y - dishPosition.y) < dishDiagonal * DISH_MIN_START_DISTANCE);
+  dishWon = false;
+  updateDish();
+}
+
+function openDishGame() {
+  minigamesScreen.classList.add('hidden');
+  dishScreen.classList.remove('hidden');
+  pushOverlayState();
+  activeGameClose = closeDishGame;
+  newDishRound(); // after un-hiding, so the board has a real size to place things in
+}
+
+function closeDishGame() {
+  clearTimeout(dishHoldTimer);
+  dishHoldTimer = null;
+  hidePopup();
+  dishScreen.classList.add('hidden');
+  minigamesScreen.classList.remove('hidden');
+  fitActiveScreen();
+  closeOverlayState();
+}
+
+testDishButton.addEventListener('click', openDishGame);
+
 const testChatButton = document.querySelector('#test-chat-button');
 const chatScreen = document.querySelector('#chat-screen');
 const chatMessages = document.querySelector('#chat-messages');
@@ -1246,6 +1391,8 @@ window.addEventListener('popstate', () => {
     closeColorGame();
   } else if (!dinoScreen.classList.contains('hidden')) {
     closeDinoGame();
+  } else if (!dishScreen.classList.contains('hidden')) {
+    closeDishGame();
   } else if (!chatScreen.classList.contains('hidden')) {
     closeChat();
   } else if (!minigamesScreen.classList.contains('hidden')) {

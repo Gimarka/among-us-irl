@@ -7,6 +7,8 @@ export const texts = {
   testDinoButton: 'TEST SAUT',
   dinoInstruction: 'SAUTE PAR-DESSUS',
   dinoFail: 'RATÉ !',
+  testDishButton: 'TEST PARABOLE',
+  dishInstruction: 'TROUVE LE SIGNAL',
   alertStartButton: 'ALERT START',
   alertStopButton: 'ALERT STOP',
   interferenceButton: 'INTERFÉRENCE',
