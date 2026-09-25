@@ -849,8 +849,11 @@ const DINO_GRAVITY = 2200; // px/s^2, pulls the jump back down
 const DINO_JUMP_SPEED = 650; // px/s, upward speed set at the moment of a tap
 const OBSTACLE_BASE_SPEED = 220; // px/s at the start of a run
 const OBSTACLE_MAX_SPEED_MULTIPLIER = 1.6; // 60% faster once all are cleared
-const OBSTACLE_MIN_INTERVAL_MS = 700;
-const OBSTACLE_MAX_INTERVAL_MS = 2000;
+// A jump keeps the dino in the air for ~0.6 s (2 * DINO_JUMP_SPEED /
+// DINO_GRAVITY), so obstacles much closer together than that couldn't all
+// be cleared: 600 ms is the floor for a gap that's always jumpable.
+const OBSTACLE_MIN_INTERVAL_MS = 600;
+const OBSTACLE_MAX_INTERVAL_MS = 1000;
 const OBSTACLE_MIN_HEIGHT = 24;
 const OBSTACLE_MAX_HEIGHT = 54; // still well under the ~96px a full jump clears
 
