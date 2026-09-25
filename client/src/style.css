@@ -73,23 +73,20 @@ textarea {
   animation: alert-flash 1s ease-in-out infinite;
 }
 
-/* Set on <body> while the sort or jump game is open: the flash and the
-   countdown bar get in the way there, so both are hidden. The door keypad
-   keeps them. */
-body.no-alert-flash #alert-overlay.active {
-  animation: none;
-}
-
-body.no-alert-flash .alert-timer {
+/* The alert (flash and countdown bar) only ever shows on two screens: the
+   main menu and the door keypad. Hidden everywhere else - with visibility
+   rather than display, so the bar's countdown keeps running underneath and
+   shows the right time left when the player comes back to one of them. */
+#alert-overlay,
+.alert-timer {
   visibility: hidden;
 }
 
-/* The alert belongs to the running game, not the character screen. Hidden
-   with visibility rather than display so the bar's countdown keeps running
-   underneath and shows the right time left once the player moves on. */
-body:has(#join-screen:not(.hidden)) #alert-overlay,
-body:has(#join-screen:not(.hidden)) .alert-timer {
-  visibility: hidden;
+body:has(#home-screen:not(.hidden)) #alert-overlay,
+body:has(#home-screen:not(.hidden)) .alert-timer,
+body:has(#minigame-screen:not(.hidden)) #alert-overlay,
+body:has(#minigame-screen:not(.hidden)) .alert-timer {
+  visibility: visible;
 }
 
 /* The alert's countdown, pinned to the top of the screen on its own, apart
