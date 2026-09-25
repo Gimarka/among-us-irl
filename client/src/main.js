@@ -847,7 +847,7 @@ const DINO_X = 30; // matches .dino-character's fixed `left`
 
 const DINO_GRAVITY = 2200; // px/s^2, pulls the jump back down
 const DINO_JUMP_SPEED = 650; // px/s, upward speed set at the moment of a tap
-const OBSTACLE_BASE_SPEED = 220; // px/s at the start of a run
+const OBSTACLE_BASE_SPEED = 300; // px/s at the start of a run
 const OBSTACLE_MAX_SPEED_MULTIPLIER = 1.6; // 60% faster once all are cleared
 // A jump keeps the dino in the air for ~0.6 s (2 * DINO_JUMP_SPEED /
 // DINO_GRAVITY), so obstacles much closer together than that couldn't all
