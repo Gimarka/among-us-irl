@@ -107,6 +107,26 @@ app.innerHTML = `
     <div id="join-screen" class="screen">
       <p class="build-id">${BUILD_ID}</p>
       <div class="screen-fit home-buttons">
+        <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="${NAME_MAX_LENGTH}" />
+        <button id="join-button" class="test-button">${texts.joinButton}</button>
+        <button id="new-game-button" class="test-button">${texts.newGameButton}</button>
+      </div>
+    </div>
+
+    <div id="lobby-screen" class="screen hidden">
+      <div class="screen-fit lobby">
+        <div class="lobby-grid">
+          ${Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => lobbySlotMarkup(index)).join('')}
+        </div>
+
+        <button id="customize-button" class="test-button">${texts.customizeButton}</button>
+
+        <button id="play-button" class="test-button">${texts.playButton}</button>
+      </div>
+    </div>
+
+    <div id="customize-screen" class="screen hidden">
+      <div class="screen-fit home-buttons">
         <div class="character-panel">
           <div class="character-frame character-frame-large" id="join-character">
             <video id="selfie-video" class="character-video hidden" playsinline muted></video>
@@ -126,21 +146,7 @@ app.innerHTML = `
           </div>
         </div>
 
-        <input id="join-name-input" class="name-input" type="text" placeholder="${texts.namePrompt}" maxlength="${NAME_MAX_LENGTH}" />
-        <div class="join-actions">
-          <button id="join-button" class="test-button join-action-button">${texts.joinButton}</button>
-          <button id="new-game-button" class="test-button join-action-button">${texts.newGameButton}</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="lobby-screen" class="screen hidden">
-      <div class="screen-fit lobby">
-        <div class="lobby-grid">
-          ${Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => lobbySlotMarkup(index)).join('')}
-        </div>
-
-        <button id="play-button" class="test-button">${texts.playButton}</button>
+        <button id="customize-done-button" class="test-button">${texts.validateButton}</button>
       </div>
     </div>
 
@@ -368,7 +374,7 @@ const SCREEN_BOTTOM_GAP_PX = 16;
 // pixel positions (drag-and-drop, jump physics), so they're sized with
 // fixed/vh-relative CSS instead (see .colorgame-board and .dino-track in
 // style.css).
-const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #home-screen, #minigames-screen, #minigame-screen';
+const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #customize-screen, #home-screen, #minigames-screen, #minigame-screen';
 
 // The title only shows on the join screen (see openLobby/handleDisconnectClick
 // below); everywhere else it's hidden so the game screens get the full
@@ -1420,6 +1426,8 @@ window.addEventListener('popstate', () => {
     closeMortScreen();
   } else if (!mortConfirmPopup.classList.contains('hidden')) {
     closeMortConfirm();
+  } else if (!customizeScreen.classList.contains('hidden')) {
+    closeCustomize();
   } else if (!newGamePopup.classList.contains('hidden')) {
     closeNewGamePopup();
   } else if (!joinGamePopup.classList.contains('hidden')) {
@@ -1472,13 +1480,16 @@ const lobbySlots = Array.from({ length: LOBBY_SLOT_COUNT }, (_, index) => ({
 // the last player is shown empty; a slot that previously held a photo but
 // is reused for a photo-less player is reset back to the plain visor.
 function renderLobby(players) {
-  // The server has the final say on colour - it swaps a requested colour
-  // for a free one when another player already holds it. Pick that up here
-  // so a future reconnect re-joins with what we actually got, not what we
-  // originally asked for.
+  updateColorAvailability(players);
+
+  // The server has the final say on our look - it picks our colour when we
+  // arrive (keeping our saved one if it's free) and can refuse a colour
+  // someone else grabbed first. Pick that up so what we send next (a
+  // reconnect, the customisation screen) matches what everyone else sees.
   const self = players.find((player) => player.id === clientId);
-  if (self && currentIdentity && self.color && self.color !== currentIdentity.color) {
-    currentIdentity = { ...currentIdentity, color: self.color };
+  if (self && currentIdentity) {
+    currentLook = { photo: self.photo, color: self.color, hat: self.hat };
+    currentIdentity = { ...currentIdentity, ...currentLook };
   }
 
   lobbySlots.forEach((slot, index) => {
@@ -1673,6 +1684,10 @@ let inSession = false; // true once we're past the lobby, in the game's menu
 let currentSession = null; // { sessionId, name, hostId, started }
 let inGame = false;
 let welcomed = false; // the first welcome of a page load is the one that picks the starting screen
+// Our saved look, separate from the name: set from the server's saved
+// character, and changed only by VALIDER on the customisation screen.
+let currentLook = { photo: null, color: null, hat: DEFAULT_HAT };
+let latestPlayers = []; // the game's roster, for greying out taken colours
 let latestSessions = []; // the REJOINDRE list, kept live by the server's 'sessions'
 let pendingRequest = null; // a create/join waiting for the connection to (re)open
 
@@ -1694,6 +1709,29 @@ SUIT_COLORS.forEach((color) => {
 });
 
 selectColor(DEFAULT_SUIT_COLOR, colorPicker.firstElementChild);
+
+// Colours are unique within a game (the server enforces this - see
+// resolveColor in server/gameState.js), so the picker greys out and disables
+// any colour someone else in the game already holds, live, as players come
+// and go. If our own current pick gets taken out from under us this way, we
+// fall back to the next free one instead of leaving a disabled swatch selected.
+function updateColorAvailability(players) {
+  latestPlayers = players;
+  const takenByOthers = new Set(
+    players.filter((player) => player.id !== clientId).map((player) => player.color),
+  );
+
+  colorPicker.querySelectorAll('.color-swatch').forEach((swatch) => {
+    swatch.disabled = takenByOthers.has(swatch.dataset.color);
+  });
+
+  if (takenByOthers.has(suitColor)) {
+    const nextSwatch = Array.from(colorPicker.querySelectorAll('.color-swatch')).find(
+      (swatch) => !takenByOthers.has(swatch.dataset.color),
+    );
+    if (nextSwatch) selectColor(nextSwatch.dataset.color, nextSwatch);
+  }
+}
 
 let hatIndex = 0;
 
@@ -1863,8 +1901,9 @@ function handleWelcome({ character, resume }) {
 
   if (welcomed) return; // a reconnect while on the join screen shouldn't undo edits in progress
   welcomed = true;
-  if (!character) return; // never played on this phone - just the blank character screen
-  fillJoinForm(character);
+  if (!character) return; // never played on this phone - just the blank home screen
+  joinNameInput.value = character.name || '';
+  currentLook = { photo: character.photo, color: character.color, hat: character.hat };
   // Still part of a running game: skip the character screen and go back to it.
   if (resume) {
     currentIdentity = character;
@@ -1873,6 +1912,9 @@ function handleWelcome({ character, resume }) {
 }
 
 function handleRole({ role, tasks }) {
+  // JOUER while this player was still customising: off to the game with the
+  // look they last saved.
+  if (!customizeScreen.classList.contains('hidden')) closeCustomize();
   inGame = true;
   updateSessionDisplay();
   renderTasks(tasks);
@@ -1959,7 +2001,7 @@ function enterFullscreen() {
 function takeJoinForm() {
   const name = joinNameInput.value.trim();
   if (!name) return false;
-  currentIdentity = { name, photo: photoDataUrl, color: suitColor, hat: HATS[hatIndex].id };
+  currentIdentity = { name, ...currentLook };
   return true;
 }
 
@@ -2046,34 +2088,59 @@ newGameName.addEventListener('keydown', (event) => {
 });
 document.querySelector('#join-game-cancel').addEventListener('click', closeJoinGamePopup);
 
-// Back to a blank join form, as if this browser had never joined.
-function resetJoinForm() {
-  joinNameInput.value = '';
-  photoDataUrl = null;
-  hatIndex = 0;
+// The customisation screen's controls, set to a look: the saved one when
+// the screen opens.
+function fillLookForm({ photo, color, hat }) {
   stopSelfieCamera();
   selfieVideo.classList.add('hidden');
-  setSelfieButtonState(CAMERA_ICON, texts.takeSelfieButton);
-  clearVisorPhoto('join');
-  setHat(joinCharacter, HATS[0].id);
-  selectColor(DEFAULT_SUIT_COLOR, colorPicker.firstElementChild);
-}
-
-// The character screen, filled in with a character the server remembers
-// (see server/characterStore.js) rather than starting blank.
-function fillJoinForm({ name, photo, color, hat }) {
-  resetJoinForm();
-  joinNameInput.value = name || '';
   photoDataUrl = photo || null;
   if (photoDataUrl) {
     setVisorPhoto('join', photoDataUrl);
     setSelfieButtonState(RETAKE_ICON, texts.retakeSelfieButton);
+  } else {
+    clearVisorPhoto('join');
+    setSelfieButtonState(CAMERA_ICON, texts.takeSelfieButton);
   }
   hatIndex = Math.max(0, HATS.findIndex((item) => item.id === hat));
   setHat(joinCharacter, HATS[hatIndex].id);
   const swatch = colorPicker.querySelector(`.color-swatch[data-color="${color}"]`);
   if (swatch) selectColor(color, swatch);
 }
+
+const customizeScreen = document.querySelector('#customize-screen');
+
+// PERSONNALISER, from the lobby.
+function openCustomize() {
+  fillLookForm(currentLook);
+  updateColorAvailability(latestPlayers);
+  lobbyScreen.classList.add('hidden');
+  lobbyBackButton.classList.add('hidden');
+  customizeScreen.classList.remove('hidden');
+  pushOverlayState();
+  fitActiveScreen();
+}
+
+// Back to the lobby. Without VALIDER (the phone's back button, or the game
+// starting), nothing is saved.
+function closeCustomize() {
+  stopSelfieCamera();
+  customizeScreen.classList.add('hidden');
+  lobbyScreen.classList.remove('hidden');
+  lobbyBackButton.classList.remove('hidden');
+  fitActiveScreen();
+  closeOverlayState();
+}
+
+// VALIDER: the look goes to the server, which updates everyone's lobby.
+function saveCustomize() {
+  currentLook = { photo: photoDataUrl, color: suitColor, hat: HATS[hatIndex].id };
+  currentIdentity = { ...currentIdentity, ...currentLook };
+  if (socket) socket.emit('customize', currentLook);
+  closeCustomize();
+}
+
+document.querySelector('#customize-button').addEventListener('click', openCustomize);
+document.querySelector('#customize-done-button').addEventListener('click', saveCustomize);
 
 // Back to the character screen. The server keeps our role in a game that has
 // started, so picking it again from REJOINDRE goes straight back in.
@@ -2098,8 +2165,7 @@ function handleDisconnectClick() {
   homeScreen.classList.add('hidden');
   lobbyScreen.classList.add('hidden');
   lobbyBackButton.classList.add('hidden');
-  if (lastIdentity) fillJoinForm(lastIdentity);
-  else resetJoinForm();
+  joinNameInput.value = lastIdentity?.name || '';
   titlePanel.classList.remove('hidden');
   joinScreen.classList.remove('hidden');
   syncLayout();

@@ -34,12 +34,13 @@ function cleanPhoto(photo) {
   return photo;
 }
 
-const DEFAULT_COLOR = '#c51111';
 const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
+// null when missing or malformed: the game then picks a random free colour
+// for the player (see resolveColor in gameState.js).
 function cleanColor(color) {
-  if (typeof color !== 'string') return DEFAULT_COLOR;
-  return COLOR_PATTERN.test(color) ? color.toLowerCase() : DEFAULT_COLOR;
+  if (typeof color !== 'string') return null;
+  return COLOR_PATTERN.test(color) ? color.toLowerCase() : null;
 }
 
 const DEFAULT_HAT = 'none';
@@ -309,6 +310,23 @@ export function createGameServer({
     // in a lobby.
     socket.on('leaveSession', () => {
       leaveCurrentSession(socket);
+    });
+
+    // VALIDER on the lobby's customisation screen. Only while waiting in the
+    // lobby - once in the game, a look is fixed. A colour someone else in the
+    // game grabbed first is refused: the player keeps their current one.
+    socket.on('customize', ({ photo, color, hat } = {}) => {
+      const session = currentSession(socket);
+      const id = socket.data.clientId;
+      const player = session?.roster.findPlayerByClientId(id);
+      if (!player || isMember(session, id)) return;
+
+      const requested = cleanColor(color);
+      const finalColor = requested && session.roster.resolveColor(id, requested) === requested ? requested : player.color;
+      const character = { name: player.name, photo: cleanPhoto(photo), color: finalColor, hat: cleanHat(hat) };
+      saveCharacter(id, character);
+      const players = session.roster.addPlayer(id, player.socketId, character.name, character.photo, character.color, character.hat);
+      io.to(roomOf(session)).emit('players', players);
     });
 
     // The sender's name/colour/hat/photo are snapshotted from the roster

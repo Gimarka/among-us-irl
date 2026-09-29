@@ -37,7 +37,8 @@ test('a joining player keeps a valid colour and hat, and falls back on bad ones'
     const bobPlayer = players.find((p) => p.name === 'Bob');
     assert.equal(alicePlayer.color, '#38fedc');
     assert.equal(alicePlayer.hat, 'crown');
-    assert.equal(bobPlayer.color, '#c51111', 'bad colour falls back');
+    assert.match(bobPlayer.color, /^#[0-9a-f]{6}$/, 'bad colour replaced by a real one');
+    assert.notEqual(bobPlayer.color, '#38fedc', 'and not one already taken');
     assert.equal(bobPlayer.hat, 'none', 'bad hat falls back');
   } finally {
     server.close();
@@ -193,6 +194,57 @@ test('leaving on purpose removes the player immediately, ignoring the grace peri
     const gone = waitForEvent(spectator, 'players');
     leaver.disconnect();
     assert.equal((await gone).find((p) => p.name === 'Leaver'), undefined);
+  } finally {
+    server.close();
+  }
+});
+
+test('a player without a saved colour gets a free one, and keeps a saved one that is free', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice', color: '#132ed1' });
+
+    const roster = waitForEvent(alice, 'players');
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+    const players = await roster;
+    assert.equal(players.find((p) => p.name === 'Alice').color, '#132ed1', 'saved colour kept');
+    const bobColor = players.find((p) => p.name === 'Bob').color;
+    assert.match(bobColor, /^#[0-9a-f]{6}$/);
+    assert.notEqual(bobColor, '#132ed1');
+  } finally {
+    server.close();
+  }
+});
+
+test('PERSONNALISER: VALIDER updates the look for everyone, but never onto a taken colour or after the start', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice', color: '#132ed1' });
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob', color: '#117f2d' });
+
+    const photo = `data:image/jpeg;base64,${'a'.repeat(100)}`;
+    const updated = waitForEvent(alice, 'players');
+    bob.emit('customize', { photo, color: '#ed54ba', hat: 'crown' });
+    const bobNow = (await updated).find((p) => p.name === 'Bob');
+    assert.deepEqual([bobNow.color, bobNow.hat, bobNow.photo], ['#ed54ba', 'crown', photo]);
+
+    const refused = waitForEvent(alice, 'players');
+    bob.emit('customize', { photo, color: '#132ed1', hat: 'crown' });
+    assert.equal((await refused).find((p) => p.name === 'Bob').color, '#ed54ba', "Alice's colour can't be taken");
+
+    const roles = Promise.all([waitForEvent(alice, 'role'), waitForEvent(bob, 'role')]);
+    alice.emit('startGame');
+    await roles;
+    // The next roster broadcast Alice hears must not carry Bob's new colour:
+    // if the customize were accepted, its own broadcast would be that next one.
+    const nextRoster = waitForEvent(alice, 'players');
+    bob.emit('customize', { photo, color: '#ef7d0d', hat: 'none' });
+    await joinGame(alice, sessionId, { clientId: 'alice', name: 'Alice', color: '#132ed1' });
+    assert.equal((await nextRoster).find((p) => p.name === 'Bob').color, '#ed54ba', 'look is fixed once in the game');
   } finally {
     server.close();
   }

@@ -8,10 +8,8 @@
 // tab, waking back up, a dropped socket) sends the same clientId, so it
 // replaces its previous entry instead of appearing twice.
 
-// Mirrors client/src/character.js's SUIT_COLORS (keep the two in sync). Also
-// doubles as the fallback order when a player's requested colour is already
-// taken: the first one nobody else currently holds.
-const SUIT_COLORS = [
+// Mirrors client/src/character.js's SUIT_COLORS (keep the two in sync).
+export const SUIT_COLORS = [
   '#c51111', '#132ed1', '#117f2d', '#ed54ba', '#ef7d0d', '#f5f557',
   '#3f474e', '#d6e0f0', '#6b2fbb', '#71491e', '#38fedc', '#50ef39',
 ];
@@ -35,18 +33,21 @@ export function createRoster() {
   }
 
   return {
-    // Colours are unique within a game. A requested colour is kept unless
-    // someone else in it already has it, in which case it's swapped for the
-    // first colour free in the palette above - falling back to the request
-    // itself if every colour is somehow taken.
+    // Colours are unique within a game. A requested colour (the player's
+    // saved one) is kept unless someone else in it already has it; without
+    // one, or if it's taken, the player gets a random colour nobody else in
+    // the game holds - falling back to the request itself, or the first
+    // colour, if every colour is somehow taken.
     resolveColor(clientId, requestedColor) {
       const takenByOthers = new Set(
         Array.from(players.values())
           .filter((player) => player.id !== clientId)
           .map((player) => player.color),
       );
-      if (!takenByOthers.has(requestedColor)) return requestedColor;
-      return SUIT_COLORS.find((color) => !takenByOthers.has(color)) || requestedColor;
+      if (requestedColor && !takenByOthers.has(requestedColor)) return requestedColor;
+      const free = SUIT_COLORS.filter((color) => !takenByOthers.has(color));
+      if (free.length === 0) return requestedColor || SUIT_COLORS[0];
+      return free[Math.floor(Math.random() * free.length)];
     },
 
     addPlayer(clientId, socketId, name, photo = null, color = null, hat = null) {

@@ -548,24 +548,6 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
    this one can't be picked right now. The colour itself stays visible
    underneath. */
 
-/* REJOINDRE and NOUVELLE PARTIE, side by side under the name field. */
-.join-actions {
-  display: flex;
-  gap: 10px;
-  width: 300px;
-  max-width: 85vw;
-}
-
-.join-actions .join-action-button {
-  flex: 1 1 0;
-  width: auto;
-  min-width: 0;
-  height: 56px;
-  padding: 0 14px;
-  font-size: 0.72rem;
-  letter-spacing: 0;
-}
-
 /* Under an input or list in a popup, e.g. "Ce nom est déjà pris". */
 .popup-error {
   margin: 0;
@@ -626,6 +608,31 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
   font-family: 'Orbitron', system-ui, sans-serif;
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.color-swatch:disabled {
+  cursor: not-allowed;
+}
+
+/* A taken colour is crossed out rather than just dimmed. */
+.color-swatch:disabled::before,
+.color-swatch:disabled::after {
+  content: '';
+  position: absolute;
+  left: 14%;
+  top: 50%;
+  width: 72%;
+  height: 3px;
+  background: #101419;
+  border-radius: 2px;
+}
+
+.color-swatch:disabled::before {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.color-swatch:disabled::after {
+  transform: translateY(-50%) rotate(-45deg);
 }
 
 .name-input {

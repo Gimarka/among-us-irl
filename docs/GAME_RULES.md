@@ -80,6 +80,14 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Character customisation moved to the lobby. The home screen only has the
+  title, the name, REJOINDRE and NOUVELLE PARTIE. Entering a game keeps the
+  phone's saved colour if nobody in that game has it (otherwise a random
+  free one), plus its saved selfie and hat. In the lobby, PERSONNALISER opens
+  the customisation screen (colours taken in that game are crossed out);
+  VALIDER saves the look for everyone. The look is fixed once in the game;
+  a player still customising when JOUER is pressed goes in with their last
+  saved look.
 - Named games, several at once (replaces the single numbered session
   below). The character screen has REJOINDRE (a live list of running games
   with their player count and "En attente"/"En cours", or "Aucune partie en

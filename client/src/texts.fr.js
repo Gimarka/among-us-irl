@@ -58,6 +58,8 @@ export const texts = {
   disconnected: 'Connexion perdue, nouvelle tentative…',
   playButton: 'JOUER',
   continueButton: 'CONTINUER',
+  customizeButton: 'PERSONNALISER',
+  validateButton: 'VALIDER',
   emptySlot: 'En attente',
   disconnectButton: 'SE DÉCONNECTER',
   backButtonLabel: 'Retour à la connexion',

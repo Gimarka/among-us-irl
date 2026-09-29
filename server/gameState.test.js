@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRoster } from './gameState.js';
+import { createRoster, SUIT_COLORS } from './gameState.js';
 
 const {
   addPlayer,
@@ -94,4 +94,17 @@ test('resolveColor never hands out a colour two different players already hold',
   const color = resolveColor('client3', '#c51111');
   assert.notEqual(color, '#c51111');
   assert.notEqual(color, '#132ed1');
+});
+
+test('resolveColor gives a player with no colour yet a random free one', () => {
+  clearPlayers();
+  addPlayer('client1', 'socket1', 'Alice', null, '#c51111');
+  const seen = new Set();
+  for (let i = 0; i < 40; i += 1) {
+    const color = resolveColor('client2', null);
+    assert.ok(SUIT_COLORS.includes(color));
+    assert.notEqual(color, '#c51111');
+    seen.add(color);
+  }
+  assert.ok(seen.size > 1, 'not always the same colour');
 });
