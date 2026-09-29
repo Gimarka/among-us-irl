@@ -1666,8 +1666,9 @@ window.addEventListener('popstate', () => {
 
 // --- Surveillance -----------------------------------------------------
 // A live feed of what every player in the game does: doors opened,
-// minigames and tasks finished (never the alert or interference). The
-// server keeps the log; this screen shows it newest first while it's open.
+// minigames and tasks finished (never the alert or interference). Opening
+// it shows only the latest action, then new ones live, newest first;
+// closing it forgets them all.
 const surveillanceScreen = document.querySelector('#surveillance-screen');
 const surveillanceList = document.querySelector('#surveillance-list');
 const SURVEILLANCE_TIME_REFRESH_MS = 10_000;

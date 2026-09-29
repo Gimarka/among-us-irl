@@ -85,8 +85,9 @@ Player colours and avatars; ambient sound. Later: end-of-game replay, spectator 
   minigame or task finished - with their character, name and how long ago.
   Also the hand scanner: each player who held it gets "a désactivé
   l'alerte". Never the alert or interference (imposter-only actions), or
-  deaths. The server keeps the last 50
-  actions per game, so opening the screen also shows what happened before.
+  deaths. No history: opening the
+  screen shows only the latest action, then new ones as they happen;
+  closing it loses them.
   Its back button returns to the main menu.
 - The voting screen has a green bar at the top: the innocents' tasks done,
   all innocents together (dead ones included; imposters' fake tasks left

@@ -35,10 +35,11 @@ const RESULT_MS = 10_000;
 
 // The surveillance screen shows what players have done - a door opened, a
 // minigame or task finished. Never the alert or interference (only
-// imposters trigger those). Phones can only report these actions; each
-// game keeps its most recent ones.
+// imposters trigger those). Phones can only report these actions. There's
+// no history: opening the screen shows just the latest action, then new
+// ones live, so each game only keeps that latest one.
 const SURVEILLANCE_ACTIONS = new Set(['door', 'sort', 'dino', 'dish']);
-const MAX_ACTIVITY = 50;
+const MAX_ACTIVITY = 1;
 
 // How long a phone has to confirm it received its role reveal. No answer
 // means the role never got there (a connection that looked alive but wasn't),
@@ -633,7 +634,7 @@ export function createGameServer({
       logActivity(session, id, action);
     });
 
-    // Opening the surveillance screen: everything logged so far, newest first.
+    // Opening the surveillance screen: only the latest action (if any).
     socket.on('getActivity', (reply) => {
       const session = currentSession(socket);
       if (typeof reply !== 'function') return;

@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer, waitForEvent, createGame, joinGame } from './testSupport.js';
 
-test('players see each other\'s actions live and in the history, but never the alert', async () => {
+test('players see each other\'s actions live, only the latest one on opening, and never the alert', async () => {
   const server = await startServer();
   try {
     const alice = await server.connect();
@@ -26,7 +26,7 @@ test('players see each other\'s actions live and in the history, but never the a
     assert.equal((await task).action, 'task');
 
     const history = await alice.emitWithAck('getActivity');
-    assert.deepEqual(history.map((item) => `${item.name} ${item.action}`), ['Alice task', 'Bob door']);
+    assert.deepEqual(history.map((item) => `${item.name} ${item.action}`), ['Alice task'], 'no older history');
   } finally {
     server.close();
   }
