@@ -80,6 +80,9 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- The voting screen has a green bar at the top: the innocents' tasks done,
+  all innocents together (dead ones included; imposters' fake tasks left
+  out). The game's name is no longer shown on the main menu.
 - Before the vote result, 5 s showing who voted for whom: each voter's small
   character appears under the player they voted for (or under PASSER). The
   eliminated player is only crossed out once the result is shown.

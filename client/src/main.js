@@ -225,7 +225,6 @@ app.innerHTML = `
     <div id="home-screen" class="screen hidden">
       <p class="build-id">${BUILD_ID}</p>
       <div class="screen-fit home-buttons">
-        <p class="session-label" id="session-label"></p>
 
         <div class="tasks-panel">
           <ul class="tasks-list" id="tasks-list"></ul>
@@ -447,6 +446,7 @@ document.querySelector('#alert-overlay').insertAdjacentHTML(
         <p class="meeting-report-text">${texts.reportTitle}</p>
       </div>
       <div class="meeting-vote hidden" id="meeting-vote">
+        <div class="meeting-progress"><div class="meeting-progress-fill" id="meeting-progress-fill"></div></div>
         <p class="meeting-countdown" id="meeting-countdown"></p>
         <div class="meeting-grid" id="meeting-grid"></div>
         <button id="meeting-skip-button" class="test-button">${texts.voteSkipButton}</button>
@@ -1676,6 +1676,7 @@ const meetingVote = document.querySelector('#meeting-vote');
 const meetingResult = document.querySelector('#meeting-result');
 const meetingCountdown = document.querySelector('#meeting-countdown');
 const meetingGrid = document.querySelector('#meeting-grid');
+const meetingProgressFill = document.querySelector('#meeting-progress-fill');
 const meetingSkipButton = document.querySelector('#meeting-skip-button');
 const meetingSkipVoters = document.querySelector('#meeting-skip-voters');
 const meetingResultText = document.querySelector('#meeting-result-text');
@@ -1782,7 +1783,7 @@ function hideMeeting() {
   meetingOverlay.classList.add('hidden');
 }
 
-function handleMeeting({ phase, remainingMs, players, eliminated, votes = [] }) {
+function handleMeeting({ phase, remainingMs, players, eliminated, votes = [], taskProgress = 0 }) {
   // Newcomers still in the lobby aren't part of it; and once it's over,
   // everyone is back on the menu, which was left open underneath.
   if (!phase || !inGame) {
@@ -1799,6 +1800,7 @@ function handleMeeting({ phase, remainingMs, players, eliminated, votes = [] }) 
   meetingVote.classList.toggle('hidden', phase !== 'vote' && phase !== 'tally');
   meetingResult.classList.toggle('hidden', phase !== 'result');
   clearInterval(meetingCountdownTimer);
+  meetingProgressFill.style.transform = `scaleX(${taskProgress})`;
   if (phase === 'vote') {
     renderVoteGrid(players, []);
     startMeetingCountdown(remainingMs);
@@ -2199,8 +2201,6 @@ function sendSessionRequest(request) {
   }
 }
 
-const sessionLabel = document.querySelector('#session-label');
-
 // Everything on screen that depends on the game we're in. The lobby button
 // is JOUER for the host before the start, CONTINUER for a newcomer once the
 // game has started, and absent for everyone else.
@@ -2213,7 +2213,6 @@ function updateSessionDisplay() {
   if (label) playButton.textContent = label;
   // Only shown on the lobby itself - see .settings-button in style.css.
   settingsButton.classList.toggle('hidden', !(currentSession && !currentSession.started && isHost));
-  sessionLabel.textContent = currentSession ? currentSession.name : '';
 }
 
 // The server has put us in a game: its lobby, or straight into the game for

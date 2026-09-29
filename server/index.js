@@ -292,10 +292,21 @@ export function createGameServer({
       remainingMs: Math.max(0, meeting.endsAt - Date.now()),
       durationMs: meeting.durationMs,
       players: meeting.participants.map(withDeath),
+      taskProgress: crewmateTaskProgress(session),
       eliminated: eliminated ? withDeath(eliminated) : null,
       // Secret while the vote runs; shown to everyone once it's over.
       votes: meeting.phase === 'vote' ? [] : Array.from(meeting.votes, ([voterId, targetId]) => ({ voterId, targetId })),
     };
+  }
+
+  // Every innocent's tasks together, dead ones included - a single number,
+  // so it never tells anyone who the imposters are (their tasks are fake
+  // and left out).
+  function crewmateTaskProgress(session) {
+    const players = session.roster.listPlayers();
+    const crewmates = Array.from(session.members.keys())
+      .filter((id) => session.roles.getRole(id, players) === 'crewmate');
+    return session.tasks.progress(crewmates);
   }
 
   function broadcastMeeting(session) {

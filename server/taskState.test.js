@@ -96,3 +96,13 @@ test('the number of tasks per player follows the setting, latecomers included', 
   assert.equal(getTasks('latecomer', roster).length, 3);
   clearTasks();
 });
+
+test('progress counts the done tasks of the given players only', () => {
+  const tasks = createTasks();
+  tasks.assignTasks([{ id: 'alice' }, { id: 'bob' }], 2);
+  assert.equal(tasks.progress(['alice', 'bob']), 0);
+  tasks.completeTask('alice', tasks.getTasks('alice')[0].id);
+  assert.equal(tasks.progress(['alice', 'bob']), 0.25);
+  assert.equal(tasks.progress(['alice']), 0.5);
+  assert.equal(tasks.progress(['nobody']), 0);
+});

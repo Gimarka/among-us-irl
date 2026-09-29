@@ -88,6 +88,15 @@ export function createTasks() {
       return list;
     },
 
+    // Share of these players' tasks that are done, from 0 to 1 (0 when
+    // they have none). Players without a task list yet don't count.
+    progress(clientIds) {
+      const lists = clientIds.map((id) => tasks?.get(id)).filter(Boolean);
+      const total = lists.reduce((sum, list) => sum + list.length, 0);
+      const done = lists.reduce((sum, list) => sum + list.filter((task) => task.done).length, 0);
+      return total === 0 ? 0 : done / total;
+    },
+
     clearTasks() {
       tasks = null;
     },

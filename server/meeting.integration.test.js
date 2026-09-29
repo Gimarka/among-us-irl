@@ -39,7 +39,7 @@ test('a report, then a vote everyone casts, eliminates the most voted player', a
     const voting = waitForPhase(alice, 'vote');
     bob.emit('reportBody');
     assert.equal((await report).players.length, 3);
-    await voting;
+    assert.equal((await voting).taskProgress, 0, 'no task done yet');
 
     const tally = waitForPhase(carol, 'tally');
     const result = waitForPhase(carol, 'result');
