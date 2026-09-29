@@ -1,5 +1,5 @@
 // Task assignment for players, one per game (see sessionState.js - every
-// game gets its own). Each player gets 6 tasks drawn at random
+// game gets its own). Each player gets tasks drawn at random
 // (no repeats) from the pool of task mini-games - not Code entry (now a
 // door-opening mechanic, not a per-player checklist item) or Emergency fix
 // (a shared event, not assigned to anyone). See docs/MINIGAMES.md.
@@ -32,7 +32,7 @@ export const TASK_ROOMS = {
   'steady-hand': 'garage',
 };
 
-const TASKS_PER_PLAYER = 6;
+const TASKS_PER_PLAYER = 6; // unless the host sets another number (see SETTINGS_LIMITS)
 
 function shuffled(array) {
   const result = [...array];
@@ -43,18 +43,21 @@ function shuffled(array) {
   return result;
 }
 
-function drawTaskList() {
+function drawTaskList(count) {
   return shuffled(TASK_POOL)
-    .slice(0, TASKS_PER_PLAYER)
+    .slice(0, count)
     .map((id) => ({ id, room: TASK_ROOMS[id], done: false }));
 }
 
 export function createTasks() {
   let tasks = null; // clientId -> [{ id, room, done }], or null before the game has started
+  let perPlayer = TASKS_PER_PLAYER;
 
-  // Draws task lists for the given roster and remembers them for the game.
-  function assignTasks(players) {
-    tasks = new Map(players.map((player) => [player.id, drawTaskList()]));
+  // Draws task lists for the given roster and remembers them (and how many
+  // each) for the game, so a latecomer gets the same number.
+  function assignTasks(players, count = TASKS_PER_PLAYER) {
+    perPlayer = count;
+    tasks = new Map(players.map((player) => [player.id, drawTaskList(perPlayer)]));
     return tasks;
   }
 
@@ -66,13 +69,13 @@ export function createTasks() {
     // were drawn gets their own fresh draw rather than no tasks at all.
     getTasks(clientId, currentPlayers) {
       if (!tasks) assignTasks(currentPlayers);
-      if (!tasks.has(clientId)) tasks.set(clientId, drawTaskList());
+      if (!tasks.has(clientId)) tasks.set(clientId, drawTaskList(perPlayer));
       return tasks.get(clientId);
     },
 
     // Marks one task done for a player, if it's actually one of their
     // assigned tasks - a no-op otherwise (a minigame reporting completion has
-    // no way of knowing whether its task was in that particular player's 6,
+    // no way of knowing whether its task was in that particular player's list,
     // and it shouldn't need to). Returns the player's updated task list, or
     // null if there was nothing to update - no task list yet, or this task
     // isn't in it - so the caller only tells the player about a real change.

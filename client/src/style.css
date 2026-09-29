@@ -226,6 +226,91 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
   filter: brightness(1.4);
 }
 
+/* The host's ⚙️: the back button's mirror image in the top-right corner.
+   JS hides it for everyone but the host; this keeps it off every screen but
+   the lobby itself (customisation, settings, the game...). */
+.settings-button {
+  left: auto;
+  right: 20px;
+  padding: 0;
+  font-size: 1.3rem;
+}
+
+body:has(#lobby-screen.hidden) .settings-button {
+  display: none;
+}
+
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 320px;
+  max-width: 88vw;
+  padding: 20px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  background: #0a1018;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5), inset 0 0 12px rgba(0, 240, 255, 0.08);
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+}
+
+.setting-label {
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.setting-stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.setting-value {
+  min-width: 48px;
+  text-align: center;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #00f0ff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.7);
+}
+
+.setting-step {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #00f0ff;
+  background: #050a0f;
+  color: #00f0ff;
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.setting-step:active {
+  filter: brightness(1.4);
+}
+
+.setting-step:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 /* Same look as .lobby-back-button, but sitting in normal flow at the top
    of this screen's own button stack rather than fixed to the viewport -
    this screen (unlike the lobby) isn't the kind of destination other

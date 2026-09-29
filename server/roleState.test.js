@@ -69,3 +69,10 @@ test('clearRoles resets the draw for the next round', () => {
   const roles = assignRoles(players(4));
   assert.equal(roles.size, 4);
 });
+
+test('the host can ask for more imposters, but there is always at least one crewmate', () => {
+  const imposters = (roles) => Array.from(roles.values()).filter((role) => role === 'imposter').length;
+  assert.equal(imposters(assignRoles(players(5), 2)), 2);
+  assert.equal(imposters(assignRoles(players(3), 3)), 2, 'capped so one crewmate remains');
+  assert.equal(imposters(assignRoles(players(2), 3)), 1);
+});

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  cleanSettings,
   cleanSessionName,
   isSessionNameTaken,
   createSession,
@@ -81,4 +82,23 @@ test('members are tracked per game, with whether they have seen their role', () 
   markRoleSeen(game, 'alice');
   assert.equal(hasSeenRole(game, 'alice'), true);
   assert.equal(isMember(createSession('Jardin', 'bob'), 'alice'), false);
+});
+
+test('a new game starts with the default settings', () => {
+  clearSessions();
+  assert.deepEqual(createSession('Maison', 'alice').settings, {
+    imposterCount: 1,
+    tasksPerPlayer: 6,
+    alertSeconds: 60,
+    interferenceSeconds: 10,
+  });
+});
+
+test('settings are kept to whole steps within their range, and junk is ignored', () => {
+  const current = { imposterCount: 1, tasksPerPlayer: 6, alertSeconds: 60, interferenceSeconds: 10 };
+  assert.deepEqual(
+    cleanSettings({ imposterCount: 9, tasksPerPlayer: 0, alertSeconds: 50, interferenceSeconds: 'abc', hacked: true }, current),
+    { imposterCount: 3, tasksPerPlayer: 1, alertSeconds: 45, interferenceSeconds: 10 },
+  );
+  assert.deepEqual(cleanSettings(null, current), current);
 });

@@ -87,3 +87,12 @@ test('every task in the pool has a fixed room, and drawn tasks carry it', () => 
   const [list] = assignTasks(players(1)).values();
   list.forEach((task) => assert.equal(task.room, TASK_ROOMS[task.id]));
 });
+
+test('the number of tasks per player follows the setting, latecomers included', () => {
+  clearTasks();
+  const roster = players(2);
+  const lists = assignTasks(roster, 3);
+  lists.forEach((list) => assert.equal(list.length, 3));
+  assert.equal(getTasks('latecomer', roster).length, 3);
+  clearTasks();
+});

@@ -78,6 +78,15 @@ const NAME_MAX_LENGTH = 20;
 // Matches the server's own cap (see MAX_SESSION_NAME_LENGTH in server/sessionState.js).
 const SESSION_NAME_MAX_LENGTH = 20;
 
+// The host's ⚙️ settings: mirrors SETTINGS_LIMITS in server/sessionState.js
+// (keep the two in sync - the server's copy is the one enforced).
+const SETTINGS_LIMITS = {
+  imposterCount: { min: 1, max: 3, step: 1 },
+  tasksPerPlayer: { min: 1, max: 9, step: 1 },
+  alertSeconds: { min: 15, max: 180, step: 15 },
+  interferenceSeconds: { min: 5, max: 60, step: 5 },
+};
+
 // Matches the server's own cap (see MAX_CHAT_LENGTH in server/index.js).
 const CHAT_MAX_LENGTH = 300;
 
@@ -103,6 +112,7 @@ app.innerHTML = `
     </div>
 
     <button id="lobby-back-button" class="lobby-back-button hidden" aria-label="${texts.backButtonLabel}">‹</button>
+    <button id="settings-button" class="lobby-back-button settings-button hidden" aria-label="${texts.settingsLabel}">⚙️</button>
 
     <div id="join-screen" class="screen">
       <p class="build-id">${BUILD_ID}</p>
@@ -122,6 +132,24 @@ app.innerHTML = `
         <button id="customize-button" class="test-button">${texts.customizeButton}</button>
 
         <button id="play-button" class="test-button">${texts.playButton}</button>
+      </div>
+    </div>
+
+    <div id="settings-screen" class="screen hidden">
+      <div class="screen-fit home-buttons">
+        <div class="settings-panel">
+          <p class="confirm-text">${texts.settingsTitle}</p>
+          ${Object.keys(SETTINGS_LIMITS).map((key) => `
+            <div class="setting-row">
+              <span class="setting-label">${texts.settingLabels[key]}</span>
+              <div class="setting-stepper">
+                <button class="setting-step" data-setting="${key}" data-direction="-1" aria-label="${texts.settingLess}">−</button>
+                <span class="setting-value" id="setting-${key}"></span>
+                <button class="setting-step" data-setting="${key}" data-direction="1" aria-label="${texts.settingMore}">+</button>
+              </div>
+            </div>`).join('')}
+        </div>
+        <button id="settings-done-button" class="test-button">${texts.validateButton}</button>
       </div>
     </div>
 
@@ -374,7 +402,7 @@ const SCREEN_BOTTOM_GAP_PX = 16;
 // pixel positions (drag-and-drop, jump physics), so they're sized with
 // fixed/vh-relative CSS instead (see .colorgame-board and .dino-track in
 // style.css).
-const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #customize-screen, #home-screen, #minigames-screen, #minigame-screen';
+const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #customize-screen, #settings-screen, #home-screen, #minigames-screen, #minigame-screen';
 
 // The title only shows on the join screen (see openLobby/handleDisconnectClick
 // below); everywhere else it's hidden so the game screens get the full
@@ -1428,6 +1456,8 @@ window.addEventListener('popstate', () => {
     closeMortConfirm();
   } else if (!customizeScreen.classList.contains('hidden')) {
     closeCustomize();
+  } else if (!settingsScreen.classList.contains('hidden')) {
+    closeSettings();
   } else if (!newGamePopup.classList.contains('hidden')) {
     closeNewGamePopup();
   } else if (!joinGamePopup.classList.contains('hidden')) {
@@ -1843,6 +1873,8 @@ function updateSessionDisplay() {
   else if (currentSession?.started && !inGame) label = texts.continueButton;
   playButton.classList.toggle('hidden', label === null);
   if (label) playButton.textContent = label;
+  // Only shown on the lobby itself - see .settings-button in style.css.
+  settingsButton.classList.toggle('hidden', !(currentSession && !currentSession.started && isHost));
   sessionLabel.textContent = currentSession ? currentSession.name : '';
 }
 
@@ -1925,6 +1957,7 @@ function handleRole({ role, tasks }) {
   // JOUER while this player was still customising: off to the game with the
   // look they last saved.
   if (!customizeScreen.classList.contains('hidden')) closeCustomize();
+  if (!settingsScreen.classList.contains('hidden')) closeSettings();
   inGame = true;
   updateSessionDisplay();
   renderTasks(tasks);
@@ -2159,6 +2192,61 @@ function saveCustomize() {
 }
 
 document.querySelector('#customize-button').addEventListener('click', openCustomize);
+
+// ⚙️, host only: this game's settings, changed with − / + and saved with
+// VALIDER. The server checks them again and tells everyone the result.
+const settingsScreen = document.querySelector('#settings-screen');
+const settingsButton = document.querySelector('#settings-button');
+let draftSettings = null;
+
+function formatSetting(key, value) {
+  return key.endsWith('Seconds') ? `${value} s` : String(value);
+}
+
+function renderSettings() {
+  Object.entries(SETTINGS_LIMITS).forEach(([key, { min, max }]) => {
+    document.querySelector(`#setting-${key}`).textContent = formatSetting(key, draftSettings[key]);
+    settingsScreen.querySelector(`[data-setting="${key}"][data-direction="-1"]`).disabled = draftSettings[key] <= min;
+    settingsScreen.querySelector(`[data-setting="${key}"][data-direction="1"]`).disabled = draftSettings[key] >= max;
+  });
+}
+
+function openSettings() {
+  draftSettings = { ...currentSession.settings };
+  renderSettings();
+  lobbyScreen.classList.add('hidden');
+  lobbyBackButton.classList.add('hidden');
+  settingsScreen.classList.remove('hidden');
+  pushOverlayState();
+  fitActiveScreen();
+}
+
+// Back to the lobby. Without VALIDER (the phone's back button, or the game
+// starting), nothing changes.
+function closeSettings() {
+  settingsScreen.classList.add('hidden');
+  lobbyScreen.classList.remove('hidden');
+  lobbyBackButton.classList.remove('hidden');
+  fitActiveScreen();
+  closeOverlayState();
+}
+
+function saveSettings() {
+  if (socket) socket.emit('updateSettings', draftSettings);
+  closeSettings();
+}
+
+settingsScreen.querySelectorAll('.setting-step').forEach((button) => {
+  button.addEventListener('click', () => {
+    const key = button.dataset.setting;
+    const { min, max, step } = SETTINGS_LIMITS[key];
+    const next = draftSettings[key] + Number(button.dataset.direction) * step;
+    draftSettings[key] = Math.min(max, Math.max(min, next));
+    renderSettings();
+  });
+});
+settingsButton.addEventListener('click', openSettings);
+document.querySelector('#settings-done-button').addEventListener('click', saveSettings);
 document.querySelector('#customize-done-button').addEventListener('click', saveCustomize);
 
 // Back to the character screen. The server keeps our role in a game that has

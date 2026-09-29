@@ -3,6 +3,7 @@ import express from 'express';
 import { Server } from 'socket.io';
 import { TASK_POOL } from './taskState.js';
 import {
+  cleanSettings,
   cleanSessionName,
   isSessionNameTaken,
   createSession,
@@ -18,13 +19,11 @@ import {
 } from './sessionState.js';
 import { saveCharacter, getCharacter } from './characterStore.js';
 
-const INTERFERENCE_DURATION_MS = 10_000;
 
 // How long a phone has to confirm it received its role reveal. No answer
 // means the role never got there (a connection that looked alive but wasn't),
 // so it's sent again when the phone comes back.
 const ROLE_ACK_TIMEOUT_MS = 10_000;
-const ALERT_COUNTDOWN_MS = 60_000;
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
 // square is a few KB). This cap only exists so a malformed or oversized
@@ -108,8 +107,10 @@ const IMMEDIATE_DISCONNECT_REASONS = new Set([
 
 export function createGameServer({
   disconnectGraceMs = DISCONNECT_GRACE_MS,
-  interferenceDurationMs = INTERFERENCE_DURATION_MS,
-  alertCountdownMs = ALERT_COUNTDOWN_MS,
+  // Tests only: short fixed durations instead of each game's settings, so a
+  // test doesn't have to wait out a real alert or interference.
+  interferenceDurationMs = null,
+  alertCountdownMs = null,
 } = {}) {
   const app = express();
   const httpServer = createServer(app);
@@ -141,8 +142,17 @@ export function createGameServer({
   const roomOf = (session) => `session:${session.id}`;
 
   function sessionInfo(session) {
-    return { sessionId: session.id, name: session.name, hostId: session.hostId, started: session.started };
+    return {
+      sessionId: session.id,
+      name: session.name,
+      hostId: session.hostId,
+      started: session.started,
+      settings: session.settings,
+    };
   }
+
+  const alertMs = (session) => alertCountdownMs ?? session.settings.alertSeconds * 1000;
+  const interferenceMs = (session) => interferenceDurationMs ?? session.settings.interferenceSeconds * 1000;
 
   // What a phone needs to show the alert: whether it's flashing, and the
   // countdown bar's time left out of its full length.
@@ -150,7 +160,7 @@ export function createGameServer({
     return {
       active: session.alert.isAlertActive(),
       remainingMs: session.alert.getAlertRemainingMs(),
-      durationMs: alertCountdownMs,
+      durationMs: alertMs(session),
     };
   }
 
@@ -365,6 +375,15 @@ export function createGameServer({
       io.to(roomOf(session)).emit('chatMessage', message);
     });
 
+    // ⚙️ in the lobby: the host adjusting this game's settings, only before
+    // JOUER. Everyone in the game hears the new values.
+    socket.on('updateSettings', (requested = {}) => {
+      const session = currentSession(socket);
+      if (!session || session.started || session.hostId !== socket.data.clientId) return;
+      session.settings = cleanSettings(requested, session.settings);
+      io.to(roomOf(session)).emit('session', sessionInfo(session));
+    });
+
     // JOUER (host only, before the game has started) sends everyone in the
     // lobby into the game at once. CONTINUER (once it has started) brings in
     // just the player who pressed it, as a crewmate (see getRole).
@@ -377,8 +396,8 @@ export function createGameServer({
         if (session.hostId !== id) return;
         session.started = true;
         const lobby = session.roster.listPlayers();
-        session.roles.assignRoles(lobby);
-        session.tasks.assignTasks(lobby);
+        session.roles.assignRoles(lobby, session.settings.imposterCount);
+        session.tasks.assignTasks(lobby, session.settings.tasksPerPlayer);
         lobby.forEach((player) => addMember(session, player.id));
         io.to(roomOf(session)).emit('session', sessionInfo(session));
         broadcastSessionList();
@@ -407,7 +426,7 @@ export function createGameServer({
     socket.on('alertStart', () => {
       const session = currentSession(socket);
       if (!session) return;
-      session.alert.startAlert(() => io.to(roomOf(session)).emit('alert', alertPayload(session)), alertCountdownMs);
+      session.alert.startAlert(() => io.to(roomOf(session)).emit('alert', alertPayload(session)), alertMs(session));
       io.to(roomOf(session)).emit('alert', alertPayload(session));
     });
 
@@ -425,7 +444,7 @@ export function createGameServer({
       if (!session) return;
       session.interference.startInterference(
         () => io.to(roomOf(session)).emit('interference', { active: false }),
-        interferenceDurationMs,
+        interferenceMs(session),
       );
       io.to(roomOf(session)).emit('interference', { active: true });
     });

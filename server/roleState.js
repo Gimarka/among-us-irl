@@ -1,7 +1,7 @@
 // One game's role assignment (see sessionState.js - every game gets its
 // own). The server draws once per game and never tells a player anyone
-// else's role (see the non-negotiable rule in CLAUDE.md). Always exactly one
-// imposter (see docs/GAME_RULES.md), picked at random from the roster -
+// else's role (see the non-negotiable rule in CLAUDE.md). The host picks how
+// many imposters (see SETTINGS_LIMITS), drawn at random from the roster -
 // everyone else is crewmate.
 
 function shuffled(array) {
@@ -17,9 +17,12 @@ export function createRoles() {
   let roles = null; // clientId -> 'crewmate' | 'imposter', or null before the game has started
 
   // Draws roles for the given roster and remembers them for the game.
-  function assignRoles(players) {
-    const imposterId = players.length > 0 ? shuffled(players)[0].id : null;
-    roles = new Map(players.map((player) => [player.id, player.id === imposterId ? 'imposter' : 'crewmate']));
+  // There's always at least one crewmate (and one imposter): with too few
+  // players for the imposter count asked for, it draws as many as it can.
+  function assignRoles(players, imposterCount = 1) {
+    const count = Math.max(1, Math.min(imposterCount, players.length - 1));
+    const imposterIds = new Set(shuffled(players).slice(0, count).map((player) => player.id));
+    roles = new Map(players.map((player) => [player.id, imposterIds.has(player.id) ? 'imposter' : 'crewmate']));
     return roles;
   }
 
