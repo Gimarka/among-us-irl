@@ -78,6 +78,11 @@ export function createSession(name, hostId) {
     // The hand scanner minigame: which players are pressing it right now,
     // and the timer running while at least two of them are (see index.js).
     handScanner: { pressing: new Set(), timer: null },
+    // Players who are dead: declared themselves dead (MORT), or were voted
+    // out. Dead players can't vote, and can't be voted for.
+    dead: new Set(),
+    // The body report and vote running right now, or null (see index.js).
+    meeting: null,
     // Players who have entered the game itself (past the lobby), and so
     // have a role: clientId -> { roleSeen }. Never taken away during the
     // game - leaving and coming back picks up exactly where they were.
@@ -100,6 +105,7 @@ export function deleteSession(id) {
   session.alert.stopAlert();
   session.interference.clearInterference();
   clearTimeout(session.handScanner.timer);
+  clearTimeout(session.meeting?.timer);
   sessions.delete(id);
 }
 

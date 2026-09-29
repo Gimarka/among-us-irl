@@ -80,6 +80,21 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Body report and vote (TEST REPORT in the test menu, for now). Any player
+  in the game can trigger it. Every phone drops what it's doing (minigames,
+  scanner, chat, dead screen), the alert is paused and any interference cut.
+  "CADAVRE TROUVÉ" on dark yellow for 5 s, then the vote: every player in the
+  game shown like in the lobby, dead players with a red cross, a 30 s
+  countdown (server-timed, same on every phone) and a PASSER button. Living
+  players tap a player (themselves included, never a dead one) or PASSER and
+  can change their vote until the vote ends; dead players can't vote. Votes
+  are secret. The vote ends at 0 or as soon as every living player has voted.
+  Then 10 s of black: the player with the most votes (no tie, and PASSER not
+  on top) is eliminated - marked dead, "<name> A ÉTÉ ÉLIMINÉ" with their
+  character - otherwise "AUCUN JOUEUR N'A ÉTÉ ÉLIMINÉ". Everyone, the
+  eliminated player included, goes back to the menu and the alert resumes
+  with the time it had left. "OUI, JE SUIS MORT" now tells the server the
+  player is dead.
 - New mini-game "Hand scanner" (TEST SCANNER in the test menu): two players
   must hold the hand at the same time for 3 s to switch off the alert. Alone,
   the screen shows "En attente d'un autre joueur"; if one lets go early the

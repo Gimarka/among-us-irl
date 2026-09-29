@@ -1908,3 +1908,131 @@ button {
 .hidden {
   display: none;
 }
+
+/* Body report and vote: takes over the whole phone, above everything else
+   (even the dead screen, z-index:45), for as long as the server runs it. */
+.meeting-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #000;
+}
+
+.meeting-report,
+.meeting-result {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+
+.meeting-report {
+  background: #8a7000;
+}
+
+.meeting-report-text,
+.meeting-result-text {
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-align: center;
+  color: #fff;
+}
+
+.meeting-report-text {
+  font-size: 2.2rem;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.meeting-result {
+  justify-content: space-between;
+}
+
+.meeting-result-text {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  font-size: 1.6rem;
+  overflow-wrap: anywhere;
+}
+
+.meeting-vote {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 16px 24px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.meeting-countdown {
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.8);
+}
+
+.meeting-grid {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 14px 20px;
+}
+
+.vote-slot {
+  position: relative;
+  cursor: pointer;
+}
+
+.vote-slot.vote-selected,
+#meeting-skip-button.vote-selected {
+  border-color: #ffd400;
+  box-shadow: 0 0 16px rgba(255, 212, 0, 0.9), inset 0 0 12px rgba(255, 212, 0, 0.2);
+}
+
+.meeting-vote-readonly .vote-slot,
+.vote-slot.vote-dead {
+  cursor: default;
+}
+
+/* A thick red cross over a dead player's tile. */
+.vote-dead::before,
+.vote-dead::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  height: 12px;
+  border-radius: 6px;
+  background: #e00000;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.vote-dead::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.vote-dead::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+#meeting-skip-button:disabled {
+  opacity: 0.4;
+}
+
+/* The panels above set their own display, which would otherwise win over
+   the plain .hidden rule and leave a hidden panel covering the others. */
+.meeting-overlay .hidden {
+  display: none;
+}

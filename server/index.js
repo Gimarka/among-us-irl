@@ -18,11 +18,18 @@ import {
   markRoleSeen,
 } from './sessionState.js';
 import { saveCharacter, getCharacter } from './characterStore.js';
+import { tallyVotes, SKIP_VOTE } from './voteState.js';
 
 
 // How long two players must keep their hands on the scanner together to
 // switch the alert off.
 const HAND_SCAN_MS = 3000;
+
+// A body report (TEST REPORT, for now): "CADAVRE TROUVÉ" on every phone,
+// then the vote, then its result, each for a fixed time.
+const REPORT_MS = 5000;
+const VOTE_MS = 30_000;
+const RESULT_MS = 10_000;
 
 // How long a phone has to confirm it received its role reveal. No answer
 // means the role never got there (a connection that looked alive but wasn't),
@@ -116,6 +123,9 @@ export function createGameServer({
   interferenceDurationMs = null,
   alertCountdownMs = null,
   handScanMs = HAND_SCAN_MS,
+  reportMs = REPORT_MS,
+  voteMs = VOTE_MS,
+  resultMs = RESULT_MS,
 } = {}) {
   const app = express();
   const httpServer = createServer(app);
@@ -167,6 +177,13 @@ export function createGameServer({
       remainingMs: session.alert.getAlertRemainingMs(),
       durationMs: alertMs(session),
     };
+  }
+
+  // Starts (or restarts) the alert for durationMs; when it runs out, the
+  // server itself ends it for everyone.
+  function startAlert(session, durationMs) {
+    session.alert.startAlert(() => io.to(roomOf(session)).emit('alert', alertPayload(session)), durationMs);
+    io.to(roomOf(session)).emit('alert', alertPayload(session));
   }
 
   // The REJOINDRE list, pushed to every phone whenever a game appears,
@@ -256,6 +273,81 @@ export function createGameServer({
     if (session.handScanner.pressing.delete(clientId)) updateHandScanner(session);
   }
 
+  // --- Body report and vote -------------------------------------------
+  // The whole game stops for it: minigames close on every phone, and the
+  // alert is paused (resumed with the time it had left once the vote is
+  // over). The phones show whatever phase the server says, for the time
+  // the server says is left, so they all stay in sync.
+
+  function meetingPayload(session) {
+    const meeting = session.meeting;
+    if (!meeting) return { phase: null };
+    const withDeath = (player) => ({ ...player, dead: session.dead.has(player.id) });
+    const eliminated = meeting.participants.find((player) => player.id === meeting.eliminatedId);
+    return {
+      phase: meeting.phase,
+      remainingMs: Math.max(0, meeting.endsAt - Date.now()),
+      durationMs: meeting.durationMs,
+      players: meeting.participants.map(withDeath),
+      eliminated: eliminated ? withDeath(eliminated) : null,
+    };
+  }
+
+  function broadcastMeeting(session) {
+    io.to(roomOf(session)).emit('meeting', meetingPayload(session));
+  }
+
+  function setMeetingPhase(session, phase, durationMs, onEnd) {
+    const meeting = session.meeting;
+    clearTimeout(meeting.timer);
+    meeting.phase = phase;
+    meeting.durationMs = durationMs;
+    meeting.endsAt = Date.now() + durationMs;
+    meeting.timer = setTimeout(onEnd, durationMs);
+    broadcastMeeting(session);
+  }
+
+  // Only players who are alive and in the vote get to vote.
+  function canVote(session, clientId) {
+    return session.meeting.participants.some((player) => player.id === clientId) && !session.dead.has(clientId);
+  }
+
+  function startMeeting(session) {
+    const pausedAlertMs = session.alert.getAlertRemainingMs(); // 0 when no alert is on
+    session.alert.stopAlert();
+    session.interference.clearInterference();
+    clearTimeout(session.handScanner.timer);
+    session.handScanner.timer = null;
+    session.handScanner.pressing.clear();
+    io.to(roomOf(session)).emit('alert', alertPayload(session));
+    io.to(roomOf(session)).emit('interference', { active: false });
+    broadcastHandScanner(session);
+
+    // Everyone playing the game at this moment (not newcomers still in the
+    // lobby), with the look they have now.
+    const participants = session.roster.listPlayers()
+      .filter((player) => isMember(session, player.id))
+      .map(({ id, name, color, photo, hat }) => ({ id, name, color, photo, hat }));
+    session.meeting = { phase: null, timer: null, participants, votes: new Map(), eliminatedId: null, pausedAlertMs };
+    setMeetingPhase(session, 'report', reportMs, () => {
+      setMeetingPhase(session, 'vote', voteMs, () => endVote(session));
+    });
+  }
+
+  function endVote(session) {
+    const meeting = session.meeting;
+    meeting.eliminatedId = tallyVotes(meeting.votes);
+    if (meeting.eliminatedId) session.dead.add(meeting.eliminatedId);
+    setMeetingPhase(session, 'result', resultMs, () => endMeeting(session));
+  }
+
+  function endMeeting(session) {
+    const { pausedAlertMs } = session.meeting;
+    session.meeting = null;
+    broadcastMeeting(session);
+    if (pausedAlertMs > 0) startAlert(session, pausedAlertMs);
+  }
+
   function leaveCurrentSession(socket) {
     const session = currentSession(socket);
     socket.data.sessionId = null;
@@ -320,6 +412,9 @@ export function createGameServer({
     socket.emit('chatHistory', session.chat.listMessages());
     socket.emit('alert', alertPayload(session));
     socket.emit('interference', { active: session.interference.isInterferenceActive() });
+    socket.emit('meeting', meetingPayload(session));
+    const myVote = session.meeting?.votes.get(id);
+    if (myVote) socket.emit('myVote', { targetId: myVote });
 
     // A returning player skips the lobby: their role reveal if they never
     // got it, otherwise just their task list to pick up from.
@@ -468,14 +563,13 @@ export function createGameServer({
     // the server itself ends the alert for everyone.
     socket.on('alertStart', () => {
       const session = currentSession(socket);
-      if (!session) return;
-      session.alert.startAlert(() => io.to(roomOf(session)).emit('alert', alertPayload(session)), alertMs(session));
-      io.to(roomOf(session)).emit('alert', alertPayload(session));
+      if (!session || session.meeting) return;
+      startAlert(session, alertMs(session));
     });
 
     socket.on('alertStop', () => {
       const session = currentSession(socket);
-      if (!session) return;
+      if (!session || session.meeting) return;
       session.alert.stopAlert();
       io.to(roomOf(session)).emit('alert', alertPayload(session));
     });
@@ -484,7 +578,7 @@ export function createGameServer({
     // once, and the server's own timer turns it back off.
     socket.on('interferenceStart', () => {
       const session = currentSession(socket);
-      if (!session) return;
+      if (!session || session.meeting) return;
       session.interference.startInterference(
         () => io.to(roomOf(session)).emit('interference', { active: false }),
         interferenceMs(session),
@@ -495,10 +589,38 @@ export function createGameServer({
     socket.on('handPress', ({ pressing } = {}) => {
       const session = currentSession(socket);
       const id = socket.data.clientId;
-      if (!session || !session.roster.findPlayerByClientId(id)) return;
+      if (!session || session.meeting || !session.roster.findPlayerByClientId(id)) return;
       if (pressing) session.handScanner.pressing.add(id);
       else session.handScanner.pressing.delete(id);
       updateHandScanner(session);
+    });
+
+    // "OUI, JE SUIS MORT": from now on this player can't vote or be voted for.
+    socket.on('declareDead', () => {
+      const session = currentSession(socket);
+      const id = socket.data.clientId;
+      if (session && isMember(session, id)) session.dead.add(id);
+    });
+
+    // TEST REPORT: any player in the game, when no report is already running.
+    socket.on('reportBody', () => {
+      const session = currentSession(socket);
+      if (!session || session.meeting || !isMember(session, socket.data.clientId)) return;
+      startMeeting(session);
+    });
+
+    // A vote can be changed until the vote ends, which is as soon as every
+    // living player has voted. Nobody sees anyone else's vote.
+    socket.on('castVote', ({ targetId } = {}) => {
+      const session = currentSession(socket);
+      const id = socket.data.clientId;
+      const meeting = session?.meeting;
+      if (!meeting || meeting.phase !== 'vote' || !canVote(session, id)) return;
+      if (targetId !== SKIP_VOTE && !canVote(session, targetId)) return;
+      meeting.votes.set(id, targetId);
+      socket.emit('myVote', { targetId });
+      const everyoneVoted = meeting.participants.every((player) => session.dead.has(player.id) || meeting.votes.has(player.id));
+      if (everyoneVoted) endVote(session);
     });
 
     socket.on('disconnect', (reason) => {

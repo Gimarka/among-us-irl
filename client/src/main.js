@@ -284,6 +284,8 @@ app.innerHTML = `
 
         <button id="test-handscan-button" class="test-button">${texts.testHandScanButton}</button>
 
+        <button id="test-report-button" class="test-button">${texts.testReportButton}</button>
+
         <button id="alert-start-button" class="test-button test-button-danger">${texts.alertStartButton}</button>
 
         <button id="alert-stop-button" class="test-button">${texts.alertStopButton}</button>
@@ -437,6 +439,21 @@ document.querySelector('#alert-overlay').insertAdjacentHTML(
       <span class="mort-skull mort-skull-br" aria-hidden="true">💀</span>
       <div class="mort-qr-panel">
         <canvas id="mort-qr-canvas"></canvas>
+      </div>
+    </div>
+
+    <div class="meeting-overlay hidden" id="meeting-overlay">
+      <div class="meeting-report hidden" id="meeting-report">
+        <p class="meeting-report-text">${texts.reportTitle}</p>
+      </div>
+      <div class="meeting-vote hidden" id="meeting-vote">
+        <p class="meeting-countdown" id="meeting-countdown"></p>
+        <div class="meeting-grid" id="meeting-grid"></div>
+        <button id="meeting-skip-button" class="test-button">${texts.voteSkipButton}</button>
+      </div>
+      <div class="meeting-result hidden" id="meeting-result">
+        <p class="meeting-result-text" id="meeting-result-text"></p>
+        <div class="meeting-result-character" id="meeting-result-character"></div>
       </div>
     </div>
   `,
@@ -1550,6 +1567,7 @@ function closeMortConfirm() {
 mortButton.addEventListener('click', openMortConfirm);
 mortConfirmCancelButton.addEventListener('click', closeMortConfirm);
 mortConfirmYesButton.addEventListener('click', () => {
+  if (socket) socket.emit('declareDead'); // from now on: can't vote, can't be voted for
   mortConfirmPopup.classList.add('hidden');
   openMortScreen();
 });
@@ -1573,11 +1591,15 @@ document.addEventListener('visibilitychange', () => {
 // than one press and history never accumulates stale entries.
 let closingFromPopState = false;
 
+let overlayDepth = 0; // history entries pushed by screens that are still open
+
 function pushOverlayState() {
   history.pushState({ overlay: true }, '', '');
+  overlayDepth += 1;
 }
 
 function closeOverlayState() {
+  overlayDepth = Math.max(0, overlayDepth - 1);
   if (!closingFromPopState) {
     history.back();
   }
@@ -1615,6 +1637,160 @@ window.addEventListener('popstate', () => {
     closeMinigamesMenu();
   }
   closingFromPopState = false;
+});
+
+// Closes whatever the player has open - a minigame, the scanner, the chat,
+// the dead screen - back down to the menu, all at once. Each close function
+// normally steps back one history entry; here they all skip that and the
+// history is rewound in a single jump instead.
+function closeEverything() {
+  const depth = overlayDepth;
+  closingFromPopState = true;
+  hidePopup();
+  [
+    [minigameScreen, closeMiniGame],
+    [colorGameScreen, closeColorGame],
+    [dinoScreen, closeDinoGame],
+    [dishScreen, closeDishGame],
+    [handScanScreen, closeHandScan],
+    [chatScreen, closeChat],
+    [scanPopup, closeScanPopup],
+    [mortConfirmPopup, closeMortConfirm],
+    [mortOverlay, closeMortScreen],
+    [minigamesScreen, closeMinigamesMenu],
+  ].forEach(([screen, close]) => {
+    if (!screen.classList.contains('hidden')) close();
+  });
+  closingFromPopState = false;
+  overlayDepth = 0;
+  if (depth > 0) history.go(-depth);
+}
+
+// --- Body report and vote ---------------------------------------------
+// The server runs it: it says which phase we're in ("CADAVRE TROUVÉ", the
+// vote, the result) and how long is left, and every phone just shows that.
+const meetingOverlay = document.querySelector('#meeting-overlay');
+const meetingReport = document.querySelector('#meeting-report');
+const meetingVote = document.querySelector('#meeting-vote');
+const meetingResult = document.querySelector('#meeting-result');
+const meetingCountdown = document.querySelector('#meeting-countdown');
+const meetingGrid = document.querySelector('#meeting-grid');
+const meetingSkipButton = document.querySelector('#meeting-skip-button');
+const meetingResultText = document.querySelector('#meeting-result-text');
+const meetingResultCharacter = document.querySelector('#meeting-result-character');
+const testReportButton = document.querySelector('#test-report-button');
+const SKIP_VOTE = 'skip'; // matches SKIP_VOTE in server/voteState.js
+
+let meetingAvatarCounter = 0; // unique DOM ids for the characters (see appendChatMessage)
+let meetingCountdownTimer = null;
+let myVoteTarget = null;
+
+// A small character, drawn the same way as the lobby's.
+function appendMeetingCharacter(parent, player, frameClass) {
+  meetingAvatarCounter += 1;
+  const avatarId = `meeting-avatar-${meetingAvatarCounter}`;
+  const frame = document.createElement('div');
+  frame.className = `character-frame ${frameClass}`;
+  frame.innerHTML = characterMarkup(avatarId); // our own trusted markup, not user data
+  parent.appendChild(frame); // in the document before setVisorPhoto, which looks it up by id
+  setSuitColor(frame, player.color || DEFAULT_SUIT_COLOR);
+  setHat(frame, player.hat || DEFAULT_HAT);
+  if (player.photo) setVisorPhoto(avatarId, player.photo);
+}
+
+function renderVoteGrid(players) {
+  const me = players.find((player) => player.id === clientId);
+  const canVote = Boolean(me && !me.dead);
+  meetingVote.classList.toggle('meeting-vote-readonly', !canVote);
+  meetingSkipButton.disabled = !canVote;
+
+  meetingGrid.innerHTML = '';
+  players.forEach((player) => {
+    const slot = document.createElement('div');
+    slot.className = 'lobby-slot vote-slot';
+    slot.dataset.playerId = player.id;
+    slot.classList.toggle('vote-dead', player.dead);
+    meetingGrid.appendChild(slot);
+    appendMeetingCharacter(slot, player, 'character-frame-tiny');
+    const nameEl = document.createElement('p');
+    nameEl.className = 'lobby-slot-name';
+    nameEl.textContent = player.name;
+    slot.appendChild(nameEl);
+    if (canVote && !player.dead) slot.addEventListener('click', () => castVote(player.id));
+  });
+  showMyVote(myVoteTarget);
+}
+
+function castVote(targetId) {
+  showMyVote(targetId); // straight away; the server confirms with 'myVote'
+  if (socket) socket.emit('castVote', { targetId });
+}
+
+function showMyVote(targetId) {
+  myVoteTarget = targetId;
+  meetingGrid.querySelectorAll('.vote-slot').forEach((slot) => {
+    slot.classList.toggle('vote-selected', slot.dataset.playerId === targetId);
+  });
+  meetingSkipButton.classList.toggle('vote-selected', targetId === SKIP_VOTE);
+}
+
+// Counts down from the time the server says is left, so every phone shows
+// the same number whatever its own clock says.
+function startMeetingCountdown(remainingMs) {
+  clearInterval(meetingCountdownTimer);
+  const endsAt = performance.now() + remainingMs;
+  const tick = () => {
+    meetingCountdown.textContent = Math.max(0, Math.ceil((endsAt - performance.now()) / 1000));
+  };
+  tick();
+  meetingCountdownTimer = setInterval(tick, 200);
+}
+
+function renderMeetingResult(eliminated) {
+  meetingResultCharacter.innerHTML = '';
+  if (!eliminated) {
+    meetingResultText.textContent = texts.voteNobodyEliminated;
+    return;
+  }
+  meetingResultText.textContent = texts.voteEliminated.replace('{name}', eliminated.name);
+  appendMeetingCharacter(meetingResultCharacter, eliminated, 'character-frame-large');
+}
+
+function hideMeeting() {
+  clearInterval(meetingCountdownTimer);
+  meetingCountdownTimer = null;
+  myVoteTarget = null;
+  meetingOverlay.classList.add('hidden');
+}
+
+function handleMeeting({ phase, remainingMs, players, eliminated }) {
+  // Newcomers still in the lobby aren't part of it; and once it's over,
+  // everyone is back on the menu, which was left open underneath.
+  if (!phase || !inGame) {
+    hideMeeting();
+    return;
+  }
+  if (meetingOverlay.classList.contains('hidden')) {
+    closeEverything();
+    meetingOverlay.classList.remove('hidden');
+  }
+  if (phase === 'report') myVoteTarget = null;
+
+  meetingReport.classList.toggle('hidden', phase !== 'report');
+  meetingVote.classList.toggle('hidden', phase !== 'vote');
+  meetingResult.classList.toggle('hidden', phase !== 'result');
+  if (phase === 'vote') {
+    renderVoteGrid(players);
+    startMeetingCountdown(remainingMs);
+  } else {
+    clearInterval(meetingCountdownTimer);
+  }
+  if (phase === 'result') renderMeetingResult(eliminated);
+}
+
+meetingSkipButton.addEventListener('click', () => castVote(SKIP_VOTE));
+testReportButton.addEventListener('click', () => {
+  if (socket) socket.emit('reportBody');
 });
 
 const joinScreen = document.querySelector('#join-screen');
@@ -2133,6 +2309,8 @@ function connectSocket() {
   socket.on('interference', ({ active }) => setInterferenceActive(active));
   socket.on('handScanner', handleHandScanner);
   socket.on('handScanComplete', handleHandScanComplete);
+  socket.on('meeting', handleMeeting);
+  socket.on('myVote', ({ targetId }) => showMyVote(targetId));
   socket.on('welcome', handleWelcome);
   socket.on('joined', handleJoined);
   socket.on('sessionError', handleSessionError);
@@ -2410,6 +2588,7 @@ function handleDisconnectClick() {
   // Out of the game, this phone no longer hears it switch these off.
   setAlertState({ active: false });
   setInterferenceActive(false);
+  hideMeeting();
 
   // Reachable from either the menu's "SE DECONNECTER" or the lobby's back
   // button, so hide both regardless of which one is actually showing.

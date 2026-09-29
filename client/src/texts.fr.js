@@ -14,6 +14,12 @@ export const texts = {
   handScanScanning: 'SCAN EN COURS…',
   handScanSuccess: 'ALERTE DÉSACTIVÉE',
   dishInstruction: 'TROUVE LE SIGNAL',
+  testReportButton: 'TEST REPORT',
+  reportTitle: 'CADAVRE TROUVÉ',
+  voteSkipButton: 'PASSER',
+  // {name} is replaced by the eliminated player's name.
+  voteEliminated: '{name} A ÉTÉ ÉLIMINÉ',
+  voteNobodyEliminated: "AUCUN JOUEUR N'A ÉTÉ ÉLIMINÉ",
   alertStartButton: 'ALERT START',
   alertStopButton: 'ALERT STOP',
   interferenceButton: 'INTERFÉRENCE',
