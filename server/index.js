@@ -20,6 +20,10 @@ import {
 import { saveCharacter, getCharacter } from './characterStore.js';
 
 
+// How long two players must keep their hands on the scanner together to
+// switch the alert off.
+const HAND_SCAN_MS = 3000;
+
 // How long a phone has to confirm it received its role reveal. No answer
 // means the role never got there (a connection that looked alive but wasn't),
 // so it's sent again when the phone comes back.
@@ -111,6 +115,7 @@ export function createGameServer({
   // test doesn't have to wait out a real alert or interference.
   interferenceDurationMs = null,
   alertCountdownMs = null,
+  handScanMs = HAND_SCAN_MS,
 } = {}) {
   const app = express();
   const httpServer = createServer(app);
@@ -214,11 +219,49 @@ export function createGameServer({
     broadcastSessionList();
   }
 
+  // Hand scanner: tells the game how many players are pressing, and whether
+  // the scan is running (so the phones can show its progress bar).
+  function broadcastHandScanner(session) {
+    io.to(roomOf(session)).emit('handScanner', {
+      pressing: session.handScanner.pressing.size,
+      scanning: session.handScanner.timer !== null,
+      scanMs: handScanMs,
+    });
+  }
+
+  // Two or more players pressing starts the scan; anyone letting go (below
+  // two) cancels it. Held long enough, it switches the alert off for the
+  // whole game and tells the players who did it.
+  function updateHandScanner(session) {
+    const scanner = session.handScanner;
+    if (scanner.pressing.size >= 2 && scanner.timer === null) {
+      scanner.timer = setTimeout(() => {
+        scanner.timer = null;
+        const players = Array.from(scanner.pressing);
+        scanner.pressing.clear();
+        session.alert.stopAlert();
+        io.to(roomOf(session)).emit('alert', alertPayload(session));
+        io.to(roomOf(session)).emit('handScanComplete', { players });
+        broadcastHandScanner(session);
+      }, handScanMs);
+    } else if (scanner.pressing.size < 2 && scanner.timer !== null) {
+      clearTimeout(scanner.timer);
+      scanner.timer = null;
+    }
+    broadcastHandScanner(session);
+  }
+
+  // A phone that leaves or drops can't still be holding the scanner.
+  function releaseHand(session, clientId) {
+    if (session.handScanner.pressing.delete(clientId)) updateHandScanner(session);
+  }
+
   function leaveCurrentSession(socket) {
     const session = currentSession(socket);
     socket.data.sessionId = null;
     if (!session) return;
     socket.leave(roomOf(session));
+    releaseHand(session, socket.data.clientId);
     cancelPendingRemoval(socket.data.clientId);
     removeFromRoster(session, socket.data.clientId, socket.id);
   }
@@ -449,10 +492,20 @@ export function createGameServer({
       io.to(roomOf(session)).emit('interference', { active: true });
     });
 
+    socket.on('handPress', ({ pressing } = {}) => {
+      const session = currentSession(socket);
+      const id = socket.data.clientId;
+      if (!session || !session.roster.findPlayerByClientId(id)) return;
+      if (pressing) session.handScanner.pressing.add(id);
+      else session.handScanner.pressing.delete(id);
+      updateHandScanner(session);
+    });
+
     socket.on('disconnect', (reason) => {
       const id = socket.data.clientId;
       const session = currentSession(socket);
       if (!id || !session) return; // wasn't in a game
+      releaseHand(session, id);
 
       if (IMMEDIATE_DISCONNECT_REASONS.has(reason)) {
         removeFromRoster(session, id, socket.id);

@@ -32,6 +32,50 @@ const CAMERA_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://
 const SHUTTER_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="5.2" fill="currentColor"/></svg>`;
 const RETAKE_ICON = `<svg class="button-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>`;
 
+// The hand scanner minigame's pad, as provided (it animates its own scan line).
+const HAND_ICON = `<svg viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="thumbGlow3" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect x="20" y="20" width="200" height="200" rx="15" fill="#12181f" stroke="#2a333d" stroke-width="2" />
+  <rect x="40" y="40" width="160" height="160" rx="10" fill="#080c10" stroke="#1c242e" stroke-width="1.5" />
+  <g transform="translate(10 0)">
+    <path d="M 104 188 C 100 176, 92 168, 84 156 C 78 147, 69 132, 64.8 124 A 6.5 6.5 0 0 1 75.2 116.1 C 79 121, 84 130, 88 136 C 91 138, 94 136, 94.5 126 L 90.5 70 A 6.2 6.2 0 0 1 102.9 69.5 L 107 113 Q 108.5 117, 110 113 L 109.5 61 A 6.25 6.25 0 0 1 122 61 L 122.5 113 Q 124 117, 125.5 113 L 127 67 A 6.2 6.2 0 0 1 139.4 67.5 L 137.5 116 Q 139.5 120, 141 117 L 144 86 A 5.5 5.5 0 0 1 155 87.5 L 152 122 C 155 138, 154 160, 147 174 L 142 188 Z" fill="#1a232e" stroke="#00f0ff" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" filter="url(#thumbGlow3)" />
+    <g fill="none" stroke="#00f0ff" stroke-width="1" stroke-linecap="round" opacity="0.35">
+      <path d="M 93.5 81 L 101.5 81" />
+      <path d="M 94.5 96 L 103.5 96" />
+      <path d="M 112 74 L 120 74" />
+      <path d="M 112 90 L 120 90" />
+      <path d="M 128.8 79 L 136.8 79" />
+      <path d="M 128.3 94 L 136.3 94" />
+      <path d="M 145.2 94 L 152.4 94" />
+      <path d="M 144 106 L 151.5 106" />
+      <path d="M 71.5 132 L 79.5 125.5" />
+      <path d="M 97 134 C 100 152, 104 168, 112 180" />
+      <path d="M 152 134 C 140 132, 126 131, 114 124" />
+      <path d="M 97 138 C 110 142, 128 146, 140 150" />
+    </g>
+  </g>
+  <line x1="45" y1="90" x2="195" y2="90" stroke="#00f0ff" stroke-width="2.5" filter="url(#thumbGlow3)">
+    <animate attributeName="y1" values="55;180;55" dur="3s" repeatCount="indefinite" />
+    <animate attributeName="y2" values="55;180;55" dur="3s" repeatCount="indefinite" />
+  </line>
+  <line x1="45" y1="100" x2="195" y2="100" stroke="#7be5ff" stroke-width="1" opacity="0.6" filter="url(#thumbGlow3)">
+    <animate attributeName="y1" values="65;190;65" dur="3s" repeatCount="indefinite" />
+    <animate attributeName="y2" values="65;190;65" dur="3s" repeatCount="indefinite" />
+  </line>
+  <path d="M 50 60 L 50 50 L 60 50" fill="none" stroke="#7be5ff" stroke-width="2" />
+  <path d="M 190 60 L 190 50 L 180 50" fill="none" stroke="#7be5ff" stroke-width="2" />
+  <path d="M 50 180 L 50 190 L 60 190" fill="none" stroke="#7be5ff" stroke-width="2" />
+  <path d="M 190 180 L 190 190 L 180 190" fill="none" stroke="#7be5ff" stroke-width="2" />
+</svg>`;
+
 // The satellite dish for the signal minigame. Drawn with currentColor so CSS
 // gives it the app's cyan (see .dishgame-dish).
 const DISH_ICON = `<svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><g transform="translate(0,400) scale(0.05,-0.05)" fill="currentColor"><path d="M4165 7859 c-971 -173 -1177 -1693 -420 -3091 49 -89 108 -191 133 -226 51 -70 53 -63 -75 -210 -300 -343 -229 -885 142 -1074 55 -29 74 -50 67 -74 -35 -114 -354 -1253 -376 -1340 -26 -104 -29 -107 -142 -153 -187 -76 -181 -67 -381 -601 -136 -365 -146 -407 -107 -482 268 -518 2868 -608 3577 -124 181 123 182 173 15 582 -253 619 -271 636 -743 716 -126 21 -157 33 -168 67 -17 58 -436 1090 -484 1195 -52 114 -47 115 101 17 914 -607 2153 -767 2964 -384 518 245 675 546 563 1079 -75 354 -359 953 -616 1298 l-48 64 46 276 c25 152 46 305 46 340 1 56 12 69 86 103 99 45 622 466 684 550 292 399 -570 1213 -1025 967 -51 -28 -444 -580 -509 -715 -3 -6 -112 -54 -242 -105 l-237 -94 -113 108 c-885 846 -2095 1425 -2738 1311z m506 -190 c510 -105 1271 -538 1946 -1107 l226 -191 -56 -25 c-32 -14 -466 -188 -967 -387 -500 -199 -962 -385 -1025 -414 -64 -28 -119 -47 -123 -43 -138 153 -482 709 -622 1003 -430 907 -202 1334 621 1164z m-894 -869 c509 -1576 3084 -3906 4338 -3925 456 -7 -375 -220 -865 -222 -761 -2 -1725 359 -2251 842 l-104 96 24 116 c86 413 -209 777 -638 785 l-168 4 -99 157 c-549 875 -719 2081 -370 2627 l45 70 14 -180 c8 -114 36 -250 74 -370z m4681 358 c301 -151 530 -536 401 -674 -181 -195 -740 190 -809 558 -34 180 166 237 408 116z m-499 -273 c87 -244 337 -477 606 -565 l98 -32 -167 -130 c-270 -212 -261 -208 -387 -180 -195 44 -399 234 -461 430 l-32 103 98 149 c54 83 119 184 144 225 25 41 52 75 60 75 8 0 26 -34 41 -75z m-487 -454 c20 -80 7 -90 -223 -184 -449 -184 -1097 -461 -1705 -730 -344 -152 -633 -277 -641 -277 -18 0 -151 160 -140 168 4 2 444 179 977 393 534 213 1128 452 1320 531 405 165 395 163 412 99z m90 -236 c12 -25 54 -78 92 -117 l69 -73 -47 -92 c-25 -50 -50 -92 -56 -92 -23 -2 -307 327 -290 333 11 4 56 24 100 45 104 49 105 49 132 -4z m-57 -527 c10 -17 -107 -241 -327 -622 -188 -328 -425 -742 -525 -920 -101 -178 -190 -325 -200 -325 -106 -6 -1516 1288 -1459 1340 19 17 558 254 1476 650 l660 285 180 -191 c99 -105 187 -202 195 -217z m400 240 c49 -18 49 -18 -98 -281 -184 -329 -472 -863 -797 -1477 -319 -604 -279 -543 -335 -512 -112 61 -126 80 -96 127 40 65 906 1575 1089 1901 94 166 165 272 179 265 13 -6 39 -17 58 -23z m250 -98 c3 -2 -15 -128 -39 -280 l-43 -276 -63 75 -63 74 34 174 c51 264 81 305 174 233z m-212 -685 c662 -927 924 -1765 630 -2011 -267 -222 -849 -105 -1562 315 l-191 112 119 225 c109 205 294 556 686 1299 80 151 150 275 155 275 6 0 79 -97 163 -215z m-3496 -797 c264 -90 408 -430 291 -688 -230 -508 -990 -326 -954 229 22 353 336 570 663 459z m396 -921 c56 -50 45 -67 -43 -67 -89 0 -96 10 -47 63 41 45 45 45 90 4z m-173 -777 c51 -286 114 -641 141 -788 71 -389 95 -350 -206 -334 -327 18 -845 107 -845 145 0 5 78 286 172 624 95 337 191 683 213 768 l40 155 112 1 c62 1 145 12 183 26 87 30 71 78 190 -597z m190 590 l95 0 46 -115 c25 -63 62 -152 82 -198 133 -303 515 -1274 507 -1288 -19 -29 -621 -138 -639 -115 -3 3 -21 105 -40 226 -38 242 -246 1391 -265 1468 -11 45 -8 47 54 35 36 -7 108 -13 160 -13z m1072 -1619 c666 -125 -20 -341 -1085 -341 -687 0 -1347 108 -1347 220 0 63 99 85 195 44 569 -244 2172 -175 2071 89 -9 24 -3 29 26 20 21 -7 84 -21 140 -32z m-2412 -251 c415 -215 2089 -227 2612 -18 157 62 140 70 216 -97 142 -313 216 -530 195 -570 -54 -101 -488 -235 -953 -297 -963 -126 -2430 76 -2430 335 0 52 198 556 244 622 45 64 41 64 116 25z"/></g></svg>`;
@@ -238,6 +282,8 @@ app.innerHTML = `
 
         <button id="test-dish-button" class="test-button">${texts.testDishButton}</button>
 
+        <button id="test-handscan-button" class="test-button">${texts.testHandScanButton}</button>
+
         <button id="alert-start-button" class="test-button test-button-danger">${texts.alertStartButton}</button>
 
         <button id="alert-stop-button" class="test-button">${texts.alertStopButton}</button>
@@ -282,6 +328,15 @@ app.innerHTML = `
           <div class="dino-character" id="dino-character"></div>
         </div>
       </div>
+    </div>
+
+    <div id="handscan-screen" class="screen handscan hidden">
+      <div class="handscan-instruction">
+        <p class="minigame-instruction-label">${texts.handScanInstruction}</p>
+        <p class="handscan-status" id="handscan-status"></p>
+      </div>
+      <div class="handscan-pad" id="handscan-pad">${HAND_ICON}</div>
+      <div class="handscan-progress"><div class="handscan-progress-fill" id="handscan-progress-fill"></div></div>
     </div>
 
     <div id="dishgame-screen" class="screen dishgame hidden">
@@ -402,7 +457,7 @@ const SCREEN_BOTTOM_GAP_PX = 16;
 // pixel positions (drag-and-drop, jump physics), so they're sized with
 // fixed/vh-relative CSS instead (see .colorgame-board and .dino-track in
 // style.css).
-const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #customize-screen, #settings-screen, #home-screen, #minigames-screen, #minigame-screen';
+const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #customize-screen, #settings-screen, #home-screen, #minigame-screen';
 
 // The title only shows on the join screen (see openLobby/handleDisconnectClick
 // below); everywhere else it's hidden so the game screens get the full
@@ -1205,6 +1260,90 @@ function closeDishGame() {
 
 testDishButton.addEventListener('click', openDishGame);
 
+// Hand scanner: two players must hold their hand on it at the same time for
+// 3 s to switch the alert off. The server is the referee - this phone only
+// says when its hand goes down or comes up, and shows what the server says.
+const handScanScreen = document.querySelector('#handscan-screen');
+const handScanPad = document.querySelector('#handscan-pad');
+const handScanStatus = document.querySelector('#handscan-status');
+const handScanFill = document.querySelector('#handscan-progress-fill');
+const testHandScanButton = document.querySelector('#test-handscan-button');
+let handPressing = false; // this player's hand is on the pad
+let handPlayersPressing = 0; // how many players in the game are pressing, this one included
+let handScanning = false;
+
+function renderHandScan(scanMs = 0) {
+  if (!handPressing) handScanStatus.textContent = '';
+  else if (handPlayersPressing < 2) handScanStatus.textContent = texts.handScanWaiting;
+  else handScanStatus.textContent = texts.handScanScanning;
+
+  const scanning = handPressing && handScanning;
+  if (scanning && !handScanFill.classList.contains('running')) {
+    // Fills over exactly the server's scan time; restarted from empty each scan.
+    handScanFill.style.transition = 'none';
+    handScanFill.style.transform = 'scaleX(0)';
+    handScanFill.getBoundingClientRect();
+    handScanFill.style.transition = `transform ${scanMs}ms linear`;
+    handScanFill.style.transform = 'scaleX(1)';
+    handScanFill.classList.add('running');
+  } else if (!scanning) {
+    handScanFill.classList.remove('running');
+    handScanFill.style.transition = 'none';
+    handScanFill.style.transform = 'scaleX(0)';
+  }
+}
+
+function setHandPressing(pressing) {
+  if (handPressing === pressing) return;
+  handPressing = pressing;
+  handScanPad.classList.toggle('pressed', pressing);
+  if (socket) socket.emit('handPress', { pressing });
+  renderHandScan();
+}
+
+function handleHandScanner({ pressing, scanning, scanMs }) {
+  handPlayersPressing = pressing;
+  handScanning = scanning;
+  renderHandScan(scanMs);
+}
+
+function handleHandScanComplete({ players }) {
+  if (handScanScreen.classList.contains('hidden') || !players.includes(clientId)) return;
+  handPressing = false;
+  handScanPad.classList.remove('pressed');
+  renderHandScan();
+  showPopup('success', texts.handScanSuccess);
+  playSuccessSoundThenClose();
+}
+
+handScanPad.addEventListener('pointerdown', (event) => {
+  handScanPad.setPointerCapture(event.pointerId);
+  setHandPressing(true);
+});
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach((type) => {
+  handScanPad.addEventListener(type, () => setHandPressing(false));
+});
+
+function openHandScan() {
+  minigamesScreen.classList.add('hidden');
+  handScanScreen.classList.remove('hidden');
+  pushOverlayState();
+  activeGameClose = closeHandScan;
+  handPlayersPressing = 0;
+  handScanning = false;
+  renderHandScan();
+}
+
+function closeHandScan() {
+  setHandPressing(false);
+  hidePopup();
+  handScanScreen.classList.add('hidden');
+  minigamesScreen.classList.remove('hidden');
+  closeOverlayState();
+}
+
+testHandScanButton.addEventListener('click', openHandScan);
+
 const testChatButton = document.querySelector('#test-chat-button');
 const chatScreen = document.querySelector('#chat-screen');
 const chatMessages = document.querySelector('#chat-messages');
@@ -1468,6 +1607,8 @@ window.addEventListener('popstate', () => {
     closeDinoGame();
   } else if (!dishScreen.classList.contains('hidden')) {
     closeDishGame();
+  } else if (!handScanScreen.classList.contains('hidden')) {
+    closeHandScan();
   } else if (!chatScreen.classList.contains('hidden')) {
     closeChat();
   } else if (!minigamesScreen.classList.contains('hidden')) {
@@ -1990,6 +2131,8 @@ function connectSocket() {
   socket.on('tasks', renderTasks);
   socket.on('alert', setAlertState);
   socket.on('interference', ({ active }) => setInterferenceActive(active));
+  socket.on('handScanner', handleHandScanner);
+  socket.on('handScanComplete', handleHandScanComplete);
   socket.on('welcome', handleWelcome);
   socket.on('joined', handleJoined);
   socket.on('sessionError', handleSessionError);

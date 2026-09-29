@@ -153,6 +153,17 @@ body:has(#minigame-screen:not(.hidden)) .alert-timer {
   overflow: hidden;
 }
 
+/* The test menu has more buttons than fit on a phone: it scrolls instead of
+   being shrunk to fit like the other screens (see FIT_SCREEN_SELECTOR). */
+#minigames-screen {
+  overflow-y: auto;
+  justify-content: flex-start;
+}
+
+#minigames-screen > .screen-fit {
+  padding: 8px 0 24px;
+}
+
 /* Positioned absolute within #join-screen (itself position:absolute), so
    it sits in its own corner independent of .screen-fit's centred, possibly
    scaled-down content below it. */
@@ -1199,7 +1210,8 @@ body:has(#lobby-screen.hidden) .settings-button {
 }
 
 .colorgame,
-.dishgame {
+.dishgame,
+.handscan {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1328,7 +1340,8 @@ body:has(#lobby-screen.hidden) .settings-button {
 /* Bordered/glowing panel, same as everywhere else - holds the instruction
    label and the live obstacle counter together as one unit. */
 .dino-instruction,
-.dishgame-instruction {
+.dishgame-instruction,
+.handscan-instruction {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1350,6 +1363,56 @@ body:has(#lobby-screen.hidden) .settings-button {
   font-weight: 800;
   color: #fff;
   text-shadow: 0 0 6px rgba(0, 240, 255, 0.8);
+}
+
+/* Hand scanner: "En attente d'un autre joueur" / "SCAN EN COURS…" under the
+   instruction, the pad itself, and a bar that fills over the 3 s scan. */
+.handscan-status {
+  min-height: 1.2em;
+  margin: 0;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #7be5ff;
+}
+
+.handscan-pad {
+  width: 240px;
+  max-width: 70vw;
+  aspect-ratio: 1;
+  touch-action: none;
+  cursor: pointer;
+  border-radius: 16px;
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+.handscan-pad svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.handscan-pad.pressed {
+  transform: scale(0.97);
+  filter: brightness(1.4) drop-shadow(0 0 12px rgba(0, 240, 255, 0.8));
+}
+
+.handscan-progress {
+  width: 240px;
+  max-width: 70vw;
+  height: 12px;
+  border: 2px solid #00f0ff;
+  border-radius: 8px;
+  background: #0a1018;
+  overflow: hidden;
+}
+
+.handscan-progress-fill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #00f0ff, #7be5ff);
+  transform: scaleX(0);
+  transform-origin: left center;
 }
 
 /* The live speed readout. Its colour (red at 2 Mb/s to green at 5 Gb/s) is

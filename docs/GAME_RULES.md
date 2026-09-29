@@ -80,6 +80,11 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- New mini-game "Hand scanner" (TEST SCANNER in the test menu): two players
+  must hold the hand at the same time for 3 s to switch off the alert. Alone,
+  the screen shows "En attente d'un autre joueur"; if one lets go early the
+  scan restarts. The server times the 3 s. The test menu scrolls, since the
+  list of mini-games is getting long (only that screen scrolls).
 - Host settings (⚙️ in the lobby, host only, before JOUER): number of
   imposters 1-3 (default 1; always at least one crewmate, so fewer are drawn
   if there aren't enough players - this replaces "always exactly 1
