@@ -203,3 +203,31 @@ test('a lobby player whose phone was asleep at JOUER gets their reveal when they
     server.close();
   }
 });
+
+test('a player whose phone never confirmed the role reveal gets it again instead of staying in the lobby', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+
+    // Bob's phone receives nothing usable: a connection that looks alive to
+    // the server but never answers.
+    bob.off('role');
+    const bobGotIt = waitForEvent(bob, 'role');
+    const aliceRole = waitForEvent(alice, 'role');
+    alice.emit('startGame');
+    await Promise.all([aliceRole, bobGotIt]);
+
+    // Back on a fresh connection: the reveal is sent again.
+    const bobAgain = await server.connect();
+    const again = waitForEvent(bobAgain, 'role');
+    const joined = await joinGame(bobAgain, sessionId, { clientId: 'bob', name: 'Bob' });
+    assert.equal(joined.inGame, true);
+    const { role } = await again;
+    assert.ok(role === 'crewmate' || role === 'imposter');
+  } finally {
+    server.close();
+  }
+});

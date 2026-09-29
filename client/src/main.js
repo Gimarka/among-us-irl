@@ -1683,6 +1683,7 @@ let inSession = false; // true once we're past the lobby, in the game's menu
 // still waiting in its lobby.
 let currentSession = null; // { sessionId, name, hostId, started }
 let inGame = false;
+let roleRevealed = false; // the role reveal has played for the game we're in
 let welcomed = false; // the first welcome of a page load is the one that picks the starting screen
 // Our saved look, separate from the name: set from the server's saved
 // character, and changed only by VALIDER on the customisation screen.
@@ -1851,7 +1852,13 @@ function handleJoined({ inGame: joinedInGame, ...info }) {
   currentSession = info;
   inGame = joinedInGame;
   updateSessionDisplay();
-  if (hasEnteredGame) return; // a quiet re-join after a dropped connection
+  if (hasEnteredGame) {
+    // A quiet re-join after a dropped connection. If we're in the game but
+    // still showing the lobby, and the reveal has already played, go on to
+    // the menu; if it hasn't, the server is resending the role right after.
+    if (inGame && roleRevealed && !inSession && roleRevealScreen.classList.contains('hidden')) openMenuFromLobby();
+    return;
+  }
 
   hasEnteredGame = true;
   if (!newGamePopup.classList.contains('hidden')) closeNewGamePopup();
@@ -1911,6 +1918,9 @@ function handleWelcome({ character, resume }) {
   }
 }
 
+// The server resends the role until the phone confirms it (see the ack in
+// connectSocket), so it can arrive twice: the reveal plays once, and any
+// later copy just makes sure we're not left sitting in the lobby.
 function handleRole({ role, tasks }) {
   // JOUER while this player was still customising: off to the game with the
   // look they last saved.
@@ -1918,7 +1928,12 @@ function handleRole({ role, tasks }) {
   inGame = true;
   updateSessionDisplay();
   renderTasks(tasks);
-  showRoleReveal(role);
+  if (!roleRevealed) {
+    roleRevealed = true;
+    showRoleReveal(role);
+  } else if (!inSession && roleRevealScreen.classList.contains('hidden')) {
+    openMenuFromLobby();
+  }
 }
 
 // One persistent connection, opened as soon as this page loads (even before
@@ -1945,7 +1960,11 @@ function connectSocket() {
   socket.on('welcome', handleWelcome);
   socket.on('joined', handleJoined);
   socket.on('sessionError', handleSessionError);
-  socket.on('role', handleRole);
+  // Confirmed back to the server, which otherwise sends it again later.
+  socket.on('role', (payload, ack) => {
+    handleRole(payload);
+    if (typeof ack === 'function') ack();
+  });
   // The host changed, or the game started.
   socket.on('session', (info) => {
     if (!currentSession || info.sessionId !== currentSession.sessionId) return;
@@ -2152,6 +2171,7 @@ function handleDisconnectClick() {
   currentIdentity = null;
   currentSession = null;
   inGame = false;
+  roleRevealed = false;
   hasEnteredGame = false;
   inSession = false;
   updateSessionDisplay();

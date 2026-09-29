@@ -19,6 +19,11 @@ import {
 import { saveCharacter, getCharacter } from './characterStore.js';
 
 const INTERFERENCE_DURATION_MS = 10_000;
+
+// How long a phone has to confirm it received its role reveal. No answer
+// means the role never got there (a connection that looked alive but wasn't),
+// so it's sent again when the phone comes back.
+const ROLE_ACK_TIMEOUT_MS = 10_000;
 const ALERT_COUNTDOWN_MS = 60_000;
 
 // Selfies arrive already shrunk and JPEG-compressed by the phone (a 160px
@@ -155,19 +160,23 @@ export function createGameServer({
     return getSession(socket.data.sessionId);
   }
 
-  // Private: only ever to that player's own socket. Skipped for a player
-  // whose phone isn't connected right now - roleSeen stays false, so they get
-  // the reveal when they come back instead.
+  // Private: only ever to that player's own socket. The role only counts as
+  // seen once the phone confirms it got it: a phone that was asleep or had
+  // just lost its connection (even one the server still thinks is connected)
+  // stays unseen, and gets the reveal - which is what takes it out of the
+  // lobby - the next time it joins, instead of being left stuck there.
   function sendRole(session, clientId) {
     const player = session.roster.findPlayerByClientId(clientId);
     const playerSocket = player && io.sockets.sockets.get(player.socketId);
     if (!playerSocket) return;
     const players = session.roster.listPlayers();
-    playerSocket.emit('role', {
+    const payload = {
       role: session.roles.getRole(clientId, players),
       tasks: session.tasks.getTasks(clientId, players),
+    };
+    playerSocket.timeout(ROLE_ACK_TIMEOUT_MS).emit('role', payload, (err) => {
+      if (!err) markRoleSeen(session, clientId);
     });
-    markRoleSeen(session, clientId);
   }
 
   // Takes a player out of a game's roster (unless socketId is a connection

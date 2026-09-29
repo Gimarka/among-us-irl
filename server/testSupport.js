@@ -29,6 +29,10 @@ export async function startServer(options) {
     async connect(clientOptions = { reconnection: false }) {
       const socket = ioClient(`http://localhost:${httpServer.address().port}`, clientOptions);
       sockets.push(socket);
+      // Confirm every role reveal, like the real app does (see handleRole in
+      // client/src/main.js). A test can remove this to play a phone that
+      // never got it.
+      socket.on('role', (payload, ack) => ack?.());
       await waitForEvent(socket, 'connect');
       return socket;
     },
