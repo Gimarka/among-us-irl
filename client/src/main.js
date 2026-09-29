@@ -1674,6 +1674,7 @@ const surveillanceList = document.querySelector('#surveillance-list');
 const SURVEILLANCE_TIME_REFRESH_MS = 10_000;
 let surveillanceAvatarCounter = 0; // unique DOM ids, see appendChatMessage
 let surveillanceTimer = null;
+let lastActivityId = 0; // the newest action shown, so a catch-up never repeats one
 
 function activityText({ action, detail }) {
   if (action === 'door') return texts.surveillanceDoor;
@@ -1736,6 +1737,8 @@ function paintActivityAvatar({ avatarFrame, avatarId, look }) {
 }
 
 function prependActivity(entry) {
+  if (entry.id <= lastActivityId) return; // already shown
+  lastActivityId = entry.id;
   surveillanceList.querySelector('.chat-empty')?.remove();
   const built = buildActivityRow(entry);
   surveillanceList.prepend(built.row);
@@ -1744,6 +1747,7 @@ function prependActivity(entry) {
 
 function renderActivity(entries) {
   surveillanceList.innerHTML = '';
+  lastActivityId = entries.reduce((max, entry) => Math.max(max, entry.id), 0);
   if (entries.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'chat-empty';
@@ -1765,6 +1769,13 @@ function openSurveillance() {
   surveillanceList.innerHTML = '';
   if (socket) socket.emit('getActivity', renderActivity);
   surveillanceTimer = setInterval(refreshActivityTimes, SURVEILLANCE_TIME_REFRESH_MS);
+}
+
+// After a lost connection: whatever happened meanwhile is gone, but the
+// latest action is picked up if it's newer than what's on screen.
+function catchUpActivity() {
+  if (surveillanceScreen.classList.contains('hidden') || !socket) return;
+  socket.emit('getActivity', (entries) => entries.forEach(prependActivity));
 }
 
 // Straight back to the main menu, not the test menu it was opened from.
@@ -2170,6 +2181,7 @@ const PHOTO_ASPECT = PHOTO_WIDTH / PHOTO_HEIGHT;
 const PHOTO_QUALITY = 0.6;
 
 let socket = null;
+const CONNECTION_CHECK_MS = 3000; // see the visibilitychange check in connectSocket
 let selfieStream = null;
 let photoDataUrl = null;
 let suitColor = DEFAULT_SUIT_COLOR;
@@ -2383,6 +2395,7 @@ function handleJoined({ inGame: joinedInGame, ...info }) {
     // still showing the lobby, and the reveal has already played, go on to
     // the menu; if it hasn't, the server is resending the role right after.
     if (inGame && roleRevealed && !inSession && roleRevealScreen.classList.contains('hidden')) openMenuFromLobby();
+    catchUpActivity();
     return;
   }
 
@@ -2514,6 +2527,19 @@ function connectSocket() {
   // server where we stand - see handleWelcome.
   socket.on('connect', () => {
     socket.emit('hello', { clientId });
+  });
+
+  // Back from another app (or the screen waking up): the phone may have cut
+  // the connection meanwhile without the app noticing - it would only find
+  // out at the next heartbeat, up to a minute later, missing everything in
+  // between. So ask the server straight away; no answer means the
+  // connection is dead, and dropping it makes Socket.IO reconnect (and
+  // rejoin the game, see handleWelcome) right now.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !socket.connected) return;
+    socket.timeout(CONNECTION_CHECK_MS).emit('stillThere', (err) => {
+      if (err) socket.io.engine.close();
+    });
   });
 
   socket.on('connect_error', () => {

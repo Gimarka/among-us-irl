@@ -485,6 +485,12 @@ export function createGameServer({
     socket.data.sessionId = null;
     socket.emit('sessions', listSessions());
 
+    // A phone coming back to the app checking its connection still works
+    // (see checkConnection in client/src/main.js).
+    socket.on('stillThere', (reply) => {
+      if (typeof reply === 'function') reply();
+    });
+
     // The first thing a phone asks: what did its character look like last
     // time, and is it still part of a running game it should go back to.
     socket.on('hello', ({ clientId } = {}) => {
