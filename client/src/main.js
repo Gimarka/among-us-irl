@@ -1676,6 +1676,7 @@ let surveillanceTimer = null;
 
 function activityText({ action, detail }) {
   if (action === 'door') return texts.surveillanceDoor;
+  if (action === 'handscan') return texts.surveillanceHandScan;
   const name = action === 'task' ? texts.taskNames[detail] || detail : texts.gameNames[action] || action;
   return texts.surveillanceFinished.replace('{name}', name);
 }

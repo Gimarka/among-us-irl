@@ -269,6 +269,7 @@ export function createGameServer({
         session.alert.stopAlert();
         io.to(roomOf(session)).emit('alert', alertPayload(session));
         io.to(roomOf(session)).emit('handScanComplete', { players });
+        players.forEach((clientId) => logActivity(session, clientId, 'handscan'));
         broadcastHandScanner(session);
       }, handScanMs);
     } else if (scanner.pressing.size < 2 && scanner.timer !== null) {
