@@ -1721,13 +1721,17 @@ function renderVoteGrid(players, votes) {
   meetingSkipButton.disabled = !canVote;
 
   meetingGrid.innerHTML = '';
+  meetingGrid.style.setProperty('--rows', Math.ceil(players.length / 2));
   players.forEach((player) => {
     const slot = document.createElement('div');
     slot.className = 'lobby-slot vote-slot';
     slot.dataset.playerId = player.id;
     slot.classList.toggle('vote-dead', player.dead);
     meetingGrid.appendChild(slot);
-    appendMeetingCharacter(slot, player, 'character-frame-tiny');
+    const figure = document.createElement('div');
+    figure.className = 'vote-figure';
+    slot.appendChild(figure);
+    appendMeetingCharacter(figure, player, 'vote-frame');
     const nameEl = document.createElement('p');
     nameEl.className = 'lobby-slot-name';
     nameEl.textContent = player.name;
