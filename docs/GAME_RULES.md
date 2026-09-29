@@ -80,6 +80,9 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Before the vote result, 5 s showing who voted for whom: each voter's small
+  character appears under the player they voted for (or under PASSER). The
+  eliminated player is only crossed out once the result is shown.
 - Body report and vote (TEST REPORT in the test menu, for now). Any player
   in the game can trigger it. Every phone drops what it's doing (minigames,
   scanner, chat, dead screen), the alert is paused and any interference cut.

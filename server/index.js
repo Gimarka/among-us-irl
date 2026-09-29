@@ -26,9 +26,11 @@ import { tallyVotes, SKIP_VOTE } from './voteState.js';
 const HAND_SCAN_MS = 3000;
 
 // A body report (TEST REPORT, for now): "CADAVRE TROUVÉ" on every phone,
-// then the vote, then its result, each for a fixed time.
+// then the vote, then who voted for whom, then the result, each for a
+// fixed time.
 const REPORT_MS = 5000;
 const VOTE_MS = 30_000;
+const TALLY_MS = 5000;
 const RESULT_MS = 10_000;
 
 // How long a phone has to confirm it received its role reveal. No answer
@@ -125,6 +127,7 @@ export function createGameServer({
   handScanMs = HAND_SCAN_MS,
   reportMs = REPORT_MS,
   voteMs = VOTE_MS,
+  tallyMs = TALLY_MS,
   resultMs = RESULT_MS,
 } = {}) {
   const app = express();
@@ -290,6 +293,8 @@ export function createGameServer({
       durationMs: meeting.durationMs,
       players: meeting.participants.map(withDeath),
       eliminated: eliminated ? withDeath(eliminated) : null,
+      // Secret while the vote runs; shown to everyone once it's over.
+      votes: meeting.phase === 'vote' ? [] : Array.from(meeting.votes, ([voterId, targetId]) => ({ voterId, targetId })),
     };
   }
 
@@ -334,11 +339,15 @@ export function createGameServer({
     });
   }
 
+  // First everyone sees who voted for whom; only then is the result (and
+  // the eliminated player's death) revealed.
   function endVote(session) {
     const meeting = session.meeting;
-    meeting.eliminatedId = tallyVotes(meeting.votes);
-    if (meeting.eliminatedId) session.dead.add(meeting.eliminatedId);
-    setMeetingPhase(session, 'result', resultMs, () => endMeeting(session));
+    setMeetingPhase(session, 'tally', tallyMs, () => {
+      meeting.eliminatedId = tallyVotes(meeting.votes);
+      if (meeting.eliminatedId) session.dead.add(meeting.eliminatedId);
+      setMeetingPhase(session, 'result', resultMs, () => endMeeting(session));
+    });
   }
 
   function endMeeting(session) {

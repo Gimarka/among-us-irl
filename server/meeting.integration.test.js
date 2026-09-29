@@ -32,7 +32,7 @@ async function startedGame(server) {
 }
 
 test('a report, then a vote everyone casts, eliminates the most voted player', async () => {
-  const server = await startServer({ reportMs: 30, voteMs: 5000, resultMs: 30 });
+  const server = await startServer({ reportMs: 30, voteMs: 5000, tallyMs: 30, resultMs: 30 });
   try {
     const [alice, bob, carol] = await startedGame(server);
     const report = waitForPhase(alice, 'report');
@@ -41,12 +41,17 @@ test('a report, then a vote everyone casts, eliminates the most voted player', a
     assert.equal((await report).players.length, 3);
     await voting;
 
+    const tally = waitForPhase(carol, 'tally');
     const result = waitForPhase(carol, 'result');
     alice.emit('castVote', { targetId: 'carol' });
     bob.emit('castVote', { targetId: 'alice' });
     bob.emit('castVote', { targetId: 'carol' }); // changed their mind
     carol.emit('castVote', { targetId: 'carol' }); // voting for yourself is allowed
-    const { eliminated } = await result; // everyone voted: no waiting for the 5 s
+    const { votes, eliminated: notYet, players } = await tally; // everyone voted: no waiting for the 5 s
+    assert.deepEqual(votes.map((vote) => `${vote.voterId}>${vote.targetId}`).sort(), ['alice>carol', 'bob>carol', 'carol>carol']);
+    assert.equal(notYet, null, 'the result comes after the votes are shown');
+    assert.equal(players.find((player) => player.id === 'carol').dead, false);
+    const { eliminated } = await result;
     assert.equal(eliminated.id, 'carol');
     assert.equal(eliminated.dead, true);
 
@@ -57,7 +62,7 @@ test('a report, then a vote everyone casts, eliminates the most voted player', a
 });
 
 test('dead players cannot vote or be voted for, and a tie eliminates nobody', async () => {
-  const server = await startServer({ reportMs: 30, voteMs: 300, resultMs: 30 });
+  const server = await startServer({ reportMs: 30, voteMs: 300, tallyMs: 30, resultMs: 30 });
   try {
     const [alice, bob, carol] = await startedGame(server);
     carol.emit('declareDead');
@@ -78,7 +83,7 @@ test('dead players cannot vote or be voted for, and a tie eliminates nobody', as
 });
 
 test('the alert is paused during the report and resumes with the time it had left', async () => {
-  const server = await startServer({ alertCountdownMs: 5000, reportMs: 30, voteMs: 30, resultMs: 30 });
+  const server = await startServer({ alertCountdownMs: 5000, reportMs: 30, voteMs: 30, tallyMs: 30, resultMs: 30 });
   try {
     const [alice] = await startedGame(server);
     const on = waitForEvent(alice, 'alert');

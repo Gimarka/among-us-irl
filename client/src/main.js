@@ -450,6 +450,7 @@ document.querySelector('#alert-overlay').insertAdjacentHTML(
         <p class="meeting-countdown" id="meeting-countdown"></p>
         <div class="meeting-grid" id="meeting-grid"></div>
         <button id="meeting-skip-button" class="test-button">${texts.voteSkipButton}</button>
+        <div class="vote-voters" id="meeting-skip-voters"></div>
       </div>
       <div class="meeting-result hidden" id="meeting-result">
         <p class="meeting-result-text" id="meeting-result-text"></p>
@@ -1676,6 +1677,7 @@ const meetingResult = document.querySelector('#meeting-result');
 const meetingCountdown = document.querySelector('#meeting-countdown');
 const meetingGrid = document.querySelector('#meeting-grid');
 const meetingSkipButton = document.querySelector('#meeting-skip-button');
+const meetingSkipVoters = document.querySelector('#meeting-skip-voters');
 const meetingResultText = document.querySelector('#meeting-result-text');
 const meetingResultCharacter = document.querySelector('#meeting-result-character');
 const testReportButton = document.querySelector('#test-report-button');
@@ -1698,9 +1700,20 @@ function appendMeetingCharacter(parent, player, frameClass) {
   if (player.photo) setVisorPhoto(avatarId, player.photo);
 }
 
-function renderVoteGrid(players) {
+// During the vote, votes is empty (they're secret). Once it's over, each
+// voter's small character appears under the player they voted for (or
+// under PASSER), and nobody can vote any more.
+function renderVoteGrid(players, votes) {
   const me = players.find((player) => player.id === clientId);
-  const canVote = Boolean(me && !me.dead);
+  const showingVotes = votes.length > 0;
+  const canVote = Boolean(me && !me.dead) && !showingVotes;
+  const votersOf = (targetId) => votes
+    .filter((vote) => vote.targetId === targetId)
+    .map((vote) => players.find((player) => player.id === vote.voterId))
+    .filter(Boolean);
+  const appendVoters = (container, targetId) => {
+    votersOf(targetId).forEach((voter) => appendMeetingCharacter(container, voter, 'character-frame-voter'));
+  };
   meetingVote.classList.toggle('meeting-vote-readonly', !canVote);
   meetingSkipButton.disabled = !canVote;
 
@@ -1716,8 +1729,14 @@ function renderVoteGrid(players) {
     nameEl.className = 'lobby-slot-name';
     nameEl.textContent = player.name;
     slot.appendChild(nameEl);
+    const voters = document.createElement('div');
+    voters.className = 'vote-voters';
+    slot.appendChild(voters);
+    appendVoters(voters, player.id);
     if (canVote && !player.dead) slot.addEventListener('click', () => castVote(player.id));
   });
+  meetingSkipVoters.innerHTML = '';
+  appendVoters(meetingSkipVoters, SKIP_VOTE);
   showMyVote(myVoteTarget);
 }
 
@@ -1763,7 +1782,7 @@ function hideMeeting() {
   meetingOverlay.classList.add('hidden');
 }
 
-function handleMeeting({ phase, remainingMs, players, eliminated }) {
+function handleMeeting({ phase, remainingMs, players, eliminated, votes = [] }) {
   // Newcomers still in the lobby aren't part of it; and once it's over,
   // everyone is back on the menu, which was left open underneath.
   if (!phase || !inGame) {
@@ -1777,13 +1796,15 @@ function handleMeeting({ phase, remainingMs, players, eliminated }) {
   if (phase === 'report') myVoteTarget = null;
 
   meetingReport.classList.toggle('hidden', phase !== 'report');
-  meetingVote.classList.toggle('hidden', phase !== 'vote');
+  meetingVote.classList.toggle('hidden', phase !== 'vote' && phase !== 'tally');
   meetingResult.classList.toggle('hidden', phase !== 'result');
+  clearInterval(meetingCountdownTimer);
   if (phase === 'vote') {
-    renderVoteGrid(players);
+    renderVoteGrid(players, []);
     startMeetingCountdown(remainingMs);
-  } else {
-    clearInterval(meetingCountdownTimer);
+  } else if (phase === 'tally') {
+    renderVoteGrid(players, votes);
+    meetingCountdown.textContent = '0';
   }
   if (phase === 'result') renderMeetingResult(eliminated);
 }

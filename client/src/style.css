@@ -2004,6 +2004,23 @@ button {
   cursor: default;
 }
 
+/* Who voted for this player (or PASSER), shown once the vote is over. */
+.vote-voters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  max-width: 132px;
+}
+
+.vote-voters:empty {
+  display: none;
+}
+
+.character-frame-voter {
+  width: 36px;
+}
+
 /* A thick red cross over a dead player's tile. */
 .vote-dead::before,
 .vote-dead::after {
