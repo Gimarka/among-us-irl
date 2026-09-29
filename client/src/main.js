@@ -287,6 +287,8 @@ app.innerHTML = `
 
         <button id="test-task-button" class="test-button">${texts.testTaskButton}</button>
 
+        <button id="test-surveillance-button" class="test-button">${texts.testSurveillanceButton}</button>
+
         <button id="alert-start-button" class="test-button test-button-danger">${texts.alertStartButton}</button>
 
         <button id="alert-stop-button" class="test-button">${texts.alertStopButton}</button>
@@ -352,6 +354,14 @@ app.innerHTML = `
           <div class="dishgame-dish" id="dishgame-dish">${DISH_ICON}</div>
         </div>
       </div>
+    </div>
+
+    <div id="surveillance-screen" class="screen chat hidden">
+      <div class="chat-header">
+        <button id="surveillance-back-button" class="minigames-back-button surveillance-back-button" aria-label="${texts.backToMenuLabel}">‹</button>
+        <p class="chat-title">${texts.surveillanceTitle}</p>
+      </div>
+      <div class="chat-messages" id="surveillance-list"></div>
     </div>
 
     <div id="chat-screen" class="screen chat hidden">
@@ -674,6 +684,12 @@ function hidePopup() {
   minigamePopup.classList.add('hidden');
 }
 
+// For the surveillance screen: tells everyone this player just opened a
+// door or finished a minigame (see SURVEILLANCE_ACTIONS in server/index.js).
+function reportAction(action) {
+  if (socket) socket.emit('reportAction', { action });
+}
+
 function playSuccessSoundThenClose() {
   const sound = sounds.success;
   const finish = () => {
@@ -693,6 +709,7 @@ function handleDigitTap(symbol) {
     position += 1;
     if (position === code.length) {
       inputLocked = true;
+      reportAction('door');
       setTimeout(() => {
         showPopup('success', texts.miniGameSuccess);
         playSuccessSoundThenClose();
@@ -920,6 +937,7 @@ function checkMatch(square) {
     // of this player's 6 assigned tasks, so their task list can update.
     // No-op server-side (and no visible effect here) if it isn't.
     if (socket) socket.emit('completeTask', { taskId: 'sort' });
+    reportAction('sort');
     setTimeout(() => {
       // TODO: swap sounds.success for a dedicated general-task sound once provided.
       showPopup('success', texts.taskSuccess);
@@ -1057,6 +1075,7 @@ function startDinoRun() {
 function dinoWin() {
   dinoGameActive = false;
   cancelAnimationFrame(dinoAnimationFrame);
+  reportAction('dino');
   // TODO: swap sounds.success for a dedicated general-task sound once provided.
   showPopup('success', texts.taskSuccess);
   playSuccessSoundThenClose();
@@ -1224,6 +1243,7 @@ function updateDish() {
 function winDishGame() {
   dishHoldTimer = null;
   dishWon = true;
+  reportAction('dish');
   showPopup('success', texts.taskSuccess);
   playSuccessSoundThenClose();
 }
@@ -1636,11 +1656,134 @@ window.addEventListener('popstate', () => {
     closeHandScan();
   } else if (!chatScreen.classList.contains('hidden')) {
     closeChat();
+  } else if (!surveillanceScreen.classList.contains('hidden')) {
+    closeSurveillance();
   } else if (!minigamesScreen.classList.contains('hidden')) {
     closeMinigamesMenu();
   }
   closingFromPopState = false;
 });
+
+// --- Surveillance -----------------------------------------------------
+// A live feed of what every player in the game does: doors opened,
+// minigames and tasks finished (never the alert or interference). The
+// server keeps the log; this screen shows it newest first while it's open.
+const surveillanceScreen = document.querySelector('#surveillance-screen');
+const surveillanceList = document.querySelector('#surveillance-list');
+const SURVEILLANCE_TIME_REFRESH_MS = 10_000;
+let surveillanceAvatarCounter = 0; // unique DOM ids, see appendChatMessage
+let surveillanceTimer = null;
+
+function activityText({ action, detail }) {
+  if (action === 'door') return texts.surveillanceDoor;
+  const name = action === 'task' ? texts.taskNames[detail] || detail : texts.gameNames[action] || action;
+  return texts.surveillanceFinished.replace('{name}', name);
+}
+
+function timeAgoText(ms) {
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 10) return texts.timeJustNow;
+  if (seconds < 60) return texts.timeSecondsAgo.replace('{n}', seconds);
+  return texts.timeMinutesAgo.replace('{n}', Math.floor(seconds / 60));
+}
+
+function refreshActivityTimes() {
+  surveillanceList.querySelectorAll('.surveillance-time').forEach((el) => {
+    el.textContent = timeAgoText(performance.now() - Number(el.dataset.at));
+  });
+}
+
+// One row: the player's character (with their selfie if we have it from
+// the roster), their name, what they did, and how long ago.
+function buildActivityRow(entry) {
+  surveillanceAvatarCounter += 1;
+  const avatarId = `surveillance-avatar-${surveillanceAvatarCounter}`;
+  const look = latestPlayers.find((player) => player.id === entry.playerId) || entry;
+
+  const row = document.createElement('div');
+  row.className = 'chat-message surveillance-row';
+  const avatarFrame = document.createElement('div');
+  avatarFrame.className = 'character-frame character-frame-chat';
+  avatarFrame.innerHTML = characterMarkup(avatarId); // our own trusted markup, not user data
+
+  const nameEl = document.createElement('p');
+  nameEl.className = 'chat-message-name';
+  nameEl.textContent = entry.name;
+  const textEl = document.createElement('p');
+  textEl.className = 'chat-message-text';
+  textEl.textContent = activityText(entry);
+  const body = document.createElement('div');
+  body.className = 'chat-message-body';
+  body.append(nameEl, textEl);
+
+  const timeEl = document.createElement('p');
+  timeEl.className = 'surveillance-time';
+  timeEl.dataset.at = String(performance.now() - entry.agoMs);
+  timeEl.textContent = timeAgoText(entry.agoMs);
+
+  row.append(avatarFrame, body, timeEl);
+  return { row, avatarFrame, avatarId, look };
+}
+
+// The character can only be drawn once the row is in the document (see
+// appendChatMessage for why).
+function paintActivityAvatar({ avatarFrame, avatarId, look }) {
+  setSuitColor(avatarFrame, look.color || DEFAULT_SUIT_COLOR);
+  setHat(avatarFrame, look.hat || DEFAULT_HAT);
+  if (look.photo) setVisorPhoto(avatarId, look.photo);
+}
+
+function prependActivity(entry) {
+  surveillanceList.querySelector('.chat-empty')?.remove();
+  const built = buildActivityRow(entry);
+  surveillanceList.prepend(built.row);
+  paintActivityAvatar(built);
+}
+
+function renderActivity(entries) {
+  surveillanceList.innerHTML = '';
+  if (entries.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'chat-empty';
+    empty.textContent = texts.surveillanceEmpty;
+    surveillanceList.appendChild(empty);
+    return;
+  }
+  entries.forEach((entry) => {
+    const built = buildActivityRow(entry);
+    surveillanceList.appendChild(built.row);
+    paintActivityAvatar(built);
+  });
+}
+
+function openSurveillance() {
+  minigamesScreen.classList.add('hidden');
+  surveillanceScreen.classList.remove('hidden');
+  pushOverlayState();
+  surveillanceList.innerHTML = '';
+  if (socket) socket.emit('getActivity', renderActivity);
+  surveillanceTimer = setInterval(refreshActivityTimes, SURVEILLANCE_TIME_REFRESH_MS);
+}
+
+// Straight back to the main menu, not the test menu it was opened from.
+function hideSurveillance() {
+  clearInterval(surveillanceTimer);
+  surveillanceTimer = null;
+  surveillanceScreen.classList.add('hidden');
+  homeScreen.classList.remove('hidden');
+  fitActiveScreen();
+}
+
+// Two history entries to undo: this screen's and the test menu's.
+function closeSurveillance() {
+  hideSurveillance();
+  overlayDepth = Math.max(0, overlayDepth - 2);
+  if (closingFromPopState) history.back(); // the back button already undid one
+  else history.go(-2);
+}
+
+document.querySelector('#test-surveillance-button').addEventListener('click', openSurveillance);
+document.querySelector('#surveillance-back-button').addEventListener('click', closeSurveillance);
 
 // Closes whatever the player has open - a minigame, the scanner, the chat,
 // the dead screen - back down to the menu, all at once. Each close function
@@ -1657,6 +1800,7 @@ function closeEverything() {
     [dishScreen, closeDishGame],
     [handScanScreen, closeHandScan],
     [chatScreen, closeChat],
+    [surveillanceScreen, hideSurveillance],
     [scanPopup, closeScanPopup],
     [mortConfirmPopup, closeMortConfirm],
     [mortOverlay, closeMortScreen],
@@ -2341,6 +2485,9 @@ function connectSocket() {
   socket.on('handScanner', handleHandScanner);
   socket.on('handScanComplete', handleHandScanComplete);
   socket.on('meeting', handleMeeting);
+  socket.on('activity', (entry) => {
+    if (!surveillanceScreen.classList.contains('hidden')) prependActivity(entry);
+  });
   socket.on('myVote', ({ targetId }) => showMyVote(targetId));
   socket.on('welcome', handleWelcome);
   socket.on('joined', handleJoined);

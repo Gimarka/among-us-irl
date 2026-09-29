@@ -16,6 +16,22 @@ export const texts = {
   dishInstruction: 'TROUVE LE SIGNAL',
   testReportButton: 'TEST REPORT',
   testTaskButton: 'TEST TÂCHE',
+  testSurveillanceButton: 'TEST SURVEILLANCE',
+  surveillanceTitle: 'SURVEILLANCE',
+  surveillanceEmpty: 'Aucune activité pour le moment.',
+  surveillanceDoor: 'a ouvert une porte',
+  // {name} is replaced by the minigame's or task's name.
+  surveillanceFinished: 'a terminé « {name} »',
+  // The test menu's minigames, by the id the phone reports.
+  gameNames: {
+    sort: 'Tri',
+    dino: 'Saut',
+    dish: 'Parabole',
+  },
+  timeJustNow: "à l'instant",
+  // {n} is replaced by the number.
+  timeSecondsAgo: 'il y a {n} s',
+  timeMinutesAgo: 'il y a {n} min',
   reportTitle: 'CADAVRE TROUVÉ',
   voteSkipButton: 'PASSER',
   // {name} is replaced by the eliminated player's name.

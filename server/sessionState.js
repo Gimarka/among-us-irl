@@ -83,6 +83,10 @@ export function createSession(name, hostId) {
     dead: new Set(),
     // The body report and vote running right now, or null (see index.js).
     meeting: null,
+    // What players have done, for the surveillance screen: the most recent
+    // actions, oldest first (see logActivity in index.js).
+    activity: [],
+    activityCount: 0, // gives each logged action its own id
     // Players who have entered the game itself (past the lobby), and so
     // have a role: clientId -> { roleSeen }. Never taken away during the
     // game - leaving and coming back picks up exactly where they were.

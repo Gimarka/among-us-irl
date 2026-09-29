@@ -2115,3 +2115,30 @@ button {
 .meeting-overlay .hidden {
   display: none;
 }
+
+/* Surveillance: laid out like the chat, with the back button where the
+   chat has its close button, but on the left. */
+.surveillance-back-button {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  width: 36px;
+  height: 36px;
+  font-size: 1.4rem;
+}
+
+.surveillance-row {
+  align-items: center;
+}
+
+.surveillance-row .chat-message-body {
+  flex: 1;
+}
+
+.surveillance-time {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}

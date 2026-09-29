@@ -80,6 +80,13 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Surveillance screen (TEST SURVEILLANCE in the test menu, for now): a live
+  feed, newest first, of what every player in the game does - door opened,
+  minigame or task finished - with their character, name and how long ago.
+  Never the alert or interference (imposter-only actions), deaths, or the
+  hand scanner (it switches the alert off). The server keeps the last 50
+  actions per game, so opening the screen also shows what happened before.
+  Its back button returns to the main menu.
 - The voting screen has a green bar at the top: the innocents' tasks done,
   all innocents together (dead ones included; imposters' fake tasks left
   out). The game's name is no longer shown on the main menu.

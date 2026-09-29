@@ -33,6 +33,13 @@ const VOTE_MS = 30_000;
 const TALLY_MS = 5000;
 const RESULT_MS = 10_000;
 
+// The surveillance screen shows what players have done - a door opened, a
+// minigame or task finished. Never the alert or interference (only
+// imposters trigger those). Phones can only report these actions; each
+// game keeps its most recent ones.
+const SURVEILLANCE_ACTIONS = new Set(['door', 'sort', 'dino', 'dish']);
+const MAX_ACTIVITY = 50;
+
 // How long a phone has to confirm it received its role reveal. No answer
 // means the role never got there (a connection that looked alive but wasn't),
 // so it's sent again when the phone comes back.
@@ -368,6 +375,33 @@ export function createGameServer({
     if (pausedAlertMs > 0) startAlert(session, pausedAlertMs);
   }
 
+  // Adds an action to the game's surveillance log and shows it live on
+  // every phone. The player's look is copied (not their photo, which the
+  // phones already have from the roster) so it still shows if they leave.
+  function logActivity(session, clientId, action, detail = null) {
+    const player = session.roster.findPlayerByClientId(clientId);
+    if (!player) return;
+    session.activityCount += 1;
+    const entry = {
+      id: session.activityCount,
+      playerId: player.id,
+      name: player.name,
+      color: player.color,
+      hat: player.hat,
+      action,
+      detail,
+      at: Date.now(),
+    };
+    session.activity.push(entry);
+    if (session.activity.length > MAX_ACTIVITY) session.activity.shift();
+    io.to(roomOf(session)).emit('activity', activityPayload(entry));
+  }
+
+  // How long ago, rather than a clock time: phone clocks can't be trusted.
+  function activityPayload({ at, ...entry }) {
+    return { ...entry, agoMs: Date.now() - at };
+  }
+
   function leaveCurrentSession(socket) {
     const session = currentSession(socket);
     socket.data.sessionId = null;
@@ -587,6 +621,23 @@ export function createGameServer({
       if (pending.length === 0) return;
       const task = pending[Math.floor(Math.random() * pending.length)];
       socket.emit('tasks', session.tasks.completeTask(id, task.id));
+      logActivity(session, id, 'task', task.id);
+    });
+
+    // A phone saying its player just opened a door or finished a minigame.
+    socket.on('reportAction', ({ action } = {}) => {
+      const session = currentSession(socket);
+      const id = socket.data.clientId;
+      if (!session || session.meeting || !isMember(session, id) || !SURVEILLANCE_ACTIONS.has(action)) return;
+      logActivity(session, id, action);
+    });
+
+    // Opening the surveillance screen: everything logged so far, newest first.
+    socket.on('getActivity', (reply) => {
+      const session = currentSession(socket);
+      if (typeof reply !== 'function') return;
+      if (!session || !isMember(session, socket.data.clientId)) reply([]);
+      else reply(session.activity.map(activityPayload).reverse());
     });
 
     // To every phone in the game, triggering player included. Restarts the
