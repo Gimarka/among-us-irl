@@ -115,6 +115,10 @@ export function createGameServer({
   const httpServer = createServer(app);
   const io = new Server(httpServer, {
     cors: { origin: '*' }, // dev only; tighten before real deployment
+    // How often the server checks each phone is still there (Socket.IO's
+    // default is 25 s). A phone that doesn't answer within pingTimeout (20 s
+    // by default) after that is treated as disconnected.
+    pingInterval: 60_000,
   });
 
   app.get('/health', (req, res) => {
