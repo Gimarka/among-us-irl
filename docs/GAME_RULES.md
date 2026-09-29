@@ -80,6 +80,18 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Named games, several at once (replaces the single numbered session
+  below). The character screen has REJOINDRE (a live list of running games
+  with their player count and "En attente"/"En cours", or "Aucune partie en
+  cours") and NOUVELLE PARTIE (name the game, max 20 characters, a name
+  already used by a running game is refused; its creator is the host). Each
+  game is fully separate: its own players, chat, roles, tasks, alert and
+  interference. Only the host sees JOUER in the lobby; if the host leaves,
+  the player who has been in the game the longest becomes host. A started
+  game stays joinable: newcomers wait in the lobby and press CONTINUER to
+  enter as a crewmate. A game is deleted once its last player has left.
+  Suit colours only need to be unique within one game. A phone still part of
+  a running game goes straight back to it when the app opens.
 - Each task has a fixed room (from the house map), shown in the task list as
   "Tri | Cuisine". During an alert, every player's list shows a red
   "Oxygène | Terrasse" row on top; the Terrace is a new room for it.

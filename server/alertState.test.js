@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isAlertActive, getAlertRemainingMs, startAlert, stopAlert } from './alertState.js';
+import { createAlert } from './alertState.js';
+
+const { isAlertActive, getAlertRemainingMs, startAlert, stopAlert } = createAlert();
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

@@ -1,352 +1,199 @@
-// Simulates two phones joining the same game: real HTTP server, real sockets.
+// Phones joining the same game and its roster: real HTTP server, real sockets.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { io as ioClient } from 'socket.io-client';
-import { createGameServer } from './index.js';
-import { clearPlayers } from './gameState.js';
+import { startServer, waitForEvent, wait, createGame, joinGame } from './testSupport.js';
 
-function listenOnRandomPort(server) {
-  return new Promise((resolve) => {
-    server.listen(0, () => resolve(server.address().port));
-  });
-}
-
-function waitForEvent(socket, event) {
-  return new Promise((resolve) => socket.once(event, resolve));
-}
-
-// io.close() alone only stops accepting new connections and waits for
-// existing ones to end on their own - a socket a test killed abruptly
-// (engine.close(), simulating a real network drop) can be left as a raw
-// connection the HTTP server still considers open, which keeps this test
-// process from ever exiting once enough of these tests have run.
-// closeAllConnections() forces every one of them shut immediately.
-function closeGameServer({ httpServer, io }) {
-  io.close();
-  httpServer.closeAllConnections();
-}
-
-test('two players joining see each other in the players list', async () => {
-  clearPlayers();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const alice = ioClient(url);
-  const bob = ioClient(url);
-
+test('two players in the same game see each other in the players list', async () => {
+  const server = await startServer();
   try {
-    await Promise.all([waitForEvent(alice, 'connect'), waitForEvent(bob, 'connect')]);
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
 
-    // Both sockets receive every broadcast, so wait for both before moving on
-    // to avoid a listener registered after the fact missing the event.
-    const aliceAlone = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    alice.emit('join', { name: 'Alice' });
-    await aliceAlone;
-
-    const bothJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    bob.emit('join', { name: 'Bob' });
-    const [fromAlice, fromBob] = await bothJoined;
+    const bothSee = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+    const [fromAlice, fromBob] = await bothSee;
 
     for (const players of [fromAlice, fromBob]) {
-      assert.equal(players.length, 2);
       assert.deepEqual(players.map((p) => p.name).sort(), ['Alice', 'Bob']);
     }
   } finally {
-    alice.close();
-    bob.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
 
 test('a joining player keeps a valid colour and hat, and falls back on bad ones', async () => {
-  clearPlayers();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const picked = ioClient(url);
-  const garbage = ioClient(url);
-
+  const server = await startServer();
   try {
-    await Promise.all([waitForEvent(picked, 'connect'), waitForEvent(garbage, 'connect')]);
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice', color: '#38FEDC', hat: 'crown' });
 
-    const firstJoin = Promise.all([waitForEvent(picked, 'players'), waitForEvent(garbage, 'players')]);
-    picked.emit('join', { name: 'Alice', color: '#38FEDC', hat: 'crown' });
-    await firstJoin;
-
-    const secondJoin = Promise.all([waitForEvent(picked, 'players'), waitForEvent(garbage, 'players')]);
-    garbage.emit('join', { name: 'Bob', color: 'javascript:alert(1)', hat: '<script>' });
-    const [players] = await secondJoin;
-
-    const alice = players.find((p) => p.name === 'Alice');
-    const bob = players.find((p) => p.name === 'Bob');
-    assert.equal(alice.color, '#38fedc');
-    assert.equal(alice.hat, 'crown');
-    assert.equal(bob.color, '#c51111', 'bad colour falls back');
-    assert.equal(bob.hat, 'none', 'bad hat falls back');
-  } finally {
-    picked.close();
-    garbage.close();
-    closeGameServer({ httpServer, io });
-  }
-});
-
-test('a player joining with a colour already in use is switched to a free one', async () => {
-  clearPlayers();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const alice = ioClient(url);
-  const bob = ioClient(url);
-
-  try {
-    await Promise.all([waitForEvent(alice, 'connect'), waitForEvent(bob, 'connect')]);
-
-    const firstJoin = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    alice.emit('join', { name: 'Alice', color: '#c51111' });
-    await firstJoin;
-
-    const secondJoin = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    bob.emit('join', { name: 'Bob', color: '#c51111' });
-    const [players] = await secondJoin;
+    const roster = waitForEvent(alice, 'players');
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob', color: 'javascript:alert(1)', hat: '<script>' });
+    const players = await roster;
 
     const alicePlayer = players.find((p) => p.name === 'Alice');
     const bobPlayer = players.find((p) => p.name === 'Bob');
-    assert.equal(alicePlayer.color, '#c51111');
-    assert.notEqual(bobPlayer.color, '#c51111', 'colour already taken must not be handed out again');
+    assert.equal(alicePlayer.color, '#38fedc');
+    assert.equal(alicePlayer.hat, 'crown');
+    assert.equal(bobPlayer.color, '#c51111', 'bad colour falls back');
+    assert.equal(bobPlayer.hat, 'none', 'bad hat falls back');
   } finally {
-    alice.close();
-    bob.close();
-    closeGameServer({ httpServer, io });
+    server.close();
+  }
+});
+
+test('colours are unique within a game, but two games can use the same one', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const carol = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice', color: '#c51111' });
+
+    const roster = waitForEvent(alice, 'players');
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob', color: '#c51111' });
+    const players = await roster;
+    assert.equal(players.find((p) => p.name === 'Alice').color, '#c51111');
+    assert.notEqual(players.find((p) => p.name === 'Bob').color, '#c51111', 'taken in this game');
+
+    const otherRoster = waitForEvent(carol, 'players');
+    await createGame(carol, 'Jardin', { clientId: 'carol', name: 'Carol', color: '#c51111' });
+    assert.equal((await otherRoster)[0].color, '#c51111', 'free in a different game');
+  } finally {
+    server.close();
   }
 });
 
 test('a reconnecting player keeps their own colour instead of being bumped off it', async () => {
-  clearPlayers();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const alice = ioClient(url);
-
+  const server = await startServer();
   try {
-    await waitForEvent(alice, 'connect');
+    const alice = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice', color: '#38fedc' });
 
-    const firstJoin = waitForEvent(alice, 'players');
-    alice.emit('join', { name: 'Alice', color: '#38fedc', clientId: 'alice-client' });
-    await firstJoin;
-
-    const secondJoin = waitForEvent(alice, 'players');
-    alice.emit('join', { name: 'Alice', color: '#38fedc', clientId: 'alice-client' });
-    const players = await secondJoin;
+    const roster = waitForEvent(alice, 'players');
+    await joinGame(alice, sessionId, { clientId: 'alice', name: 'Alice', color: '#38fedc' });
+    const players = await roster;
 
     assert.equal(players.length, 1);
     assert.equal(players[0].color, '#38fedc');
   } finally {
-    alice.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
 
 test('a joining player keeps a valid selfie but not an oversized one', async () => {
-  clearPlayers();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const withPhoto = ioClient(url);
-  const withHugePhoto = ioClient(url);
-
+  const server = await startServer();
   try {
-    await Promise.all([waitForEvent(withPhoto, 'connect'), waitForEvent(withHugePhoto, 'connect')]);
-
-    // Both sockets receive every broadcast, so wait for both before moving on
-    // to avoid a listener registered after the fact catching the wrong one.
+    const alice = await server.connect();
+    const bob = await server.connect();
     const photo = `data:image/jpeg;base64,${'a'.repeat(500)}`;
-    const firstJoin = Promise.all([
-      waitForEvent(withPhoto, 'players'),
-      waitForEvent(withHugePhoto, 'players'),
-    ]);
-    withPhoto.emit('join', { name: 'Alice', photo });
-    await firstJoin;
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice', photo });
 
-    const secondJoin = Promise.all([
-      waitForEvent(withPhoto, 'players'),
-      waitForEvent(withHugePhoto, 'players'),
-    ]);
-    withHugePhoto.emit('join', {
-      name: 'Bob',
-      photo: `data:image/jpeg;base64,${'a'.repeat(200_000)}`,
-    });
-    const [players] = await secondJoin;
+    const roster = waitForEvent(alice, 'players');
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob', photo: `data:image/jpeg;base64,${'a'.repeat(200_000)}` });
+    const players = await roster;
 
-    const alice = players.find((p) => p.name === 'Alice');
-    const bob = players.find((p) => p.name === 'Bob');
-    assert.equal(alice.photo, photo);
-    assert.equal(bob.photo, null, 'oversized photo is dropped, player still joins');
+    assert.equal(players.find((p) => p.name === 'Alice').photo, photo);
+    assert.equal(players.find((p) => p.name === 'Bob').photo, null, 'oversized photo is dropped, player still joins');
   } finally {
-    withPhoto.close();
-    withHugePhoto.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
 
 test('the same clientId reconnecting (a second tab) replaces the old connection instead of duplicating', async () => {
-  clearPlayers();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const spectator = ioClient(url);
-  const firstTab = ioClient(url);
-
+  const server = await startServer();
   try {
-    await Promise.all([waitForEvent(spectator, 'connect'), waitForEvent(firstTab, 'connect')]);
+    const spectator = await server.connect();
+    const firstTab = await server.connect();
+    const { sessionId } = await createGame(spectator, 'Maison', { clientId: 'spectator', name: 'Spec' });
+    await joinGame(firstTab, sessionId, { clientId: 'same-browser', name: 'Tyty' });
 
-    const firstJoin = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(firstTab, 'players')]);
-    firstTab.emit('join', { clientId: 'same-browser', name: 'Tyty' });
-    await firstJoin;
-
-    // A second tab in the same browser, same saved identity/clientId.
-    const secondTab = ioClient(url);
-    await waitForEvent(secondTab, 'connect');
-
-    const secondJoinSeen = Promise.all([
-      waitForEvent(spectator, 'players'),
-      waitForEvent(secondTab, 'players'),
-    ]);
-    // The first tab's connection getting closed by the server also fires a
-    // 'players' broadcast (its own disconnect handler runs) - wait for that
-    // too so we're asserting on the final, settled roster.
+    const secondTab = await server.connect();
     const firstTabClosed = waitForEvent(firstTab, 'disconnect');
-    secondTab.emit('join', { clientId: 'same-browser', name: 'Tyty' });
-    const [players] = await secondJoinSeen;
+    const roster = waitForEvent(spectator, 'players');
+    await joinGame(secondTab, sessionId, { clientId: 'same-browser', name: 'Tyty' });
+    const players = await roster;
     await firstTabClosed;
 
-    const matches = players.filter((p) => p.name === 'Tyty');
-    assert.equal(matches.length, 1, 'only one entry for the same clientId, not two');
+    assert.equal(players.filter((p) => p.name === 'Tyty').length, 1, 'only one entry for the same clientId, not two');
     assert.equal(firstTab.connected, false, 'the replaced tab gets disconnected, not left as a ghost');
-
-    secondTab.close();
   } finally {
-    spectator.close();
-    firstTab.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
 
 test('an unexpected disconnect keeps the player in the roster until the grace period runs out', async () => {
-  clearPlayers();
-  const { httpServer, io } = createGameServer({ disconnectGraceMs: 150 });
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const spectator = ioClient(url);
-  // No auto-reconnect needed here - this test is only about the server's own
-  // grace-period timer, and a client left endlessly retrying in the
-  // background is exactly the kind of lingering handle that stops the test
-  // process from exiting cleanly once the assertions are done.
-  const flaky = ioClient(url, { reconnection: false });
-
+  const server = await startServer({ disconnectGraceMs: 150 });
   try {
-    await Promise.all([waitForEvent(spectator, 'connect'), waitForEvent(flaky, 'connect')]);
-
-    const joined = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(flaky, 'players')]);
-    flaky.emit('join', { clientId: 'flaky-client', name: 'Flaky' });
-    await joined;
+    const spectator = await server.connect();
+    const flaky = await server.connect();
+    const { sessionId } = await createGame(spectator, 'Maison', { clientId: 'spectator', name: 'Spec' });
+    await joinGame(flaky, sessionId, { clientId: 'flaky', name: 'Flaky' });
 
     // Close the raw transport rather than calling disconnect() - the same
-    // way a locked phone or a Wi-Fi drop looks from the server's side,
-    // skipping the clean handshake a deliberate disconnect would do.
+    // way a locked phone or a Wi-Fi drop looks from the server's side.
     const removedBroadcast = waitForEvent(spectator, 'players');
     flaky.io.engine.close();
 
     let broadcastArrived = false;
-    removedBroadcast.then(() => {
-      broadcastArrived = true;
-    });
-    await new Promise((resolve) => setTimeout(resolve, 80)); // well under the 150ms grace period
+    removedBroadcast.then(() => { broadcastArrived = true; });
+    await wait(80); // well under the 150ms grace period
     assert.equal(broadcastArrived, false, 'no removal broadcast while the grace period is still running');
 
-    const players = await removedBroadcast; // resolves once the grace period actually elapses
+    const players = await removedBroadcast;
     assert.equal(players.find((p) => p.name === 'Flaky'), undefined, 'removed once the grace period ran out');
   } finally {
-    spectator.close();
-    flaky.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
 
 test('reconnecting during the grace period cancels the pending removal', async () => {
-  clearPlayers();
-  const { httpServer, io } = createGameServer({ disconnectGraceMs: 150 });
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const spectator = ioClient(url);
-  // Sped up so the client's own auto-reconnect - which a real drop also
-  // relies on - lands comfortably inside the short grace period above.
-  const flaky = ioClient(url, { reconnectionDelay: 10, reconnectionDelayMax: 20 });
-
+  const server = await startServer({ disconnectGraceMs: 150 });
   try {
-    await Promise.all([waitForEvent(spectator, 'connect'), waitForEvent(flaky, 'connect')]);
-
-    const joined = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(flaky, 'players')]);
-    flaky.emit('join', { clientId: 'flaky-client', name: 'Flaky' });
-    await joined;
+    const spectator = await server.connect();
+    const flaky = await server.connect({ reconnectionDelay: 10, reconnectionDelayMax: 20 });
+    const { sessionId } = await createGame(spectator, 'Maison', { clientId: 'spectator', name: 'Spec' });
+    await joinGame(flaky, sessionId, { clientId: 'flaky', name: 'Flaky' });
 
     flaky.io.engine.close();
-
-    // Socket.IO reconnects the transport on its own; the app re-joins with
-    // the same clientId as soon as it does (see connectSocket in main.js).
     await waitForEvent(flaky, 'connect');
-    const rejoined = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(flaky, 'players')]);
-    flaky.emit('join', { clientId: 'flaky-client', name: 'Flaky' });
-    const [players] = await rejoined;
-    assert.ok(players.find((p) => p.name === 'Flaky'), 'still present right after reconnecting');
+    const roster = waitForEvent(spectator, 'players');
+    await joinGame(flaky, sessionId, { clientId: 'flaky', name: 'Flaky' });
+    assert.ok((await roster).find((p) => p.name === 'Flaky'), 'still present right after reconnecting');
 
-    // Wait past the *original* grace deadline - if the first timer hadn't
-    // been cancelled on rejoin, a stray removal would show up here.
+    // Past the *original* grace deadline - if the first timer hadn't been
+    // cancelled on rejoin, a stray removal would show up here.
     let strayRemoval = false;
     spectator.once('players', (p) => {
       if (!p.find((x) => x.name === 'Flaky')) strayRemoval = true;
     });
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await wait(250);
     assert.equal(strayRemoval, false, 'never removed - the reconnect cancelled the original timer');
   } finally {
-    spectator.close();
-    flaky.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
 
-test('a deliberate disconnect (logout) removes the player immediately, ignoring the grace period', async () => {
-  clearPlayers();
-  // Long enough that only an *immediate* removal could show up in this test.
-  const { httpServer, io } = createGameServer({ disconnectGraceMs: 60_000 });
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const spectator = ioClient(url);
-  const leaver = ioClient(url);
-
+test('leaving on purpose removes the player immediately, ignoring the grace period', async () => {
+  const server = await startServer({ disconnectGraceMs: 60_000 });
   try {
-    await Promise.all([waitForEvent(spectator, 'connect'), waitForEvent(leaver, 'connect')]);
-
-    const joined = Promise.all([waitForEvent(spectator, 'players'), waitForEvent(leaver, 'players')]);
-    leaver.emit('join', { clientId: 'leaver-client', name: 'Leaver' });
-    await joined;
+    const spectator = await server.connect();
+    const leaver = await server.connect();
+    const { sessionId } = await createGame(spectator, 'Maison', { clientId: 'spectator', name: 'Spec' });
+    await joinGame(leaver, sessionId, { clientId: 'leaver', name: 'Leaver' });
 
     const left = waitForEvent(spectator, 'players');
-    leaver.disconnect(); // exactly what the "SE DECONNECTER" button does
-    const players = await left;
-    assert.equal(players.find((p) => p.name === 'Leaver'), undefined, 'removed right away, not after a long wait');
+    leaver.emit('leaveSession'); // what the back button and SE DÉCONNECTER send
+    assert.equal((await left).find((p) => p.name === 'Leaver'), undefined, 'removed right away');
+
+    // Closing the app outright (a clean disconnect) is just as immediate.
+    await joinGame(leaver, sessionId, { clientId: 'leaver', name: 'Leaver' });
+    const gone = waitForEvent(spectator, 'players');
+    leaver.disconnect();
+    assert.equal((await gone).find((p) => p.name === 'Leaver'), undefined);
   } finally {
-    spectator.close();
-    leaver.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
-

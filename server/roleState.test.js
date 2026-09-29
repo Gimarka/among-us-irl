@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assignRoles, getRole, clearRoles } from './roleState.js';
+import { createRoles } from './roleState.js';
+
+const { assignRoles, getRole, clearRoles } = createRoles();
 
 function players(count) {
   return Array.from({ length: count }, (_, i) => ({ id: `client${i}` }));

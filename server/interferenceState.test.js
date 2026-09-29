@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isInterferenceActive, startInterference, clearInterference } from './interferenceState.js';
+import { createInterference } from './interferenceState.js';
+
+const { isInterferenceActive, startInterference, clearInterference } = createInterference();
 
 test('startInterference is active immediately and calls onExpire once the duration passes', async () => {
   clearInterference();

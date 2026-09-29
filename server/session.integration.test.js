@@ -1,163 +1,205 @@
-// Plays whole sessions with fake players: real HTTP server, real sockets.
+// Named games side by side, played with fake players: real HTTP server,
+// real sockets.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { io as ioClient } from 'socket.io-client';
-import { createGameServer } from './index.js';
-import { clearPlayers } from './gameState.js';
-import { endSession } from './sessionState.js';
-import { clearCharacters } from './characterStore.js';
+import { startServer, waitForEvent, wait, hello, createGame, joinGame } from './testSupport.js';
 
-function listenOnRandomPort(server) {
-  return new Promise((resolve) => {
-    server.listen(0, () => resolve(server.address().port));
-  });
-}
-
-function waitForEvent(socket, event) {
-  return new Promise((resolve) => socket.once(event, resolve));
-}
-
-// See join.integration.test.js for why this (rather than a plain io.close())
-// is needed to let the test process exit cleanly.
-function closeGameServer({ httpServer, io }) {
-  io.close();
-  httpServer.closeAllConnections();
-}
-
-function hello(socket, clientId) {
-  const welcome = waitForEvent(socket, 'welcome');
-  socket.emit('hello', { clientId });
-  return welcome;
-}
-
-async function connect(url) {
-  const socket = ioClient(url, { reconnection: false });
-  await waitForEvent(socket, 'connect');
-  return socket;
-}
-
-async function join(socket, clientId, name) {
-  const joined = waitForEvent(socket, 'players');
-  socket.emit('join', { clientId, name });
-  await joined;
-}
-
-function reset() {
-  clearPlayers();
-  endSession();
-  clearCharacters();
-}
-
-test('a full session: start, late joiner, rejoin, end, and a fresh session after', async () => {
-  reset();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-  const sockets = [];
-
+test('NOUVELLE PARTIE creates a named game with its creator as host, listed for everyone', async () => {
+  const server = await startServer();
   try {
-    const alice = await connect(url);
-    const bob = await connect(url);
-    sockets.push(alice, bob);
+    const browsing = await server.connect(); // a phone sitting on the character screen
+    const alice = await server.connect();
 
-    assert.deepEqual(await hello(alice, 'alice'), { sessionId: null, member: false, character: null });
+    const listed = waitForEvent(browsing, 'sessions');
+    const joined = await createGame(alice, '  Soirée  ', { clientId: 'alice', name: 'Alice' });
+    assert.equal(joined.name, 'Soirée');
+    assert.equal(joined.hostId, 'alice');
+    assert.equal(joined.started, false);
+    assert.equal(joined.inGame, false, 'a new game starts in its lobby');
 
-    await join(alice, 'alice', 'Alice');
-    await join(bob, 'bob', 'Bob');
-
-    // JOUER: both lobby players start together, and everyone hears the session id.
-    const started = Promise.all([
-      waitForEvent(alice, 'role'),
-      waitForEvent(bob, 'role'),
-      waitForEvent(alice, 'session'),
-    ]);
-    alice.emit('startGame');
-    const [aliceStart, , { sessionId }] = await started;
-    assert.equal(typeof sessionId, 'number');
-
-    const chatSent = waitForEvent(bob, 'chatMessage');
-    alice.emit('chatMessage', { text: 'salut' });
-    await chatSent;
-
-    // A newcomer during the session: not a member until CONTINUER, then always a crewmate.
-    const carol = await connect(url);
-    sockets.push(carol);
-    const carolWelcome = await hello(carol, 'carol');
-    assert.equal(carolWelcome.sessionId, sessionId);
-    assert.equal(carolWelcome.member, false);
-    await join(carol, 'carol', 'Carol');
-    const carolRole = waitForEvent(carol, 'role');
-    carol.emit('startGame');
-    assert.equal((await carolRole).role, 'crewmate');
-
-    // Alice leaves on purpose and comes back: same session, same tasks, no second reveal.
-    alice.disconnect();
-    const aliceAgain = await connect(url);
-    sockets.push(aliceAgain);
-    const aliceWelcome = await hello(aliceAgain, 'alice');
-    assert.equal(aliceWelcome.member, true);
-    assert.equal(aliceWelcome.character.name, 'Alice');
-
-    let aliceGotRoleAgain = false;
-    aliceAgain.on('role', () => { aliceGotRoleAgain = true; });
-    const resumedTasks = waitForEvent(aliceAgain, 'tasks');
-    aliceAgain.emit('join', { clientId: 'alice', name: 'Alice' });
-    assert.deepEqual(await resumedTasks, aliceStart.tasks);
-    assert.equal(aliceGotRoleAgain, false);
-
-    // Everyone leaves: the session ends, but characters are kept.
-    [aliceAgain, bob, carol].forEach((socket) => socket.disconnect());
-    const dave = await connect(url);
-    sockets.push(dave);
-    await new Promise((resolve) => setTimeout(resolve, 50)); // let the disconnects land
-    assert.equal((await hello(dave, 'dave')).sessionId, null);
-    const aliceCharacter = (await hello(dave, 'alice')).character;
-    assert.equal(aliceCharacter.name, 'Alice');
-
-    // A new session starts from zero, with the next id.
-    await join(dave, 'dave', 'Dave');
-    const nextSession = Promise.all([waitForEvent(dave, 'session'), waitForEvent(dave, 'chatHistory')]);
-    dave.emit('startGame');
-    const [{ sessionId: nextId }, chat] = await nextSession;
-    assert.equal(nextId, sessionId + 1);
-    assert.deepEqual(chat, [], 'the previous session\'s chat must be gone');
+    const [game] = await listed;
+    assert.deepEqual(game, { id: joined.sessionId, name: 'Soirée', playerCount: 1, started: false });
   } finally {
-    sockets.forEach((socket) => socket.close());
-    closeGameServer({ httpServer, io });
+    server.close();
+  }
+});
+
+test('a game name must be non-empty and not already used by a running game', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    const bob = await server.connect();
+    await createGame(alice, 'Soirée', { clientId: 'alice', name: 'Alice' });
+
+    const taken = waitForEvent(bob, 'sessionError');
+    bob.emit('createSession', { clientId: 'bob', name: 'Bob', sessionName: 'SOIRÉE' });
+    assert.equal((await taken).reason, 'name-taken', 'ignoring upper/lower case');
+
+    const empty = waitForEvent(bob, 'sessionError');
+    bob.emit('createSession', { clientId: 'bob', name: 'Bob', sessionName: '   ' });
+    assert.equal((await empty).reason, 'name-empty');
+
+    const gone = waitForEvent(bob, 'sessionError');
+    bob.emit('joinSession', { clientId: 'bob', name: 'Bob', sessionId: 9999 });
+    assert.equal((await gone).reason, 'not-found');
+  } finally {
+    server.close();
+  }
+});
+
+test('two games are fully separate: chat, alert and roster stay in their own game', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    const bob = await server.connect();
+    await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
+    await createGame(bob, 'Jardin', { clientId: 'bob', name: 'Bob' });
+
+    const leaked = [];
+    bob.on('chatMessage', () => leaked.push('chat'));
+    bob.on('alert', () => leaked.push('alert'));
+    bob.on('players', () => leaked.push('players'));
+
+    const own = waitForEvent(alice, 'alert');
+    alice.emit('chatMessage', { text: 'salut' });
+    alice.emit('alertStart');
+    await own;
+    await hello(bob, 'bob');
+    assert.deepEqual(leaked, []);
+  } finally {
+    server.close();
+  }
+});
+
+test('when the host leaves, the longest-present player becomes host', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const carol = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+    await joinGame(carol, sessionId, { clientId: 'carol', name: 'Carol' });
+
+    const newHost = waitForEvent(carol, 'session');
+    alice.emit('leaveSession');
+    assert.equal((await newHost).hostId, 'bob');
+
+    const roles = Promise.all([waitForEvent(bob, 'role'), waitForEvent(carol, 'role')]);
+    bob.emit('startGame');
+    await roles;
+  } finally {
+    server.close();
+  }
+});
+
+test('a game already started stays joinable: newcomers wait in the lobby, then CONTINUER as crewmate', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
+    // The list is pushed on every change; wait for the one where it has started.
+    const shownStarted = new Promise((resolve) => {
+      bob.on('sessions', (list) => { if (list[0]?.started) resolve(list); });
+    });
+    const aliceRole = waitForEvent(alice, 'role');
+    alice.emit('startGame');
+    await aliceRole;
+    await shownStarted; // times out (fails) if the list never shows it as started
+
+    const joined = await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+    assert.equal(joined.started, true);
+    assert.equal(joined.inGame, false, 'a newcomer goes to the lobby first');
+
+    const bobRole = waitForEvent(bob, 'role');
+    bob.emit('startGame');
+    assert.equal((await bobRole).role, 'crewmate');
+  } finally {
+    server.close();
+  }
+});
+
+test('coming back: a player keeps their game after leaving it once started, but not a lobby', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+
+    // Bob leaves the lobby before the start: no game to come back to.
+    bob.emit('leaveSession');
+    assert.equal((await hello(bob, 'bob')).resume, null);
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+
+    const roles = Promise.all([waitForEvent(alice, 'role'), waitForEvent(bob, 'role')]);
+    alice.emit('startGame');
+    const [, bobStart] = await roles;
+
+    // Bob leaves the started game: still his, with the same tasks and no second reveal.
+    bob.emit('leaveSession');
+    const welcome = await hello(bob, 'bob');
+    assert.deepEqual(welcome.resume, { sessionId, inGame: true });
+    assert.equal(welcome.character.name, 'Bob');
+
+    let revealedAgain = false;
+    bob.on('role', () => { revealedAgain = true; });
+    const resumedTasks = waitForEvent(bob, 'tasks');
+    const rejoined = await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+    assert.equal(rejoined.inGame, true, 'straight back to the main menu');
+    assert.deepEqual(await resumedTasks, bobStart.tasks);
+    assert.equal(revealedAgain, false);
+  } finally {
+    server.close();
+  }
+});
+
+test('a game is deleted once its last player leaves, but characters are kept', async () => {
+  const server = await startServer();
+  try {
+    const alice = await server.connect();
+    await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
+
+    const emptied = waitForEvent(alice, 'sessions');
+    alice.emit('leaveSession');
+    assert.deepEqual(await emptied, []);
+
+    const welcome = await hello(alice, 'alice');
+    assert.equal(welcome.resume, null);
+    assert.equal(welcome.character.name, 'Alice');
+
+    // The name is free again.
+    const again = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
+    assert.equal(again.name, 'Maison');
+  } finally {
+    server.close();
   }
 });
 
 test('a lobby player whose phone was asleep at JOUER gets their reveal when they reconnect', async () => {
-  reset();
-  const { httpServer, io } = createGameServer({ disconnectGraceMs: 5000 });
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-  const sockets = [];
-
+  const server = await startServer({ disconnectGraceMs: 5000 });
   try {
-    const alice = await connect(url);
-    const bob = await connect(url);
-    sockets.push(alice, bob);
-    await join(alice, 'alice', 'Alice');
-    await join(bob, 'bob', 'Bob');
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
 
     // Bob's connection drops without him leaving - he stays in the lobby roster.
     bob.io.engine.close();
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await wait(50);
 
     const aliceRole = waitForEvent(alice, 'role');
     alice.emit('startGame');
     await aliceRole;
 
-    const bobAgain = await connect(url);
-    sockets.push(bobAgain);
-    assert.equal((await hello(bobAgain, 'bob')).member, true);
+    const bobAgain = await server.connect();
+    assert.deepEqual((await hello(bobAgain, 'bob')).resume, { sessionId, inGame: true });
     const bobRole = waitForEvent(bobAgain, 'role');
-    bobAgain.emit('join', { clientId: 'bob', name: 'Bob' });
+    await joinGame(bobAgain, sessionId, { clientId: 'bob', name: 'Bob' });
     const { role } = await bobRole;
     assert.ok(role === 'crewmate' || role === 'imposter');
   } finally {
-    sockets.forEach((socket) => socket.close());
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });

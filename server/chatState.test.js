@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addMessage, listMessages, clearMessages } from './chatState.js';
+import { createChat } from './chatState.js';
+
+const { addMessage, listMessages, clearMessages } = createChat();
 
 test('addMessage adds a message and returns it with an id and timestamp', () => {
   clearMessages();

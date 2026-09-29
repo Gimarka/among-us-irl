@@ -1,16 +1,16 @@
 import { createServer } from 'node:http';
 import express from 'express';
 import { Server } from 'socket.io';
-import { addPlayer, removePlayer, listPlayers, findPlayerByClientId, resolveColor } from './gameState.js';
-import { addMessage, listMessages } from './chatState.js';
-import { getRole, assignRoles } from './roleState.js';
-import { getTasks, assignTasks, completeTask, TASK_POOL } from './taskState.js';
-import { isAlertActive, getAlertRemainingMs, startAlert, stopAlert } from './alertState.js';
-import { isInterferenceActive, startInterference } from './interferenceState.js';
+import { TASK_POOL } from './taskState.js';
 import {
-  startSession,
-  endSession,
-  getSessionId,
+  cleanSessionName,
+  isSessionNameTaken,
+  createSession,
+  getSession,
+  deleteSession,
+  listSessions,
+  rememberClientSession,
+  getClientSession,
   isMember,
   addMember,
   hasSeenRole,
@@ -71,6 +71,17 @@ function cleanClientId(clientId, fallback) {
   return typeof clientId === 'string' && CLIENT_ID_PATTERN.test(clientId) ? clientId : fallback;
 }
 
+// Who a phone says it is when it creates or joins a game.
+function cleanIdentity({ clientId, name, photo, color, hat } = {}, socketId) {
+  return {
+    clientId: cleanClientId(clientId, socketId),
+    name: String(name || '').trim().slice(0, 20) || 'Joueur',
+    photo: cleanPhoto(photo),
+    color: cleanColor(color),
+    hat: cleanHat(hat),
+  };
+}
+
 // A dropped connection - phone locked, tab backgrounded, Wi-Fi hiccup - looks
 // identical to actually leaving from here, and reconnecting after any of
 // those is already handled client-side (it re-joins with the same clientId).
@@ -81,8 +92,8 @@ const DISCONNECT_GRACE_MS = 15 * 60 * 1000;
 
 // Reasons Socket.IO reports when *we* end the connection on purpose, rather
 // than it failing underneath us - the logout button (client-initiated) and
-// evicting a since-replaced connection (server-initiated, see the 'join'
-// handler below). Both mean the player is definitely not coming back on
+// evicting a since-replaced connection (server-initiated, see
+// enterSession below). Both mean the player is definitely not coming back on
 // this connection, so there's nothing to wait out.
 const IMMEDIATE_DISCONNECT_REASONS = new Set([
   'client namespace disconnect',
@@ -101,12 +112,12 @@ export function createGameServer({
   });
 
   app.get('/health', (req, res) => {
-    res.json({ ok: true, players: listPlayers().length });
+    res.json({ ok: true, sessions: listSessions().length });
   });
 
   // clientId -> pending removal timer, for players riding out the grace
-  // period above. Never more than one entry per clientId: joining or
-  // disconnecting again both replace whatever was there before.
+  // period above. A phone is in at most one game's roster at a time, so one
+  // entry per clientId is enough.
   const pendingRemovals = new Map();
 
   function cancelPendingRemoval(clientId) {
@@ -115,107 +126,189 @@ export function createGameServer({
     pendingRemovals.delete(clientId);
   }
 
-  // What every phone needs to show the alert: whether it's flashing, and the
-  // countdown bar's time left (0 once it's run out) out of its full length.
-  function alertPayload() {
-    return { active: isAlertActive(), remainingMs: getAlertRemainingMs(), durationMs: alertCountdownMs };
+  // Each game broadcasts only to its own Socket.IO room, so nothing - an
+  // alert, a chat message, the roster - ever reaches another game.
+  const roomOf = (session) => `session:${session.id}`;
+
+  function sessionInfo(session) {
+    return { sessionId: session.id, name: session.name, hostId: session.hostId, started: session.started };
   }
 
-  // Everything a phone shows that depends on which session is running. Sent
-  // to everyone whenever a session starts or ends, since both wipe the chat,
-  // alert and interference (see sessionState.js).
-  function broadcastSessionState() {
-    io.emit('session', { sessionId: getSessionId() });
-    io.emit('chatHistory', listMessages());
-    io.emit('alert', alertPayload());
-    io.emit('interference', { active: isInterferenceActive() });
+  // What a phone needs to show the alert: whether it's flashing, and the
+  // countdown bar's time left out of its full length.
+  function alertPayload(session) {
+    return {
+      active: session.alert.isAlertActive(),
+      remainingMs: session.alert.getAlertRemainingMs(),
+      durationMs: alertCountdownMs,
+    };
   }
 
-  // Private, like before sessions existed: only ever to that player's own
-  // socket. Skipped for a player whose phone isn't connected right now -
-  // roleSeen stays false, so they get the reveal when they come back instead.
-  function sendRole(clientId) {
-    const player = findPlayerByClientId(clientId);
+  // The REJOINDRE list, pushed to every phone whenever a game appears,
+  // disappears, starts or changes size, so an open list stays live.
+  function broadcastSessionList() {
+    io.emit('sessions', listSessions());
+  }
+
+  function currentSession(socket) {
+    return getSession(socket.data.sessionId);
+  }
+
+  // Private: only ever to that player's own socket. Skipped for a player
+  // whose phone isn't connected right now - roleSeen stays false, so they get
+  // the reveal when they come back instead.
+  function sendRole(session, clientId) {
+    const player = session.roster.findPlayerByClientId(clientId);
     const playerSocket = player && io.sockets.sockets.get(player.socketId);
     if (!playerSocket) return;
-    const players = listPlayers();
-    playerSocket.emit('role', { role: getRole(clientId, players), tasks: getTasks(clientId, players) });
-    markRoleSeen(clientId);
+    const players = session.roster.listPlayers();
+    playerSocket.emit('role', {
+      role: session.roles.getRole(clientId, players),
+      tasks: session.tasks.getTasks(clientId, players),
+    });
+    markRoleSeen(session, clientId);
   }
 
-  // The session ends once nobody is left in the roster at all - everyone
-  // either left on purpose or ran out their disconnect grace period.
-  function removeFromRoster(clientId, socketId) {
-    const players = removePlayer(clientId, socketId);
-    io.emit('players', players);
-    if (players.length === 0 && getSessionId() !== null) {
-      endSession();
-      broadcastSessionState();
+  // Takes a player out of a game's roster (unless socketId is a connection
+  // that's since been replaced - see removePlayer). The game is deleted once
+  // nobody is left; if the host is the one leaving, the player who has been
+  // in the game the longest takes over.
+  function removeFromRoster(session, clientId, socketId) {
+    const entry = session.roster.findPlayerByClientId(clientId);
+    const removed = Boolean(entry) && entry.socketId === socketId;
+    const players = session.roster.removePlayer(clientId, socketId);
+
+    if (players.length === 0) {
+      deleteSession(session.id);
+    } else {
+      io.to(roomOf(session)).emit('players', players);
+      if (removed && session.hostId === clientId) {
+        session.hostId = players[0].id;
+        io.to(roomOf(session)).emit('session', sessionInfo(session));
+      }
     }
+    broadcastSessionList();
+  }
+
+  function leaveCurrentSession(socket) {
+    const session = currentSession(socket);
+    socket.data.sessionId = null;
+    if (!session) return;
+    socket.leave(roomOf(session));
+    cancelPendingRemoval(socket.data.clientId);
+    removeFromRoster(session, socket.data.clientId, socket.id);
+  }
+
+  // Puts this connection into a game's lobby - or straight back into the
+  // game itself for a player who already has a role in it.
+  function enterSession(socket, session, identity) {
+    const id = identity.clientId;
+    if (socket.data.sessionId !== null && socket.data.sessionId !== undefined && socket.data.sessionId !== session.id) {
+      leaveCurrentSession(socket);
+    }
+
+    // Reconnecting before the grace period ran out means they never really left.
+    cancelPendingRemoval(id);
+
+    // A phone plays one game at a time: if it's still listed in another one
+    // (another tab, or an old connection riding out its grace period), it
+    // leaves that one now.
+    const previous = getClientSession(id);
+    const stale = previous && previous.id !== session.id ? previous.roster.findPlayerByClientId(id) : null;
+    if (stale) {
+      removeFromRoster(previous, id, stale.socketId);
+      io.sockets.sockets.get(stale.socketId)?.disconnect(true);
+    }
+
+    // The same player can briefly hold two live connections in this game -
+    // a second tab, a phone that reconnected under a fresh socket just
+    // before its old one timed out. Only one should count, so the previous
+    // connection gets closed below. That has to happen *after* the roster
+    // already reflects the new connection: disconnect() can fire its
+    // 'disconnect' handler synchronously, and that handler's stale-connection
+    // check (see removePlayer) only stays correct if this new entry is
+    // already in place by the time it runs.
+    const existing = session.roster.findPlayerByClientId(id);
+    const previousSocketId = existing && existing.socketId !== socket.id ? existing.socketId : null;
+
+    const character = {
+      name: identity.name,
+      photo: identity.photo,
+      color: session.roster.resolveColor(id, identity.color),
+      hat: identity.hat,
+    };
+    saveCharacter(id, character);
+    socket.data.clientId = id;
+    socket.data.sessionId = session.id;
+    socket.join(roomOf(session));
+    const players = session.roster.addPlayer(id, socket.id, character.name, character.photo, character.color, character.hat);
+    rememberClientSession(id, session.id);
+    io.to(roomOf(session)).emit('players', players);
+
+    if (previousSocketId) {
+      io.sockets.sockets.get(previousSocketId)?.disconnect(true);
+    }
+
+    socket.emit('joined', { ...sessionInfo(session), inGame: isMember(session, id) });
+    socket.emit('chatHistory', session.chat.listMessages());
+    socket.emit('alert', alertPayload(session));
+    socket.emit('interference', { active: session.interference.isInterferenceActive() });
+
+    // A returning player skips the lobby: their role reveal if they never
+    // got it, otherwise just their task list to pick up from.
+    if (isMember(session, id)) {
+      if (hasSeenRole(session, id)) socket.emit('tasks', session.tasks.getTasks(id, session.roster.listPlayers()));
+      else sendRole(session, id);
+    }
+    broadcastSessionList();
   }
 
   io.on('connection', (socket) => {
-    // Sent right away, before this socket has joined anything, so a
-    // freshly opened join screen knows which colours are already taken
-    // instead of only finding out from the next player to join or leave.
-    socket.emit('players', listPlayers());
-    socket.emit('chatHistory', listMessages());
-    socket.emit('alert', alertPayload());
-    socket.emit('interference', { active: isInterferenceActive() });
+    socket.data.sessionId = null;
+    socket.emit('sessions', listSessions());
 
-    // The first thing a phone asks, before joining: is a session running,
-    // is this phone already part of it, and what did its character look
-    // like last time. That's all the phone needs to pick its starting screen.
+    // The first thing a phone asks: what did its character look like last
+    // time, and is it still part of a running game it should go back to.
     socket.on('hello', ({ clientId } = {}) => {
       const id = cleanClientId(clientId, socket.id);
+      const session = getClientSession(id);
       socket.emit('welcome', {
-        sessionId: getSessionId(),
-        member: isMember(id),
         character: getCharacter(id),
+        resume: session ? { sessionId: session.id, inGame: isMember(session, id) } : null,
       });
+      socket.emit('sessions', listSessions());
     });
 
-    socket.on('join', ({ clientId, name, photo, color, hat } = {}) => {
-      const id = cleanClientId(clientId, socket.id);
-      const cleanName = String(name || '').trim().slice(0, 20) || 'Joueur';
-
-      // The same player can briefly hold two live connections - a second
-      // tab, a phone that reconnected under a fresh socket just before its
-      // old one timed out. Only one should count, so the previous
-      // connection gets closed below. That has to happen *after* the
-      // roster already reflects the new connection: disconnect() can fire
-      // its 'disconnect' handler synchronously, and that handler's own
-      // stale-connection check (see removePlayer) only stays correct if
-      // this new entry is already in place by the time it runs - otherwise
-      // it would broadcast Tyty as gone for an instant before reappearing.
-      const existing = findPlayerByClientId(id);
-      const previousSocketId = existing && existing.socketId !== socket.id ? existing.socketId : null;
-
-      // Reconnecting - the same tab coming back, or a new one - before the
-      // grace period ran out means they never really left.
-      cancelPendingRemoval(id);
-
-      socket.data.clientId = id;
-      const character = {
-        name: cleanName,
-        photo: cleanPhoto(photo),
-        color: resolveColor(id, cleanColor(color)),
-        hat: cleanHat(hat),
-      };
-      saveCharacter(id, character);
-      const players = addPlayer(id, socket.id, character.name, character.photo, character.color, character.hat);
-      io.emit('players', players);
-
-      if (previousSocketId) {
-        io.sockets.sockets.get(previousSocketId)?.disconnect(true);
+    // NOUVELLE PARTIE: a new, named game, with its creator as host.
+    socket.on('createSession', (payload = {}) => {
+      const identity = cleanIdentity(payload, socket.id);
+      const name = cleanSessionName(payload.sessionName);
+      if (!name) {
+        socket.emit('sessionError', { reason: 'name-empty' });
+        return;
       }
-
-      // A returning session member skips the lobby: their role reveal if
-      // they never got it, otherwise just their task list to pick up from.
-      if (isMember(id)) {
-        if (hasSeenRole(id)) socket.emit('tasks', getTasks(id, listPlayers()));
-        else sendRole(id);
+      if (isSessionNameTaken(name)) {
+        socket.emit('sessionError', { reason: 'name-taken' });
+        return;
       }
+      enterSession(socket, createSession(name, identity.clientId), identity);
+    });
+
+    // REJOINDRE: one of the games from the list.
+    socket.on('joinSession', (payload = {}) => {
+      const session = getSession(payload.sessionId);
+      if (!session) {
+        socket.emit('sessionError', { reason: 'not-found' });
+        return;
+      }
+      enterSession(socket, session, cleanIdentity(payload, socket.id));
+    });
+
+    // Back to the character screen. The player keeps their role in a game
+    // that has started (so they can come back to it), but not their place
+    // in a lobby.
+    socket.on('leaveSession', () => {
+      leaveCurrentSession(socket);
     });
 
     // The sender's name/colour/hat/photo are snapshotted from the roster
@@ -223,95 +316,107 @@ export function createGameServer({
     // a message keeps showing who its sender was at the time, even if that
     // player later changes their look or leaves.
     socket.on('chatMessage', ({ text } = {}) => {
-      const id = socket.data.clientId;
-      if (!id) return; // hasn't joined - shouldn't happen, chat is only reachable post-join
-      const player = findPlayerByClientId(id);
+      const session = currentSession(socket);
+      const player = session?.roster.findPlayerByClientId(socket.data.clientId);
       if (!player) return;
 
       const cleanText = cleanChatText(text);
       if (!cleanText) return;
 
-      const message = addMessage({
-        clientId: id,
+      const message = session.chat.addMessage({
+        clientId: player.id,
         name: player.name,
         photo: player.photo,
         color: player.color,
         hat: player.hat,
         text: cleanText,
       });
-      io.emit('chatMessage', message);
+      io.to(roomOf(session)).emit('chatMessage', message);
     });
 
-    // JOUER (no session yet) starts a session for everyone in the lobby at
-    // once. CONTINUER (a session is already running) brings in just the
-    // player who pressed it, as a crewmate (see getRole in roleState.js).
+    // JOUER (host only, before the game has started) sends everyone in the
+    // lobby into the game at once. CONTINUER (once it has started) brings in
+    // just the player who pressed it, as a crewmate (see getRole).
     socket.on('startGame', () => {
+      const session = currentSession(socket);
       const id = socket.data.clientId;
-      if (!id) return; // hasn't joined - shouldn't happen, play is only reachable post-join
+      if (!session || !id) return;
 
-      if (getSessionId() === null) {
-        startSession();
-        const lobby = listPlayers();
-        assignRoles(lobby);
-        assignTasks(lobby);
-        lobby.forEach((player) => addMember(player.id));
-        broadcastSessionState();
-        lobby.forEach((player) => sendRole(player.id));
+      if (!session.started) {
+        if (session.hostId !== id) return;
+        session.started = true;
+        const lobby = session.roster.listPlayers();
+        session.roles.assignRoles(lobby);
+        session.tasks.assignTasks(lobby);
+        lobby.forEach((player) => addMember(session, player.id));
+        io.to(roomOf(session)).emit('session', sessionInfo(session));
+        broadcastSessionList();
+        lobby.forEach((player) => sendRole(session, player.id));
         return;
       }
 
-      addMember(id);
-      // A second tap (or two players pressing JOUER at the same moment)
-      // must not replay a reveal the player already got.
-      if (!hasSeenRole(id)) sendRole(id);
+      addMember(session, id);
+      // A second tap must not replay a reveal the player already got.
+      if (!hasSeenRole(session, id)) sendRole(session, id);
     });
 
     // A minigame reports its own completion without knowing whether it's
     // actually one of this player's assigned tasks - completeTask is a
     // no-op if it isn't, so nothing else needs to check that here.
     socket.on('completeTask', ({ taskId } = {}) => {
-      const id = socket.data.clientId;
-      if (!id || !TASK_POOL.includes(taskId)) return;
-      const tasks = completeTask(id, taskId);
+      const session = currentSession(socket);
+      if (!session || !TASK_POOL.includes(taskId)) return;
+      const tasks = session.tasks.completeTask(socket.data.clientId, taskId);
       if (tasks) socket.emit('tasks', tasks);
     });
 
-    // Broadcast (io.emit), not private - unlike role/tasks, an alert is
-    // meant for every connected phone at once, triggering player included.
-    // Restarts the countdown from full if an alert is already running. When
-    // it runs out, the server itself ends the alert for everyone.
+    // To every phone in the game, triggering player included. Restarts the
+    // countdown from full if an alert is already running. When it runs out,
+    // the server itself ends the alert for everyone.
     socket.on('alertStart', () => {
-      startAlert(() => io.emit('alert', alertPayload()), alertCountdownMs);
-      io.emit('alert', alertPayload());
+      const session = currentSession(socket);
+      if (!session) return;
+      session.alert.startAlert(() => io.to(roomOf(session)).emit('alert', alertPayload(session)), alertCountdownMs);
+      io.to(roomOf(session)).emit('alert', alertPayload(session));
     });
 
     socket.on('alertStop', () => {
-      stopAlert();
-      io.emit('alert', alertPayload());
+      const session = currentSession(socket);
+      if (!session) return;
+      session.alert.stopAlert();
+      io.to(roomOf(session)).emit('alert', alertPayload(session));
     });
 
-    // Broadcast, same as alert - every phone loses its scanner/task list at
-    // once. Auto-expires on the server's own timer rather than needing a
-    // second button press to turn off.
+    // Same as alert: every phone in the game loses its scanner/task list at
+    // once, and the server's own timer turns it back off.
     socket.on('interferenceStart', () => {
-      startInterference(() => io.emit('interference', { active: false }), interferenceDurationMs);
-      io.emit('interference', { active: true });
+      const session = currentSession(socket);
+      if (!session) return;
+      session.interference.startInterference(
+        () => io.to(roomOf(session)).emit('interference', { active: false }),
+        interferenceDurationMs,
+      );
+      io.to(roomOf(session)).emit('interference', { active: true });
     });
 
     socket.on('disconnect', (reason) => {
       const id = socket.data.clientId;
-      if (!id) return; // disconnected before ever joining
-
-      cancelPendingRemoval(id);
+      const session = currentSession(socket);
+      if (!id || !session) return; // wasn't in a game
 
       if (IMMEDIATE_DISCONNECT_REASONS.has(reason)) {
-        removeFromRoster(id, socket.id);
+        removeFromRoster(session, id, socket.id);
         return;
       }
 
+      // Only this connection's own entry rides out the grace period - a
+      // connection that's already been replaced has nothing left to remove.
+      if (session.roster.findPlayerByClientId(id)?.socketId !== socket.id) return;
+      cancelPendingRemoval(id);
       const timer = setTimeout(() => {
         pendingRemovals.delete(id);
-        removeFromRoster(id, socket.id);
+        const stillThere = getSession(session.id);
+        if (stillThere) removeFromRoster(stillThere, id, socket.id);
       }, disconnectGraceMs);
       pendingRemovals.set(id, timer);
     });

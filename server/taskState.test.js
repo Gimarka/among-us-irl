@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assignTasks, getTasks, completeTask, clearTasks, TASK_POOL, TASK_ROOMS } from './taskState.js';
+import { createTasks, TASK_POOL, TASK_ROOMS } from './taskState.js';
+
+const { assignTasks, getTasks, completeTask, clearTasks } = createTasks();
 
 function players(count) {
   return Array.from({ length: count }, (_, i) => ({ id: `client${i}` }));

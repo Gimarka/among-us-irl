@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
+import { createRoster } from './gameState.js';
+
+const {
   addPlayer,
   removePlayer,
   listPlayers,
   findPlayerByClientId,
   clearPlayers,
   resolveColor,
-} from './gameState.js';
+} = createRoster();
 
 test('addPlayer adds a player and returns the full list', () => {
   clearPlayers();

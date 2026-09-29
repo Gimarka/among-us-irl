@@ -1,123 +1,62 @@
-// Simulates two phones chatting in the same game: real HTTP server, real sockets.
+// A game's chat: real HTTP server, real sockets.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { io as ioClient } from 'socket.io-client';
-import { createGameServer } from './index.js';
-import { clearPlayers } from './gameState.js';
-import { clearMessages } from './chatState.js';
-
-function listenOnRandomPort(server) {
-  return new Promise((resolve) => {
-    server.listen(0, () => resolve(server.address().port));
-  });
-}
-
-function waitForEvent(socket, event) {
-  return new Promise((resolve) => socket.once(event, resolve));
-}
-
-// See join.integration.test.js for why this (rather than a plain io.close())
-// is needed to let the test process exit cleanly.
-function closeGameServer({ httpServer, io }) {
-  io.close();
-  httpServer.closeAllConnections();
-}
+import { startServer, waitForEvent, createGame, joinGame } from './testSupport.js';
 
 test('a chat message is broadcast with the sender\'s name, colour and hat', async () => {
-  clearPlayers();
-  clearMessages();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const alice = ioClient(url);
-  const bob = ioClient(url);
-
+  const server = await startServer();
   try {
-    await Promise.all([waitForEvent(alice, 'connect'), waitForEvent(bob, 'connect')]);
+    const alice = await server.connect();
+    const bob = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice', color: '#38fedc', hat: 'crown' });
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
 
-    const aliceJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    alice.emit('join', { name: 'Alice', color: '#38fedc', hat: 'crown' });
-    await aliceJoined;
-
-    const bobJoined = Promise.all([waitForEvent(alice, 'players'), waitForEvent(bob, 'players')]);
-    bob.emit('join', { name: 'Bob' });
-    await bobJoined;
-
-    const bothReceive = Promise.all([waitForEvent(alice, 'chatMessage'), waitForEvent(bob, 'chatMessage')]);
-    alice.emit('chatMessage', { text: 'salut tout le monde' });
-    const [fromAlice, fromBob] = await bothReceive;
-
+    const both = Promise.all([waitForEvent(alice, 'chatMessage'), waitForEvent(bob, 'chatMessage')]);
+    alice.emit('chatMessage', { text: '  salut  ' });
+    const [fromAlice, fromBob] = await both;
     for (const message of [fromAlice, fromBob]) {
+      assert.equal(message.text, 'salut');
       assert.equal(message.name, 'Alice');
-      assert.equal(message.text, 'salut tout le monde');
       assert.equal(message.color, '#38fedc');
       assert.equal(message.hat, 'crown');
     }
   } finally {
-    alice.close();
-    bob.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
 
-test('a newly connecting player receives the existing chat history', async () => {
-  clearPlayers();
-  clearMessages();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const alice = ioClient(url);
-
+test('a player joining a game receives that game\'s existing chat history', async () => {
+  const server = await startServer();
   try {
-    await waitForEvent(alice, 'connect');
-
-    const joined = waitForEvent(alice, 'players');
-    alice.emit('join', { name: 'Alice' });
-    await joined;
-
+    const alice = await server.connect();
+    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
     const sent = waitForEvent(alice, 'chatMessage');
-    alice.emit('chatMessage', { text: 'premier message' });
+    alice.emit('chatMessage', { text: 'premier' });
     await sent;
 
-    const bob = ioClient(url);
-    const history = await waitForEvent(bob, 'chatHistory');
-    assert.equal(history.length, 1);
-    assert.equal(history[0].text, 'premier message');
-    assert.equal(history[0].name, 'Alice');
-    bob.close();
+    const bob = await server.connect();
+    const history = waitForEvent(bob, 'chatHistory');
+    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+    assert.deepEqual((await history).map((m) => m.text), ['premier']);
   } finally {
-    alice.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
 
 test('blank or whitespace-only chat messages are dropped', async () => {
-  clearPlayers();
-  clearMessages();
-  const { httpServer, io } = createGameServer();
-  const port = await listenOnRandomPort(httpServer);
-  const url = `http://localhost:${port}`;
-
-  const alice = ioClient(url);
-
+  const server = await startServer();
   try {
-    await waitForEvent(alice, 'connect');
-    const joined = waitForEvent(alice, 'players');
-    alice.emit('join', { name: 'Alice' });
-    await joined;
-
+    const alice = await server.connect();
+    await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
+    const received = [];
+    alice.on('chatMessage', (message) => received.push(message.text));
     alice.emit('chatMessage', { text: '   ' });
-
-    // Nothing to wait on for a message that should never arrive - send a
-    // real one right behind it and confirm that's the only one that shows up.
-    const received = waitForEvent(alice, 'chatMessage');
-    alice.emit('chatMessage', { text: 'vrai message' });
-    const message = await received;
-    assert.equal(message.text, 'vrai message');
+    alice.emit('chatMessage', { text: '' });
+    const real = waitForEvent(alice, 'chatMessage');
+    alice.emit('chatMessage', { text: 'vrai' });
+    await real;
+    assert.deepEqual(received, ['vrai']);
   } finally {
-    alice.close();
-    closeGameServer({ httpServer, io });
+    server.close();
   }
 });
