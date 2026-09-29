@@ -1,43 +1,40 @@
-// A game's chat: real HTTP server, real sockets.
+// The chat: real HTTP server, real sockets. The state only says which
+// message is the latest; phones fetch the ones they don't have.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, waitForEvent, createGame, joinGame } from './testSupport.js';
+import { startServer, act, until, joinGame, startedGame } from './testSupport.js';
 
-test('a chat message is broadcast with the sender\'s name, colour and hat', async () => {
+const getChat = (phone, afterId) => phone.emitWithAck('getChat', { afterId });
+
+test('a chat message reaches every phone with the sender\'s name, colour, hat and photo address', async () => {
   const server = await startServer();
   try {
-    const alice = await server.connect();
-    const bob = await server.connect();
-    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice', color: '#38fedc', hat: 'crown' });
-    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
+    const { phones: [alice, bob] } = await startedGame(server, ['Alice', 'Bob']);
+    await act(alice, 'chat', { text: '  salut  ' });
+    await until(bob, (s) => s.chatLastId === 1);
 
-    const both = Promise.all([waitForEvent(alice, 'chatMessage'), waitForEvent(bob, 'chatMessage')]);
-    alice.emit('chatMessage', { text: '  salut  ' });
-    const [fromAlice, fromBob] = await both;
-    for (const message of [fromAlice, fromBob]) {
-      assert.equal(message.text, 'salut');
-      assert.equal(message.name, 'Alice');
-      assert.equal(message.color, '#38fedc');
-      assert.equal(message.hat, 'crown');
-    }
+    const [message] = await getChat(bob, 0);
+    const alicePlayer = bob.state.players.find((p) => p.id === 'alice');
+    assert.equal(message.text, 'salut');
+    assert.deepEqual([message.name, message.color, message.hat], ['Alice', alicePlayer.color, alicePlayer.hat]);
+    assert.ok('photo' in message);
+    assert.deepEqual(await getChat(bob, 1), [], 'nothing after the latest');
   } finally {
     server.close();
   }
 });
 
-test('a player joining a game receives that game\'s existing chat history', async () => {
+test('a phone joining (or coming back) can fetch the game\'s whole chat', async () => {
   const server = await startServer();
   try {
-    const alice = await server.connect();
-    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
-    const sent = waitForEvent(alice, 'chatMessage');
-    alice.emit('chatMessage', { text: 'premier' });
-    await sent;
+    const { phones: [alice], gameId } = await startedGame(server, ['Alice']);
+    await act(alice, 'chat', { text: 'un' });
+    await act(alice, 'chat', { text: 'deux' });
 
     const bob = await server.connect();
-    const history = waitForEvent(bob, 'chatHistory');
-    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
-    assert.deepEqual((await history).map((m) => m.text), ['premier']);
+    const { state } = await joinGame(bob, gameId, { clientId: 'bob', name: 'Bob' });
+    assert.equal(state.chatLastId, 2);
+    assert.deepEqual((await getChat(bob, 0)).map((m) => m.text), ['un', 'deux']);
   } finally {
     server.close();
   }
@@ -46,16 +43,10 @@ test('a player joining a game receives that game\'s existing chat history', asyn
 test('blank or whitespace-only chat messages are dropped', async () => {
   const server = await startServer();
   try {
-    const alice = await server.connect();
-    await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
-    const received = [];
-    alice.on('chatMessage', (message) => received.push(message.text));
-    alice.emit('chatMessage', { text: '   ' });
-    alice.emit('chatMessage', { text: '' });
-    const real = waitForEvent(alice, 'chatMessage');
-    alice.emit('chatMessage', { text: 'vrai' });
-    await real;
-    assert.deepEqual(received, ['vrai']);
+    const { phones: [alice] } = await startedGame(server, ['Alice']);
+    assert.equal((await act(alice, 'chat', { text: '   ' })).ok, false);
+    assert.equal((await act(alice, 'chat', {})).ok, false);
+    assert.equal(alice.state.chatLastId, 0);
   } finally {
     server.close();
   }

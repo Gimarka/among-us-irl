@@ -2142,3 +2142,28 @@ button {
   color: rgba(255, 255, 255, 0.5);
   white-space: nowrap;
 }
+
+/* A player whose phone has lost its connection (still in the game, just
+   not reachable right now): dimmed in the lobby and the vote. */
+.lobby-slot-offline,
+.vote-offline {
+  opacity: 0.4;
+}
+
+/* This phone's own lost connection: above everything, even the meeting. */
+.connection-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  padding: 8px 16px;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  color: #fff;
+  background: #b30000;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}

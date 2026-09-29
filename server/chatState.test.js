@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createChat } from './chatState.js';
 
-const { addMessage, listMessages, clearMessages } = createChat();
+const { addMessage, listMessages, messagesAfter, lastId, clearMessages } = createChat();
 
 test('addMessage adds a message and returns it with an id and timestamp', () => {
   clearMessages();
@@ -38,6 +38,16 @@ test('the log drops the oldest messages once it grows past its cap', () => {
   assert.equal(messages.length, 200);
   assert.equal(messages[0].text, 'message 5', 'the oldest 5 should have fallen off');
   assert.equal(messages[messages.length - 1].text, 'message 204');
+});
+
+test('messagesAfter gives only the messages a phone is missing, and lastId the latest', () => {
+  clearMessages();
+  assert.equal(lastId(), 0);
+  addMessage({ clientId: 'client1', name: 'Alice', text: 'un' });
+  addMessage({ clientId: 'client1', name: 'Alice', text: 'deux' });
+  assert.equal(lastId(), 2);
+  assert.deepEqual(messagesAfter(1).map((m) => m.text), ['deux']);
+  assert.deepEqual(messagesAfter(2), []);
 });
 
 test('clearMessages empties the log and resets ids', () => {

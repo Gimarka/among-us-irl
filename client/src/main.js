@@ -453,6 +453,8 @@ document.querySelector('#alert-overlay').insertAdjacentHTML(
       </div>
     </div>
 
+    <div class="connection-banner hidden" id="connection-banner" role="status">${texts.disconnected}</div>
+
     <div class="meeting-overlay hidden" id="meeting-overlay">
       <div class="meeting-report hidden" id="meeting-report">
         <p class="meeting-report-text">${texts.reportTitle}</p>
@@ -471,6 +473,10 @@ document.querySelector('#alert-overlay').insertAdjacentHTML(
     </div>
   `,
 );
+
+// Shown while this phone has lost its connection to the game (see
+// showConnectionBanner), so the player knows their screen may be behind.
+const connectionBanner = document.querySelector('#connection-banner');
 
 // The title sits in a fixed panel, outside the flow, so the screens below it
 // don't know how tall it is and tall content (a hat, for instance) slides
@@ -687,7 +693,7 @@ function hidePopup() {
 // For the surveillance screen: tells everyone this player just opened a
 // door or finished a minigame (see SURVEILLANCE_ACTIONS in server/index.js).
 function reportAction(action) {
-  if (socket) socket.emit('reportAction', { action });
+  act('reportAction', { action });
 }
 
 function playSuccessSoundThenClose() {
@@ -764,8 +770,8 @@ function setAlertState({ active, remainingMs = 0, durationMs = 1 }) {
   alertTimerFill.style.transform = 'scaleX(0)';
 }
 
-alertStartButton.addEventListener('click', () => { if (socket) socket.emit('alertStart'); });
-alertStopButton.addEventListener('click', () => { if (socket) socket.emit('alertStop'); });
+alertStartButton.addEventListener('click', () => act('alertStart'));
+alertStopButton.addEventListener('click', () => act('alertStop'));
 
 // Broadcast, same as alert - blanks the scanner and task list on every
 // phone at once with procedural static (canvas, not the reference image -
@@ -816,7 +822,7 @@ function setInterferenceActive(active) {
   }
 }
 
-interferenceButton.addEventListener('click', () => { if (socket) socket.emit('interferenceStart'); });
+interferenceButton.addEventListener('click', () => act('interferenceStart'));
 
 const colorGameScreen = document.querySelector('#colorgame-screen');
 const colorGameBoard = document.querySelector('#colorgame-board');
@@ -936,7 +942,7 @@ function checkMatch(square) {
     // This minigame is the "Tri" task - tell the server in case it's one
     // of this player's 6 assigned tasks, so their task list can update.
     // No-op server-side (and no visible effect here) if it isn't.
-    if (socket) socket.emit('completeTask', { taskId: 'sort' });
+    act('completeTask', { taskId: 'sort' });
     reportAction('sort');
     setTimeout(() => {
       // TODO: swap sounds.success for a dedicated general-task sound once provided.
@@ -1337,7 +1343,7 @@ function setHandPressing(pressing) {
   if (handPressing === pressing) return;
   handPressing = pressing;
   handScanPad.classList.toggle('pressed', pressing);
-  if (socket) socket.emit('handPress', { pressing });
+  act('handPress', { pressing });
   renderHandScan();
 }
 
@@ -1449,7 +1455,7 @@ function appendChatMessage(message) {
 
   setSuitColor(avatarFrame, message.color || DEFAULT_SUIT_COLOR);
   setHat(avatarFrame, message.hat || DEFAULT_HAT);
-  if (message.photo) setVisorPhoto(avatarId, message.photo);
+  if (message.photo) setVisorPhoto(avatarId, photoSrc(message.photo));
 
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -1484,8 +1490,8 @@ chatCloseButton.addEventListener('click', closeChat);
 chatForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const text = chatInput.value.trim();
-  if (!text || !socket) return;
-  socket.emit('chatMessage', { text });
+  if (!text) return;
+  act('chat', { text });
   chatInput.value = '';
 });
 
@@ -1590,7 +1596,7 @@ function closeMortConfirm() {
 mortButton.addEventListener('click', openMortConfirm);
 mortConfirmCancelButton.addEventListener('click', closeMortConfirm);
 mortConfirmYesButton.addEventListener('click', () => {
-  if (socket) socket.emit('declareDead'); // from now on: can't vote, can't be voted for
+  act('declareDead'); // from now on: can't vote, can't be voted for
   mortConfirmPopup.classList.add('hidden');
   openMortScreen();
 });
@@ -1701,7 +1707,8 @@ function refreshActivityTimes() {
 function buildActivityRow(entry) {
   surveillanceAvatarCounter += 1;
   const avatarId = `surveillance-avatar-${surveillanceAvatarCounter}`;
-  const look = latestPlayers.find((player) => player.id === entry.playerId) || entry;
+  const player = latestPlayers.find((item) => item.id === entry.playerId);
+  const look = player ? { ...entry, photo: photoSrc(player.photo) } : entry;
 
   const row = document.createElement('div');
   row.className = 'chat-message surveillance-row';
@@ -1762,20 +1769,21 @@ function renderActivity(entries) {
   });
 }
 
+// Opening shows only the latest action (the state carries the last few).
 function openSurveillance() {
   minigamesScreen.classList.add('hidden');
   surveillanceScreen.classList.remove('hidden');
   pushOverlayState();
-  surveillanceList.innerHTML = '';
-  if (socket) socket.emit('getActivity', renderActivity);
+  const latest = gameState?.activity.at(-1);
+  renderActivity(latest ? [latest] : []);
   surveillanceTimer = setInterval(refreshActivityTimes, SURVEILLANCE_TIME_REFRESH_MS);
 }
 
-// After a lost connection: whatever happened meanwhile is gone, but the
-// latest action is picked up if it's newer than what's on screen.
-function catchUpActivity() {
-  if (surveillanceScreen.classList.contains('hidden') || !socket) return;
-  socket.emit('getActivity', (entries) => entries.forEach(prependActivity));
+// While the screen is open, each new action from the state appears on top
+// (several at once in the order they happened; ones already shown skipped).
+function syncActivity(activity) {
+  if (surveillanceScreen.classList.contains('hidden')) return;
+  activity.forEach(prependActivity);
 }
 
 // Straight back to the main menu, not the test menu it was opened from.
@@ -1845,6 +1853,7 @@ const SKIP_VOTE = 'skip'; // matches SKIP_VOTE in server/voteState.js
 
 let meetingAvatarCounter = 0; // unique DOM ids for the characters (see appendChatMessage)
 let meetingCountdownTimer = null;
+let meetingCountdownEndsAt = 0;
 let myVoteTarget = null;
 
 // A small character, drawn the same way as the lobby's.
@@ -1857,7 +1866,7 @@ function appendMeetingCharacter(parent, player, frameClass) {
   parent.appendChild(frame); // in the document before setVisorPhoto, which looks it up by id
   setSuitColor(frame, player.color || DEFAULT_SUIT_COLOR);
   setHat(frame, player.hat || DEFAULT_HAT);
-  if (player.photo) setVisorPhoto(avatarId, player.photo);
+  if (player.photo) setVisorPhoto(avatarId, photoSrc(player.photo));
 }
 
 // During the vote, votes is empty (they're secret). Once it's over, each
@@ -1884,6 +1893,7 @@ function renderVoteGrid(players, votes) {
     slot.className = 'lobby-slot vote-slot';
     slot.dataset.playerId = player.id;
     slot.classList.toggle('vote-dead', player.dead);
+    slot.classList.toggle('vote-offline', player.online === false);
     meetingGrid.appendChild(slot);
     const figure = document.createElement('div');
     figure.className = 'vote-figure';
@@ -1905,8 +1915,8 @@ function renderVoteGrid(players, votes) {
 }
 
 function castVote(targetId) {
-  showMyVote(targetId); // straight away; the server confirms with 'myVote'
-  if (socket) socket.emit('castVote', { targetId });
+  showMyVote(targetId); // straight away; the server's state confirms it
+  act('castVote', { targetId });
 }
 
 function showMyVote(targetId) {
@@ -1922,6 +1932,7 @@ function showMyVote(targetId) {
 function startMeetingCountdown(remainingMs) {
   clearInterval(meetingCountdownTimer);
   const endsAt = performance.now() + remainingMs;
+  meetingCountdownEndsAt = endsAt;
   const tick = () => {
     meetingCountdown.textContent = Math.max(0, Math.ceil((endsAt - performance.now()) / 1000));
   };
@@ -1946,7 +1957,24 @@ function hideMeeting() {
   meetingOverlay.classList.add('hidden');
 }
 
-function handleMeeting({ phase, remainingMs, players, eliminated, votes = [], taskProgress = 0 }) {
+// The meeting part of the state. Only redrawn when something in it changed
+// (not just the time left); the countdown is only reset if it drifted.
+function syncMeeting(meeting, previous) {
+  const withoutTimes = (m) => m && JSON.stringify({ ...m, remainingMs: 0, myVote: null });
+  if (!meeting || withoutTimes(meeting) !== withoutTimes(previous)) {
+    handleMeeting(meeting || {});
+  } else if (meeting.step === 'vote' && Math.abs(performance.now() + meeting.remainingMs - meetingCountdownEndsAt) > 1000) {
+    startMeetingCountdown(meeting.remainingMs);
+  }
+  // Our own vote as the server has it - unless we just tapped another one
+  // that it hasn't confirmed yet.
+  if (meeting) {
+    const unconfirmed = pendingActions.filter((action) => action.type === 'castVote').at(-1);
+    showMyVote(unconfirmed ? unconfirmed.targetId : meeting.myVote);
+  }
+}
+
+function handleMeeting({ step: phase, remainingMs, players, eliminated, votes = [], taskProgress = 0 }) {
   // Newcomers still in the lobby aren't part of it; and once it's over,
   // everyone is back on the menu, which was left open underneath.
   if (!phase || !inGame) {
@@ -1977,12 +2005,8 @@ function handleMeeting({ phase, remainingMs, players, eliminated, votes = [], ta
 meetingSkipButton.addEventListener('click', () => castVote(SKIP_VOTE));
 // Marks one of this player's unfinished tasks done; the server picks which
 // and sends back the updated list.
-document.querySelector('#test-task-button').addEventListener('click', () => {
-  if (socket) socket.emit('completeRandomTask');
-});
-testReportButton.addEventListener('click', () => {
-  if (socket) socket.emit('reportBody');
-});
+document.querySelector('#test-task-button').addEventListener('click', () => act('completeRandomTask'));
+testReportButton.addEventListener('click', () => act('reportBody'));
 
 const joinScreen = document.querySelector('#join-screen');
 const joinNameInput = document.querySelector('#join-name-input');
@@ -2024,9 +2048,10 @@ function renderLobby(players) {
   // arrive (keeping our saved one if it's free) and can refuse a colour
   // someone else grabbed first. Pick that up so what we send next (a
   // reconnect, the customisation screen) matches what everyone else sees.
+  // (Our photo stays the one we have: the list only has its address.)
   const self = players.find((player) => player.id === clientId);
   if (self && currentIdentity) {
-    currentLook = { photo: self.photo, color: self.color, hat: self.hat };
+    currentLook = { ...currentLook, color: self.color, hat: self.hat };
     currentIdentity = { ...currentIdentity, ...currentLook };
   }
 
@@ -2034,6 +2059,7 @@ function renderLobby(players) {
     const player = players[index];
     if (!player) {
       slot.root.classList.add('lobby-slot-empty');
+      slot.root.classList.remove('lobby-slot-offline');
       slot.nameEl.textContent = texts.emptySlot;
       setSuitColor(slot.frame, DEFAULT_SUIT_COLOR);
       setHat(slot.frame, DEFAULT_HAT);
@@ -2045,11 +2071,12 @@ function renderLobby(players) {
     }
 
     slot.root.classList.remove('lobby-slot-empty');
+    slot.root.classList.toggle('lobby-slot-offline', player.online === false);
     slot.nameEl.textContent = player.name;
     setSuitColor(slot.frame, player.color || DEFAULT_SUIT_COLOR);
     setHat(slot.frame, player.hat || DEFAULT_HAT);
     if (player.photo) {
-      setVisorPhoto(slot.id, player.photo);
+      setVisorPhoto(slot.id, photoSrc(player.photo));
       slot.hasPhoto = true;
     } else if (slot.hasPhoto) {
       clearVisorPhoto(slot.id);
@@ -2158,15 +2185,11 @@ function renderTasks(tasks) {
   });
 }
 
-// JOUER starts the session for the whole lobby, CONTINUER joins the running
-// one - either way the role reveal arrives as a 'role' event (see handleRole),
-// which is also how every other lobby player gets moved along by JOUER.
+// JOUER starts the game for the whole lobby, CONTINUER joins the running
+// one - either way the state then says we're playing, and the role reveal
+// plays (see syncScreens), for every lobby player at once.
 function handlePlayClick() {
-  if (!socket) {
-    openMenuFromLobby(); // shouldn't happen once joined, but never get stuck on the lobby
-    return;
-  }
-  socket.emit('startGame');
+  act('start');
 }
 
 playButton.addEventListener('click', handlePlayClick);
@@ -2217,7 +2240,7 @@ const clientId = getOrCreateClientId();
 let currentIdentity = null; // { name, photo, color, hat } once we know who we are
 let hasEnteredGame = false; // true once we've left the join screen this page load
 let inSession = false; // true once we're past the lobby, in the game's menu
-// Mirrors of what the server last told us (see 'joined'/'session'/'role'):
+// Mirrors of what the server's latest state says (see applyState):
 // the game this phone is in, if any, and whether it's playing it yet or
 // still waiting in its lobby.
 let currentSession = null; // { sessionId, name, hostId, started }
@@ -2354,6 +2377,154 @@ async function handleSelfieClick() {
   }
 }
 
+// --- Talking to the server ------------------------------------------
+// The server owns the game. After every change it sends this phone its
+// whole view of the game ('state', see applyState), so the screens are
+// always drawn from the latest complete picture - a phone that was asleep
+// or offline is fully caught up by the next one it gets. Everything the
+// player does is an action (see act) the server confirms; one it never
+// confirmed (the connection died) is sent again after reconnecting.
+
+// How long to wait for the server to answer before treating the connection
+// as dead and reconnecting.
+const ANSWER_TIMEOUT_MS = 5000;
+// Only meaningful right now, so never sent again later.
+const NOT_RESENT = new Set(['handPress']);
+// How long a lost connection lasts before the "reconnecting" banner shows
+// (most reconnects are quicker than that).
+const CONNECTION_BANNER_DELAY_MS = 1500;
+
+let gameState = null; // the latest state from the server for the game we're in
+let joinedGameId = null; // this connection is in that game (reset on every disconnect)
+const pendingActions = []; // sent, not yet confirmed by the server
+let actionCounter = 0;
+let chatKnownId = 0; // the latest chat message this phone has
+let chatFetching = false;
+let lastScanSeenId = 0; // the latest hand scan already celebrated
+let connectionBannerTimer = null;
+
+const photoSrc = (path) => (path ? `${SERVER_URL}${path}` : null);
+
+// The connection looks alive but the server doesn't answer: drop it, so
+// Socket.IO reconnects (and rejoins the game, see handleWelcome) right now.
+function dropDeadConnection() {
+  if (socket?.connected) socket.io.engine.close();
+}
+
+function sendAction(action) {
+  if (!socket?.connected || joinedGameId === null) return; // sent once back in the game
+  socket.timeout(ANSWER_TIMEOUT_MS).emit('act', action, (err) => {
+    if (err) {
+      dropDeadConnection();
+      return;
+    }
+    const index = pendingActions.indexOf(action);
+    if (index !== -1) pendingActions.splice(index, 1);
+  });
+}
+
+// Something the player did. Each carries its own id, so one that did reach
+// the server before the connection died isn't done twice when sent again.
+function act(type, payload = {}) {
+  actionCounter += 1;
+  const action = { id: `${clientId}-${Date.now().toString(36)}-${actionCounter}`, type, ...payload };
+  if (!NOT_RESENT.has(type)) pendingActions.push(action);
+  sendAction(action);
+}
+
+function showConnectionBanner() {
+  if (connectionBannerTimer || !hasEnteredGame) return;
+  connectionBannerTimer = setTimeout(() => connectionBanner.classList.remove('hidden'), CONNECTION_BANNER_DELAY_MS);
+}
+
+function hideConnectionBanner() {
+  clearTimeout(connectionBannerTimer);
+  connectionBannerTimer = null;
+  connectionBanner.classList.add('hidden');
+}
+
+// Fetches the chat messages this phone doesn't have yet (the state only
+// says which is the latest).
+function syncChat() {
+  if (chatFetching || !gameState || gameState.chatLastId <= chatKnownId || !socket?.connected) return;
+  chatFetching = true;
+  const gameId = gameState.game.id;
+  socket.timeout(ANSWER_TIMEOUT_MS).emit('getChat', { afterId: chatKnownId }, (err, messages) => {
+    chatFetching = false;
+    if (err || gameState?.game.id !== gameId) return;
+    messages.forEach((message) => {
+      if (message.id <= chatKnownId) return;
+      appendChatMessage(message);
+      chatKnownId = message.id;
+    });
+    syncChat(); // more may have come in meanwhile
+  });
+}
+
+// The alert bar is only restarted when the alert starts or stops, or when
+// the time left has drifted from what the bar shows.
+let alertBarEndsAt = 0;
+function syncAlert(alert) {
+  const endsAt = performance.now() + alert.remainingMs;
+  if (alert.active === alertIsActive && (!alert.active || Math.abs(endsAt - alertBarEndsAt) < 1000)) return;
+  alertBarEndsAt = endsAt;
+  setAlertState(alert);
+}
+
+function syncHandScanner(scanner, isFirstState) {
+  handleHandScanner(scanner);
+  if (scanner.completedId <= lastScanSeenId) return;
+  lastScanSeenId = scanner.completedId;
+  if (!isFirstState) handleHandScanComplete({ players: scanner.completedBy });
+}
+
+// Which screen we're on, from the state: the lobby until we're playing,
+// then the role reveal (once), then the menu.
+function syncScreens() {
+  const { me } = gameState;
+  if (!me.member) return;
+  if (!me.roleSeen && !roleRevealed) {
+    roleRevealed = true;
+    closeLobbySubscreens();
+    showRoleReveal(me.role);
+    act('roleSeen');
+    return;
+  }
+  if (me.roleSeen && !inSession && roleRevealScreen.classList.contains('hidden')) {
+    closeLobbySubscreens();
+    openMenuFromLobby();
+  }
+}
+
+// JOUER while this player was still customising or in the settings: off
+// to the game with what they last saved.
+function closeLobbySubscreens() {
+  if (!customizeScreen.classList.contains('hidden')) closeCustomize();
+  if (!settingsScreen.classList.contains('hidden')) closeSettings();
+}
+
+// The one place the server's state reaches the screens.
+function applyState(state) {
+  const sameGame = gameState && gameState.game.id === state.game.id;
+  if (sameGame && state.version < gameState.version) return; // older than what we have
+  const previous = sameGame ? gameState : null;
+  gameState = state;
+  const changed = (pick) => !previous || JSON.stringify(pick(previous)) !== JSON.stringify(pick(state));
+
+  currentSession = { sessionId: state.game.id, ...state.game };
+  inGame = state.me.member;
+  updateSessionDisplay();
+  if (changed((s) => s.players)) renderLobby(state.players);
+  syncAlert(state.alert);
+  if (state.me.member && changed((s) => s.me.tasks)) renderTasks(state.me.tasks);
+  if (changed((s) => s.interference.active)) setInterferenceActive(state.interference.active);
+  syncHandScanner(state.handScanner, !previous);
+  syncMeeting(state.meeting, previous?.meeting ?? null);
+  syncActivity(state.activity);
+  syncChat();
+  syncScreens();
+}
+
 // Asks the server to create or join a game - right away if connected,
 // otherwise as soon as the connection opens (see handleWelcome).
 function sendSessionRequest(request) {
@@ -2364,9 +2535,9 @@ function sendSessionRequest(request) {
   }
   pendingRequest = null;
   if (request.type === 'create') {
-    activeSocket.emit('createSession', { ...currentIdentity, clientId, sessionName: request.sessionName });
+    activeSocket.emit('createGame', { ...currentIdentity, clientId, sessionName: request.sessionName }, handleJoinReply);
   } else {
-    activeSocket.emit('joinSession', { ...currentIdentity, clientId, sessionId: request.sessionId });
+    activeSocket.emit('joinGame', { ...currentIdentity, clientId, sessionId: request.sessionId }, handleJoinReply);
   }
 }
 
@@ -2384,36 +2555,13 @@ function updateSessionDisplay() {
   settingsButton.classList.toggle('hidden', !(currentSession && !currentSession.started && isHost));
 }
 
-// The server has put us in a game: its lobby, or straight into the game for
-// a player who already has a role in it.
-function handleJoined({ inGame: joinedInGame, ...info }) {
-  currentSession = info;
-  inGame = joinedInGame;
-  updateSessionDisplay();
-  if (hasEnteredGame) {
-    // A quiet re-join after a dropped connection. If we're in the game but
-    // still showing the lobby, and the reveal has already played, go on to
-    // the menu; if it hasn't, the server is resending the role right after.
-    if (inGame && roleRevealed && !inSession && roleRevealScreen.classList.contains('hidden')) openMenuFromLobby();
-    catchUpActivity();
-    return;
-  }
-
-  hasEnteredGame = true;
-  if (!newGamePopup.classList.contains('hidden')) closeNewGamePopup();
-  if (!joinGamePopup.classList.contains('hidden')) closeJoinGamePopup();
-  stopSelfieCamera(); // release the camera before leaving the join screen
-  if (inGame) openMenuDirect();
-  else openLobby();
-}
-
 const SESSION_ERROR_TEXTS = {
   'name-empty': texts.sessionNameEmpty,
   'name-taken': texts.sessionNameTaken,
   'not-found': texts.sessionNotFound,
 };
 
-function handleSessionError({ reason }) {
+function handleSessionError(reason) {
   // Our game vanished while we were reconnecting to it: a fresh page load
   // puts us back on the character screen.
   if (hasEnteredGame) {
@@ -2425,6 +2573,29 @@ function handleSessionError({ reason }) {
   errorEl.classList.remove('hidden');
 }
 
+// The server has put us in a game (its lobby, or straight into the game
+// for a player who already has a role in it) and sent its state.
+function handleJoinReply(reply) {
+  if (!reply?.ok) {
+    handleSessionError(reply?.error);
+    return;
+  }
+  joinedGameId = reply.state.game.id;
+  hideConnectionBanner();
+  if (!hasEnteredGame) {
+    hasEnteredGame = true;
+    if (!newGamePopup.classList.contains('hidden')) closeNewGamePopup();
+    if (!joinGamePopup.classList.contains('hidden')) closeJoinGamePopup();
+    stopSelfieCamera(); // release the camera before leaving the join screen
+    renderChatHistory([]);
+    const { me } = reply.state;
+    if (me.member && me.roleSeen) openMenuDirect();
+    else openLobby();
+  }
+  applyState(reply.state);
+  pendingActions.slice().forEach(sendAction); // what the last connection never confirmed
+}
+
 function handleWelcome({ character, resume }) {
   if (hasEnteredGame) {
     // Came back from a dropped connection. If the game we were in is gone
@@ -2434,8 +2605,10 @@ function handleWelcome({ character, resume }) {
       window.location.reload();
       return;
     }
-    // Otherwise quietly reappear wherever we already were.
-    socket.emit('joinSession', { ...currentIdentity, clientId, sessionId: currentSession.sessionId });
+    // Otherwise quietly reappear wherever we already were - without
+    // sending the selfie again, the server still has it.
+    const { name, color, hat } = currentIdentity;
+    socket.emit('joinGame', { clientId, sessionId: currentSession.sessionId, name, color, hat }, handleJoinReply);
     return;
   }
 
@@ -2457,95 +2630,51 @@ function handleWelcome({ character, resume }) {
   }
 }
 
-// The server resends the role until the phone confirms it (see the ack in
-// connectSocket), so it can arrive twice: the reveal plays once, and any
-// later copy just makes sure we're not left sitting in the lobby.
-function handleRole({ role, tasks }) {
-  // JOUER while this player was still customising: off to the game with the
-  // look they last saved.
-  if (!customizeScreen.classList.contains('hidden')) closeCustomize();
-  if (!settingsScreen.classList.contains('hidden')) closeSettings();
-  inGame = true;
-  updateSessionDisplay();
-  renderTasks(tasks);
-  if (!roleRevealed) {
-    roleRevealed = true;
-    showRoleReveal(role);
-  } else if (!inSession && roleRevealScreen.classList.contains('hidden')) {
-    openMenuFromLobby();
-  }
-}
-
 // One persistent connection, opened as soon as this page loads (even before
 // the player has picked a name) so the REJOINDRE list is ready and live.
 // Every connect - the first, and every one after (the phone woke up, the tab
-// came back, a ping timed out and Socket.IO auto-reconnected) - starts with
+// came back, a heartbeat was missed and Socket.IO reconnected) - starts with
 // 'hello', so a player in a game quietly reappears wherever they already
 // were instead of getting sent back to the join screen.
 function connectSocket() {
   if (socket) return socket;
 
   // WebSocket straight away, skipping Socket.IO's default start on HTTP
-  // long-polling: behind a hosting proxy, polling replies can be held back,
-  // which delayed lobby updates by seconds.
+  // long-polling: behind a hosting proxy, polling replies can be held back.
   socket = io(SERVER_URL, { transports: ['websocket'] });
-  // Kept for the whole page, not just the join handshake, so the lobby
-  // stays live as other players join or leave while everyone waits.
-  socket.on('players', renderLobby);
-  socket.on('chatHistory', renderChatHistory);
-  socket.on('chatMessage', appendChatMessage);
-  socket.on('tasks', renderTasks);
-  socket.on('alert', setAlertState);
-  socket.on('interference', ({ active }) => setInterferenceActive(active));
-  socket.on('handScanner', handleHandScanner);
-  socket.on('handScanComplete', handleHandScanComplete);
-  socket.on('meeting', handleMeeting);
-  socket.on('activity', (entry) => {
-    if (!surveillanceScreen.classList.contains('hidden')) prependActivity(entry);
-  });
-  socket.on('myVote', ({ targetId }) => showMyVote(targetId));
-  socket.on('welcome', handleWelcome);
-  socket.on('joined', handleJoined);
-  socket.on('sessionError', handleSessionError);
-  // Confirmed back to the server, which otherwise sends it again later.
-  socket.on('role', (payload, ack) => {
-    handleRole(payload);
-    if (typeof ack === 'function') ack();
-  });
-  // The host changed, or the game started.
-  socket.on('session', (info) => {
-    if (!currentSession || info.sessionId !== currentSession.sessionId) return;
-    currentSession = info;
-    updateSessionDisplay();
+  // Only for the game this connection is in: one still on its way from a
+  // game we just left is dropped.
+  socket.on('state', (state) => {
+    if (state.game.id === joinedGameId) applyState(state);
   });
   socket.on('sessions', (list) => {
     latestSessions = list;
     if (!joinGamePopup.classList.contains('hidden')) renderSessionList();
   });
 
-  // Every connect, the first and every reconnect, starts by asking the
-  // server where we stand - see handleWelcome.
   socket.on('connect', () => {
-    socket.emit('hello', { clientId });
+    socket.emit('hello', { clientId }, handleWelcome);
+  });
+
+  socket.on('disconnect', () => {
+    joinedGameId = null;
+    showConnectionBanner();
   });
 
   // Back from another app (or the screen waking up): the phone may have cut
-  // the connection meanwhile without the app noticing - it would only find
-  // out at the next heartbeat, up to a minute later, missing everything in
-  // between. So ask the server straight away; no answer means the
-  // connection is dead, and dropping it makes Socket.IO reconnect (and
-  // rejoin the game, see handleWelcome) right now.
+  // the connection meanwhile without the app noticing. Ask the server
+  // straight away; no answer means the connection is dead.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible' || !socket.connected) return;
     socket.timeout(CONNECTION_CHECK_MS).emit('stillThere', (err) => {
-      if (err) socket.io.engine.close();
+      if (err) dropDeadConnection();
     });
   });
 
   socket.on('connect_error', () => {
     if (!pendingRequest) return; // no create/join in flight to fail
     pendingRequest = null;
-    handleSessionError({ reason: 'connection' });
+    handleSessionError('connection');
   });
 
   return socket;
@@ -2608,7 +2737,7 @@ function closeNewGamePopup() {
 function createGameFromPopup() {
   const sessionName = newGameName.value.trim();
   if (!sessionName) {
-    handleSessionError({ reason: 'name-empty' });
+    handleSessionError('name-empty');
     return;
   }
   enterFullscreen();
@@ -2714,7 +2843,7 @@ function closeCustomize() {
 function saveCustomize() {
   currentLook = { photo: photoDataUrl, color: suitColor, hat: HATS[hatIndex].id };
   currentIdentity = { ...currentIdentity, ...currentLook };
-  if (socket) socket.emit('customize', currentLook);
+  act('customize', currentLook);
   closeCustomize();
 }
 
@@ -2759,7 +2888,7 @@ function closeSettings() {
 }
 
 function saveSettings() {
-  if (socket) socket.emit('updateSettings', draftSettings);
+  act('updateSettings', draftSettings);
   closeSettings();
 }
 
@@ -2779,7 +2908,14 @@ document.querySelector('#customize-done-button').addEventListener('click', saveC
 // Back to the character screen. The server keeps our role in a game that has
 // started, so picking it again from REJOINDRE goes straight back in.
 function handleDisconnectClick() {
-  if (socket) socket.emit('leaveSession');
+  if (socket) socket.emit('leaveGame', {});
+  gameState = null;
+  joinedGameId = null;
+  pendingActions.length = 0;
+  chatKnownId = 0;
+  lastScanSeenId = 0;
+  alertBarEndsAt = 0;
+  hideConnectionBanner();
 
   // What we last sent the server is exactly what it has stored for us.
   const lastIdentity = currentIdentity;

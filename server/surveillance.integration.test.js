@@ -1,32 +1,38 @@
-// The surveillance log. Real HTTP server, real sockets.
+// The surveillance feed. Real HTTP server, real sockets.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startServer, waitForEvent, createGame, joinGame } from './testSupport.js';
+import { startServer, act, until, joinGame, startedGame } from './testSupport.js';
 
-test('players see each other\'s actions live, only the latest one on opening, and never the alert', async () => {
+test('players see each other\'s doors, minigames and tasks, but never the alert', async () => {
   const server = await startServer();
   try {
-    const alice = await server.connect();
+    const { phones: [alice, bob] } = await startedGame(server, ['Alice', 'Bob']);
+    await act(bob, 'reportAction', { action: 'door' });
+    const [entry] = (await until(alice, (s) => s.activity.length === 1)).activity;
+    assert.deepEqual([entry.name, entry.action], ['Bob', 'door']);
+    assert.ok(entry.agoMs >= 0);
+
+    assert.equal((await act(bob, 'reportAction', { action: 'alertStart' })).ok, false, 'not something the feed shows');
+    await act(alice, 'completeRandomTask');
+    const { activity } = await until(bob, (s) => s.activity.length === 2);
+    assert.deepEqual(activity.map((item) => `${item.name} ${item.action}`), ['Bob door', 'Alice task']);
+    assert.ok(activity[1].detail, 'which task');
+  } finally {
+    server.close();
+  }
+});
+
+test('only the last few actions are kept, and a newcomer in the lobby sees none', async () => {
+  const server = await startServer();
+  try {
+    const { phones: [alice], gameId } = await startedGame(server, ['Alice']);
+    for (let i = 0; i < 8; i += 1) await act(alice, 'reportAction', { action: 'dino' });
+    const { activity } = await until(alice, (s) => s.activity.at(-1)?.id === 8);
+    assert.equal(activity.length, 5);
+
     const bob = await server.connect();
-    const { sessionId } = await createGame(alice, 'Maison', { clientId: 'alice', name: 'Alice' });
-    await joinGame(bob, sessionId, { clientId: 'bob', name: 'Bob' });
-    const roles = [waitForEvent(alice, 'role'), waitForEvent(bob, 'role')];
-    alice.emit('startGame');
-    await Promise.all(roles);
-
-    const live = waitForEvent(alice, 'activity');
-    bob.emit('reportAction', { action: 'door' });
-    const entry = await live;
-    assert.equal(entry.name, 'Bob');
-    assert.equal(entry.action, 'door');
-
-    bob.emit('reportAction', { action: 'alertStart' }); // not something the screen shows
-    const task = waitForEvent(alice, 'activity');
-    alice.emit('completeRandomTask');
-    assert.equal((await task).action, 'task');
-
-    const history = await alice.emitWithAck('getActivity');
-    assert.deepEqual(history.map((item) => `${item.name} ${item.action}`), ['Alice task'], 'no older history');
+    const { state } = await joinGame(bob, gameId, { clientId: 'bob', name: 'Bob' });
+    assert.deepEqual(state.activity, []);
   } finally {
     server.close();
   }

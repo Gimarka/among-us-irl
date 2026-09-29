@@ -80,6 +80,13 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- Server reworked for sync (see TECH.md "How phones stay in sync"): every phone
+  gets its whole view of the game after each change, actions are confirmed and
+  resent after a lost connection, selfies are loaded once. New visible behaviour:
+  a phone that lost its connection shows "Connexion perdue, nouvelle tentative…";
+  players whose phone dropped are dimmed in the lobby and the vote, and the vote no
+  longer waits for them. Tasks, chat, alert, interference, the hand scanner and new
+  reports are refused during a meeting.
 - Surveillance screen (TEST SURVEILLANCE in the test menu, for now): a live
   feed, newest first, of what every player in the game does - door opened,
   minigame or task finished - with their character, name and how long ago.
