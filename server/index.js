@@ -578,6 +578,17 @@ export function createGameServer({
       if (tasks) socket.emit('tasks', tasks);
     });
 
+    // TEST TÂCHE: marks one of the player's unfinished tasks done, at random.
+    socket.on('completeRandomTask', () => {
+      const session = currentSession(socket);
+      const id = socket.data.clientId;
+      if (!session || !isMember(session, id)) return;
+      const pending = session.tasks.getTasks(id, session.roster.listPlayers()).filter((task) => !task.done);
+      if (pending.length === 0) return;
+      const task = pending[Math.floor(Math.random() * pending.length)];
+      socket.emit('tasks', session.tasks.completeTask(id, task.id));
+    });
+
     // To every phone in the game, triggering player included. Restarts the
     // countdown from full if an alert is already running. When it runs out,
     // the server itself ends the alert for everyone.

@@ -15,6 +15,7 @@ export const texts = {
   handScanSuccess: 'ALERTE DÉSACTIVÉE',
   dishInstruction: 'TROUVE LE SIGNAL',
   testReportButton: 'TEST REPORT',
+  testTaskButton: 'TEST TÂCHE',
   reportTitle: 'CADAVRE TROUVÉ',
   voteSkipButton: 'PASSER',
   // {name} is replaced by the eliminated player's name.

@@ -285,6 +285,8 @@ app.innerHTML = `
 
         <button id="test-report-button" class="test-button">${texts.testReportButton}</button>
 
+        <button id="test-task-button" class="test-button">${texts.testTaskButton}</button>
+
         <button id="alert-start-button" class="test-button test-button-danger">${texts.alertStartButton}</button>
 
         <button id="alert-stop-button" class="test-button">${texts.alertStopButton}</button>
@@ -1812,6 +1814,11 @@ function handleMeeting({ phase, remainingMs, players, eliminated, votes = [], ta
 }
 
 meetingSkipButton.addEventListener('click', () => castVote(SKIP_VOTE));
+// Marks one of this player's unfinished tasks done; the server picks which
+// and sends back the updated list.
+document.querySelector('#test-task-button').addEventListener('click', () => {
+  if (socket) socket.emit('completeRandomTask');
+});
 testReportButton.addEventListener('click', () => {
   if (socket) socket.emit('reportBody');
 });
