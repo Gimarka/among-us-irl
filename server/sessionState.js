@@ -21,7 +21,7 @@ export const MAX_SESSION_NAME_LENGTH = 20;
 export const SETTINGS_LIMITS = {
   imposterCount: { min: 1, max: 3, step: 1, default: 1 },
   tasksPerPlayer: { min: 1, max: 9, step: 1, default: 6 }, // 9 = every task in the pool
-  alertSeconds: { min: 15, max: 180, step: 15, default: 60 },
+  alertSeconds: { min: 20, max: 120, step: 10, default: 60 },
   interferenceSeconds: { min: 5, max: 60, step: 5, default: 10 },
 };
 

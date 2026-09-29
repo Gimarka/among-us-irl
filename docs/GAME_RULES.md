@@ -83,8 +83,8 @@ Player colours and avatars; ambient sound. Later: end-of-game replay, spectator 
 - Host settings (⚙️ in the lobby, host only, before JOUER): number of
   imposters 1-3 (default 1; always at least one crewmate, so fewer are drawn
   if there aren't enough players - this replaces "always exactly 1
-  imposter"), tasks per player 1-9 (default 6), alert length 15 s-3 min in
-  15 s steps (default 60 s), interference length 5-60 s in 5 s steps
+  imposter"), tasks per player 1-9 (default 6), alert length 20 s-2 min in
+  10 s steps (default 60 s), interference length 5-60 s in 5 s steps
   (default 10 s). Each game has its own settings; the server enforces the
   ranges.
 - Character customisation moved to the lobby. The home screen only has the

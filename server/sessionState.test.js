@@ -97,8 +97,8 @@ test('a new game starts with the default settings', () => {
 test('settings are kept to whole steps within their range, and junk is ignored', () => {
   const current = { imposterCount: 1, tasksPerPlayer: 6, alertSeconds: 60, interferenceSeconds: 10 };
   assert.deepEqual(
-    cleanSettings({ imposterCount: 9, tasksPerPlayer: 0, alertSeconds: 50, interferenceSeconds: 'abc', hacked: true }, current),
-    { imposterCount: 3, tasksPerPlayer: 1, alertSeconds: 45, interferenceSeconds: 10 },
+    cleanSettings({ imposterCount: 9, tasksPerPlayer: 0, alertSeconds: 55, interferenceSeconds: 'abc', hacked: true }, current),
+    { imposterCount: 3, tasksPerPlayer: 1, alertSeconds: 60, interferenceSeconds: 10 },
   );
   assert.deepEqual(cleanSettings(null, current), current);
 });

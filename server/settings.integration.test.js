@@ -63,14 +63,14 @@ test('the alert countdown and the interference last as long as the settings say'
   try {
     const { phones: [host] } = await lobby(server, 1);
     const set = waitForEvent(host, 'session');
-    host.emit('updateSettings', { alertSeconds: 15, interferenceSeconds: 5 });
+    host.emit('updateSettings', { alertSeconds: 20, interferenceSeconds: 5 });
     await set;
 
     const alert = waitForEvent(host, 'alert');
     host.emit('alertStart');
     const { durationMs, remainingMs } = await alert;
-    assert.equal(durationMs, 15_000);
-    assert.ok(remainingMs > 14_000 && remainingMs <= 15_000);
+    assert.equal(durationMs, 20_000);
+    assert.ok(remainingMs > 19_000 && remainingMs <= 20_000);
 
     const on = waitForEvent(host, 'interference');
     host.emit('interferenceStart');
