@@ -35,7 +35,7 @@ export const DEFAULT_TIMINGS = {
 // What a phone may report for the surveillance screen: a door opened, a
 // minigame finished. Never the alert or interference (only imposters
 // trigger those). Tasks and the hand scanner are logged by the game itself.
-export const SURVEILLANCE_ACTIONS = new Set(['door', 'sort', 'dino', 'dish']);
+export const SURVEILLANCE_ACTIONS = new Set(['door', 'sort', 'dino', 'dish', 'wires']);
 
 // The surveillance screen has no history: it shows the latest action when
 // opened, then new ones live. A few are kept so that several actions in a

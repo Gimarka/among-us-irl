@@ -8,6 +8,8 @@ export const texts = {
   dinoInstruction: 'SAUTE PAR-DESSUS',
   dinoFail: 'RATÉ !',
   testDishButton: 'TEST PARABOLE',
+  testWiresButton: 'TEST CÂBLES',
+  wiresInstruction: 'BRANCHE LES CÂBLES',
   testHandScanButton: 'TEST SCANNER',
   handScanInstruction: 'POSE TA MAIN',
   handScanWaiting: "En attente d'un autre joueur",
@@ -28,6 +30,7 @@ export const texts = {
     sort: 'Tri',
     dino: 'Saut',
     dish: 'Parabole',
+    wires: 'Câblage',
   },
   timeJustNow: "à l'instant",
   // {n} is replaced by the number.

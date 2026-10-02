@@ -80,6 +80,12 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- New minigame "Câblage" (TEST CÂBLES in the test menu; it is the Câblage task):
+  3 coloured cables on the left, 3 letters on the right, and the top panel shows
+  which colour goes to which letter. Letters, matchups and order are redrawn every
+  time the game opens. Drag each cable onto its letter: a wrong one flashes red
+  and snaps back. All three plugged in completes the task (and shows on the
+  surveillance screen).
 - Server reworked for sync (see TECH.md "How phones stay in sync"): every phone
   gets its whole view of the game after each change, actions are confirmed and
   resent after a lost connection, selfies are loaded once. New visible behaviour:

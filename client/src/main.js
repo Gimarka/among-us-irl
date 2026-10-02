@@ -281,6 +281,8 @@ app.innerHTML = `
 
         <button id="test-dish-button" class="test-button">${texts.testDishButton}</button>
 
+        <button id="test-wires-button" class="test-button">${texts.testWiresButton}</button>
+
         <button id="test-handscan-button" class="test-button">${texts.testHandScanButton}</button>
 
         <button id="test-report-button" class="test-button">${texts.testReportButton}</button>
@@ -331,6 +333,20 @@ app.innerHTML = `
       <div class="dino-track-panel">
         <div class="dino-track" id="dino-track">
           <div class="dino-character" id="dino-character"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="wiregame-screen" class="screen wiregame hidden">
+      <div class="wiregame-instruction">
+        <p class="minigame-instruction-label">${texts.wiresInstruction}</p>
+        <div class="wiregame-legend" id="wiregame-legend"></div>
+      </div>
+      <div class="wiregame-board-panel">
+        <div class="wiregame-board" id="wiregame-board">
+          <svg class="wiregame-wires" id="wiregame-wires" aria-hidden="true"></svg>
+          <div class="wiregame-column" id="wiregame-sources"></div>
+          <div class="wiregame-column" id="wiregame-targets"></div>
         </div>
       </div>
     </div>
@@ -1184,6 +1200,184 @@ const dishScreen = document.querySelector('#dishgame-screen');
 const dishBoard = document.querySelector('#dishgame-board');
 const dish = document.querySelector('#dishgame-dish');
 const dishSpeed = document.querySelector('#dishgame-speed');
+// --- Câblage (wires): three coloured cables on the left, three letters on
+// the right. The panel at the top says which colour goes to which letter -
+// a new draw (letters, matchups and order) every time the game opens.
+// Drag each cable end onto its letter: a right one stays plugged in, a
+// wrong one flashes red and snaps back. All three plugged in: task done.
+const wireGameScreen = document.querySelector('#wiregame-screen');
+const wireBoard = document.querySelector('#wiregame-board');
+const wireSvg = document.querySelector('#wiregame-wires');
+const wireSources = document.querySelector('#wiregame-sources');
+const wireTargets = document.querySelector('#wiregame-targets');
+const wireLegend = document.querySelector('#wiregame-legend');
+const WIRE_COLORS = ['#ff3b3b', '#3fa9ff', '#ffd23f'];
+// No I, O or Q: too easy to mix up with 1, 0 and each other at a glance.
+const WIRE_LETTERS = 'ABCDEFGHJKLMNPRSTUVXYZ';
+const WIRE_WRONG_FLASH_MS = 400;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+let wireMatch = {}; // colour -> its letter, for this game
+let wiresPlugged = {}; // colour -> letter element it's plugged into
+let wireDrag = null; // { color, source, line } while a cable end is held
+
+// A point's position inside the board, from the centre of an element.
+function wireAnchor(element, side) {
+  const board = wireBoard.getBoundingClientRect();
+  const rect = element.getBoundingClientRect();
+  const x = side === 'right' ? rect.right : side === 'left' ? rect.left : rect.left + rect.width / 2;
+  return { x: x - board.left, y: rect.top + rect.height / 2 - board.top };
+}
+
+function wireLine(color) {
+  const line = document.createElementNS(SVG_NS, 'line');
+  line.setAttribute('stroke', color);
+  line.setAttribute('class', 'wiregame-line');
+  wireSvg.appendChild(line);
+  return line;
+}
+
+function setWireEnds(line, from, to) {
+  line.setAttribute('x1', from.x);
+  line.setAttribute('y1', from.y);
+  line.setAttribute('x2', to.x);
+  line.setAttribute('y2', to.y);
+}
+
+// Plugged cables are redrawn from their two ends, so they stay attached if
+// the screen changes size.
+function redrawPluggedWires() {
+  wireSvg.querySelectorAll('.wiregame-line.plugged').forEach((line) => {
+    const { color } = line.dataset;
+    const source = wireSources.querySelector(`[data-color="${color}"]`);
+    setWireEnds(line, wireAnchor(source, 'right'), wireAnchor(wiresPlugged[color], 'left'));
+  });
+}
+
+function newWireRound() {
+  const colors = shuffled(WIRE_COLORS);
+  const letters = shuffled(WIRE_LETTERS.split('')).slice(0, colors.length);
+  wireMatch = Object.fromEntries(colors.map((color, index) => [color, letters[index]]));
+  wiresPlugged = {};
+  wireSvg.innerHTML = '';
+
+  wireLegend.innerHTML = '';
+  WIRE_COLORS.forEach((color) => {
+    const item = document.createElement('div');
+    item.className = 'wiregame-legend-item';
+    const swatch = document.createElement('span');
+    swatch.className = 'wiregame-legend-swatch';
+    swatch.style.background = color;
+    const letter = document.createElement('span');
+    letter.textContent = wireMatch[color];
+    item.append(swatch, letter);
+    wireLegend.appendChild(item);
+  });
+
+  wireSources.innerHTML = '';
+  shuffled(WIRE_COLORS).forEach((color) => {
+    const plug = document.createElement('div');
+    plug.className = 'wiregame-source';
+    plug.dataset.color = color;
+    plug.style.setProperty('--wire-color', color);
+    wireSources.appendChild(plug);
+  });
+
+  wireTargets.innerHTML = '';
+  shuffled(letters).forEach((letter) => {
+    const target = document.createElement('div');
+    target.className = 'wiregame-target';
+    target.dataset.letter = letter;
+    target.textContent = letter;
+    wireTargets.appendChild(target);
+  });
+}
+
+function endWireDrag(event) {
+  if (!wireDrag) return;
+  const { color, source, line } = wireDrag;
+  wireDrag = null;
+  source.classList.remove('dragging');
+  const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('.wiregame-target');
+  if (!target || target.classList.contains('plugged')) {
+    line.remove();
+    return;
+  }
+  if (target.dataset.letter !== wireMatch[color]) {
+    line.remove();
+    target.classList.add('wrong');
+    setTimeout(() => target.classList.remove('wrong'), WIRE_WRONG_FLASH_MS);
+    sounds.error.currentTime = 0;
+    sounds.error.play().catch(() => {}); // non-essential
+    return;
+  }
+
+  // Plugged in.
+  wiresPlugged[color] = target;
+  line.dataset.color = color;
+  line.classList.add('plugged');
+  source.classList.add('plugged');
+  target.classList.add('plugged');
+  target.style.setProperty('--wire-color', color);
+  redrawPluggedWires();
+  if (Object.keys(wiresPlugged).length < WIRE_COLORS.length) return;
+
+  // This minigame is the "Câblage" task (see completeTask in server/game.js).
+  act('completeTask', { taskId: 'wires' });
+  reportAction('wires');
+  setTimeout(() => {
+    showPopup('success', texts.taskSuccess);
+    playSuccessSoundThenClose();
+  }, SUCCESS_SOUND_DELAY_MS);
+}
+
+wireBoard.addEventListener('pointerdown', (event) => {
+  const source = event.target.closest('.wiregame-source');
+  if (!source || source.classList.contains('plugged') || wireDrag) return;
+  wireBoard.setPointerCapture(event.pointerId);
+  source.classList.add('dragging');
+  const { color } = source.dataset;
+  wireDrag = { color, source, line: wireLine(color) };
+  const board = wireBoard.getBoundingClientRect();
+  setWireEnds(wireDrag.line, wireAnchor(source, 'right'), { x: event.clientX - board.left, y: event.clientY - board.top });
+});
+
+wireBoard.addEventListener('pointermove', (event) => {
+  if (!wireDrag) return;
+  const board = wireBoard.getBoundingClientRect();
+  setWireEnds(wireDrag.line, wireAnchor(wireDrag.source, 'right'), { x: event.clientX - board.left, y: event.clientY - board.top });
+});
+
+wireBoard.addEventListener('pointerup', endWireDrag);
+wireBoard.addEventListener('pointercancel', () => {
+  if (!wireDrag) return;
+  wireDrag.line.remove();
+  wireDrag.source.classList.remove('dragging');
+  wireDrag = null;
+});
+window.addEventListener('resize', () => {
+  if (!wireGameScreen.classList.contains('hidden')) redrawPluggedWires();
+});
+
+function openWireGame() {
+  minigamesScreen.classList.add('hidden');
+  wireGameScreen.classList.remove('hidden');
+  pushOverlayState();
+  activeGameClose = closeWireGame;
+  newWireRound();
+}
+
+function closeWireGame() {
+  hidePopup();
+  wireDrag = null;
+  wireGameScreen.classList.add('hidden');
+  minigamesScreen.classList.remove('hidden');
+  fitActiveScreen();
+  closeOverlayState();
+}
+
+document.querySelector('#test-wires-button').addEventListener('click', openWireGame);
+
 const testDishButton = document.querySelector('#test-dish-button');
 
 const DISH_WIDTH = 76.8;
@@ -1660,6 +1854,8 @@ window.addEventListener('popstate', () => {
     closeDishGame();
   } else if (!handScanScreen.classList.contains('hidden')) {
     closeHandScan();
+  } else if (!wireGameScreen.classList.contains('hidden')) {
+    closeWireGame();
   } else if (!chatScreen.classList.contains('hidden')) {
     closeChat();
   } else if (!surveillanceScreen.classList.contains('hidden')) {
@@ -1820,6 +2016,7 @@ function closeEverything() {
     [dinoScreen, closeDinoGame],
     [dishScreen, closeDishGame],
     [handScanScreen, closeHandScan],
+    [wireGameScreen, closeWireGame],
     [chatScreen, closeChat],
     [surveillanceScreen, hideSurveillance],
     [scanPopup, closeScanPopup],

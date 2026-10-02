@@ -1201,7 +1201,8 @@ body:has(#lobby-screen.hidden) .settings-button {
 
 .colorgame,
 .dishgame,
-.handscan {
+.handscan,
+.wiregame {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1230,7 +1231,8 @@ body:has(#lobby-screen.hidden) .settings-button {
    as the full draggable area; padding the board would shrink that area
    without the position math knowing, letting shapes drift into the border. */
 .colorgame-board-panel,
-.dishgame-board-panel {
+.dishgame-board-panel,
+.wiregame-board-panel {
   padding: 12px;
   box-sizing: border-box;
   border: 2px solid #00f0ff;
@@ -1331,7 +1333,8 @@ body:has(#lobby-screen.hidden) .settings-button {
    label and the live obstacle counter together as one unit. */
 .dino-instruction,
 .dishgame-instruction,
-.handscan-instruction {
+.handscan-instruction,
+.wiregame-instruction {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2166,4 +2169,103 @@ button {
   background: #b30000;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
   pointer-events: none;
+}
+
+/* Câblage: the matchups at the top, cables on the left, letters on the right. */
+.wiregame-legend {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+}
+
+.wiregame-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.wiregame-legend-swatch {
+  width: 26px;
+  height: 10px;
+  border-radius: 5px;
+  box-shadow: 0 0 6px currentColor;
+}
+
+/* Reads real pixel positions (the cables are drawn between them), so it's
+   sized like the other drag games rather than scaled. */
+.wiregame-board {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  width: 300px;
+  max-width: 85vw;
+  height: 320px;
+  max-height: min(48vh, calc(var(--avail-h, 480px) - 200px));
+  touch-action: none; /* dragging a cable never scrolls the page */
+}
+
+.wiregame-wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.wiregame-line {
+  stroke-width: 10;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.6));
+}
+
+.wiregame-column {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.wiregame-source {
+  width: 54px;
+  height: 30px;
+  border-radius: 6px 15px 15px 6px;
+  background: var(--wire-color);
+  box-shadow: 0 0 10px var(--wire-color);
+  cursor: grab;
+}
+
+.wiregame-source.dragging {
+  filter: brightness(1.3);
+}
+
+.wiregame-target {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  height: 54px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 12px;
+  background: #050a0f;
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.7);
+}
+
+.wiregame-target.plugged {
+  border-color: var(--wire-color);
+  box-shadow: 0 0 12px var(--wire-color);
+}
+
+.wiregame-target.wrong {
+  border-color: #ff2d2d;
+  background: #3a0000;
+  box-shadow: 0 0 14px rgba(255, 45, 45, 0.9);
 }
