@@ -80,6 +80,12 @@ Target game length: 15–30 minutes.
 Player colours and avatars; ambient sound. Later: end-of-game replay, spectator feed, stats.
 
 ## Decision log (newest first)
+- New minigame "Séquence" (TEST SÉQUENCE in the test menu; it is the Séquence
+  task): a black screen of 9 squares above 9 buttons in the same layout. The
+  screen lights squares blue one after another (0.5 s each), the player repeats
+  them on the buttons; each round adds one square, up to 5. Squares can repeat,
+  never twice in a row. Only the pressed button lights up. A wrong button:
+  "SÉQUENCE ERRONÉE", then back to one square with a new sequence.
 - New minigame "Câblage" (TEST CÂBLES in the test menu; it is the Câblage task):
   3 coloured cables on the left, 3 letters on the right, and the top panel shows
   which colour goes to which letter. Letters, matchups and order are redrawn every

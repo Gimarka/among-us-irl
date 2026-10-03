@@ -9,6 +9,8 @@ export const texts = {
   dinoFail: 'RATÉ !',
   testDishButton: 'TEST PARABOLE',
   testWiresButton: 'TEST CÂBLES',
+  testSimonButton: 'TEST SÉQUENCE',
+  simonFail: 'SÉQUENCE ERRONÉE',
   wiresInstruction: 'BRANCHE LES CÂBLES',
   wiresFail: 'MAUVAIS BRANCHEMENT',
   testHandScanButton: 'TEST SCANNER',
@@ -32,6 +34,7 @@ export const texts = {
     dino: 'Saut',
     dish: 'Parabole',
     wires: 'Câblage',
+    simon: 'Séquence',
   },
   timeJustNow: "à l'instant",
   // {n} is replaced by the number.

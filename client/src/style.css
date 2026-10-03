@@ -2269,3 +2269,61 @@ button {
   background: #3a0000;
   box-shadow: 0 0 14px rgba(255, 45, 45, 0.9);
 }
+
+/* Séquence: the black screen of 9 squares, and the 9 buttons under it. */
+.simon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.simon-display,
+.simon-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 270px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 2px solid #00f0ff;
+  border-radius: 16px;
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+.simon-display {
+  background: #000;
+}
+
+.simon-pad {
+  background: #0a1018;
+}
+
+.simon-cell {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: #050505;
+  border: 1px solid #1a1a1a;
+  transition: background 0.08s, box-shadow 0.08s;
+}
+
+.simon-cell.lit {
+  background: #3fa9ff;
+  box-shadow: 0 0 22px rgba(63, 169, 255, 0.95);
+}
+
+.simon-button {
+  aspect-ratio: 1;
+  border: 2px solid #00f0ff;
+  border-radius: 10px;
+  background: #050a0f;
+  box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.15);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.simon-button.pressed {
+  background: #3fa9ff;
+  box-shadow: 0 0 16px rgba(63, 169, 255, 0.9);
+}

@@ -283,6 +283,8 @@ app.innerHTML = `
 
         <button id="test-wires-button" class="test-button">${texts.testWiresButton}</button>
 
+        <button id="test-simon-button" class="test-button">${texts.testSimonButton}</button>
+
         <button id="test-handscan-button" class="test-button">${texts.testHandScanButton}</button>
 
         <button id="test-report-button" class="test-button">${texts.testReportButton}</button>
@@ -347,6 +349,17 @@ app.innerHTML = `
           <svg class="wiregame-wires" id="wiregame-wires" aria-hidden="true"></svg>
           <div class="wiregame-column" id="wiregame-sources"></div>
           <div class="wiregame-column" id="wiregame-targets"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="simon-screen" class="screen hidden">
+      <div class="screen-fit simon">
+        <div class="simon-display" id="simon-display">
+          ${Array.from({ length: 9 }, (_, index) => `<div class="simon-cell" data-index="${index}"></div>`).join('')}
+        </div>
+        <div class="simon-pad" id="simon-pad">
+          ${Array.from({ length: 9 }, (_, index) => `<button class="simon-button" data-index="${index}" aria-label="${index + 1}"></button>`).join('')}
         </div>
       </div>
     </div>
@@ -509,7 +522,7 @@ const SCREEN_BOTTOM_GAP_PX = 16;
 // pixel positions (drag-and-drop, jump physics), so they're sized with
 // fixed/vh-relative CSS instead (see .colorgame-board and .dino-track in
 // style.css).
-const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #customize-screen, #settings-screen, #home-screen, #minigame-screen';
+const FIT_SCREEN_SELECTOR = '#join-screen, #lobby-screen, #customize-screen, #settings-screen, #home-screen, #minigame-screen, #simon-screen';
 
 // The title only shows on the join screen (see openLobby/handleDisconnectClick
 // below); everywhere else it's hidden so the game screens get the full
@@ -1403,6 +1416,125 @@ function closeWireGame() {
 
 document.querySelector('#test-wires-button').addEventListener('click', openWireGame);
 
+// --- Séquence (simon): the black screen lights squares in a sequence, and
+// the player repeats it on the buttons below (same layout). One square,
+// then the same one plus another, and so on up to 5. A wrong button starts
+// over from one square, with a new sequence.
+const simonScreen = document.querySelector('#simon-screen');
+const simonCells = Array.from(document.querySelectorAll('#simon-display .simon-cell'));
+const simonButtons = Array.from(document.querySelectorAll('#simon-pad .simon-button'));
+const SIMON_LENGTH = 5;
+const SIMON_LIT_MS = 500; // how long each square stays lit
+const SIMON_GAP_MS = 250; // dark pause between two squares
+const SIMON_START_DELAY_MS = 700; // before the sequence plays, so the player is ready
+const SIMON_NEXT_DELAY_MS = 600; // after a step is repeated, before the longer one plays
+const SIMON_PRESS_MS = 180; // how long a pressed button stays lit
+
+let simonSequence = [];
+let simonStep = 0; // how many squares this round shows (1 to SIMON_LENGTH)
+let simonInput = 0; // how many of them the player has repeated so far
+let simonAcceptsInput = false;
+let simonTimers = [];
+
+function simonLater(ms, run) {
+  simonTimers.push(setTimeout(run, ms));
+}
+
+function clearSimonTimers() {
+  simonTimers.forEach(clearTimeout);
+  simonTimers = [];
+}
+
+// Any square, but never the same one twice in a row (two flashes of the
+// same square would blur into one).
+function newSimonSequence() {
+  simonSequence = [];
+  while (simonSequence.length < SIMON_LENGTH) {
+    const square = Math.floor(Math.random() * simonCells.length);
+    if (square !== simonSequence.at(-1)) simonSequence.push(square);
+  }
+}
+
+// Plays the first simonStep squares of the sequence, then lets the player in.
+function playSimonStep() {
+  simonAcceptsInput = false;
+  simonInput = 0;
+  simonSequence.slice(0, simonStep).forEach((square, index) => {
+    const start = index * (SIMON_LIT_MS + SIMON_GAP_MS);
+    simonLater(start, () => simonCells[square].classList.add('lit'));
+    simonLater(start + SIMON_LIT_MS, () => simonCells[square].classList.remove('lit'));
+  });
+  simonLater(simonStep * (SIMON_LIT_MS + SIMON_GAP_MS), () => { simonAcceptsInput = true; });
+}
+
+function startSimonRound() {
+  clearSimonTimers();
+  simonCells.forEach((cell) => cell.classList.remove('lit'));
+  newSimonSequence();
+  simonStep = 1;
+  simonLater(SIMON_START_DELAY_MS, playSimonStep);
+}
+
+function pressSimonButton(button) {
+  if (!simonAcceptsInput) return;
+  button.classList.add('pressed');
+  setTimeout(() => button.classList.remove('pressed'), SIMON_PRESS_MS);
+
+  if (Number(button.dataset.index) !== simonSequence[simonInput]) {
+    simonAcceptsInput = false;
+    showPopup('error', texts.simonFail);
+    sounds.error.currentTime = 0;
+    sounds.error.play().catch(() => {}); // non-essential
+    simonLater(ERROR_POPUP_DURATION_MS, () => {
+      hidePopup();
+      startSimonRound();
+    });
+    return;
+  }
+
+  simonInput += 1;
+  if (simonInput < simonStep) return;
+  simonAcceptsInput = false;
+  if (simonStep < SIMON_LENGTH) {
+    simonStep += 1;
+    simonLater(SIMON_NEXT_DELAY_MS, playSimonStep);
+    return;
+  }
+
+  // This minigame is the "Séquence" task (see completeTask in server/game.js).
+  act('completeTask', { taskId: 'simon' });
+  reportAction('simon');
+  simonLater(SUCCESS_SOUND_DELAY_MS, () => {
+    showPopup('success', texts.taskSuccess);
+    playSuccessSoundThenClose();
+  });
+}
+
+simonButtons.forEach((button) => {
+  button.addEventListener('pointerdown', () => pressSimonButton(button));
+});
+
+function openSimonGame() {
+  minigamesScreen.classList.add('hidden');
+  simonScreen.classList.remove('hidden');
+  pushOverlayState();
+  activeGameClose = closeSimonGame;
+  fitActiveScreen();
+  startSimonRound();
+}
+
+function closeSimonGame() {
+  clearSimonTimers();
+  simonAcceptsInput = false;
+  hidePopup();
+  simonScreen.classList.add('hidden');
+  minigamesScreen.classList.remove('hidden');
+  fitActiveScreen();
+  closeOverlayState();
+}
+
+document.querySelector('#test-simon-button').addEventListener('click', openSimonGame);
+
 const testDishButton = document.querySelector('#test-dish-button');
 
 const DISH_WIDTH = 76.8;
@@ -1881,6 +2013,8 @@ window.addEventListener('popstate', () => {
     closeHandScan();
   } else if (!wireGameScreen.classList.contains('hidden')) {
     closeWireGame();
+  } else if (!simonScreen.classList.contains('hidden')) {
+    closeSimonGame();
   } else if (!chatScreen.classList.contains('hidden')) {
     closeChat();
   } else if (!surveillanceScreen.classList.contains('hidden')) {
@@ -2042,6 +2176,7 @@ function closeEverything() {
     [dishScreen, closeDishGame],
     [handScanScreen, closeHandScan],
     [wireGameScreen, closeWireGame],
+    [simonScreen, closeSimonGame],
     [chatScreen, closeChat],
     [surveillanceScreen, hideSurveillance],
     [scanPopup, closeScanPopup],
