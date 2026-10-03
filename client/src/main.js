@@ -1203,8 +1203,10 @@ const dishSpeed = document.querySelector('#dishgame-speed');
 // --- Câblage (wires): three coloured cables on the left, three letters on
 // the right. The panel at the top says which colour goes to which letter -
 // a new draw (letters, matchups and order) every time the game opens.
-// Drag each cable end onto its letter: a right one stays plugged in, a
-// wrong one flashes red and snaps back. All three plugged in: task done.
+// Drag each cable end onto a letter (a plugged cable can be dragged again
+// to move it). Nothing says whether it's right until all three are
+// plugged in: then it's either done, or the wrong ones flash red and every
+// cable is unplugged for another try.
 const wireGameScreen = document.querySelector('#wiregame-screen');
 const wireBoard = document.querySelector('#wiregame-board');
 const wireSvg = document.querySelector('#wiregame-wires');
@@ -1214,12 +1216,13 @@ const wireLegend = document.querySelector('#wiregame-legend');
 const WIRE_COLORS = ['#ff3b3b', '#3fa9ff', '#ffd23f'];
 // No I, O or Q: too easy to mix up with 1, 0 and each other at a glance.
 const WIRE_LETTERS = 'ABCDEFGHJKLMNPRSTUVXYZ';
-const WIRE_WRONG_FLASH_MS = 400;
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 let wireMatch = {}; // colour -> its letter, for this game
 let wiresPlugged = {}; // colour -> letter element it's plugged into
 let wireDrag = null; // { color, source, line } while a cable end is held
+let wiresChecking = false; // all three plugged in, the result is showing
 
 // A point's position inside the board, from the centre of an element.
 function wireAnchor(element, side) {
@@ -1254,11 +1257,48 @@ function redrawPluggedWires() {
   });
 }
 
+function unplugWire(color) {
+  const target = wiresPlugged[color];
+  if (!target) return;
+  delete wiresPlugged[color];
+  target.classList.remove('plugged', 'wrong');
+  target.style.removeProperty('--wire-color');
+  wireSources.querySelector(`[data-color="${color}"]`).classList.remove('plugged');
+  wireSvg.querySelector(`.wiregame-line[data-color="${color}"]`)?.remove();
+}
+
+// All three are plugged in: done if every one is on its own letter,
+// otherwise the wrong ones flash red and everything is unplugged.
+function checkWires() {
+  const wrong = Object.entries(wiresPlugged).filter(([color, target]) => target.dataset.letter !== wireMatch[color]);
+  wiresChecking = true;
+  if (wrong.length === 0) {
+    // This minigame is the "Câblage" task (see completeTask in server/game.js).
+    act('completeTask', { taskId: 'wires' });
+    reportAction('wires');
+    setTimeout(() => {
+      showPopup('success', texts.taskSuccess);
+      playSuccessSoundThenClose();
+    }, SUCCESS_SOUND_DELAY_MS);
+    return;
+  }
+  wrong.forEach(([, target]) => target.classList.add('wrong'));
+  showPopup('error', texts.wiresFail);
+  sounds.error.currentTime = 0;
+  sounds.error.play().catch(() => {}); // non-essential
+  setTimeout(() => {
+    hidePopup();
+    WIRE_COLORS.forEach(unplugWire);
+    wiresChecking = false;
+  }, ERROR_POPUP_DURATION_MS);
+}
+
 function newWireRound() {
   const colors = shuffled(WIRE_COLORS);
   const letters = shuffled(WIRE_LETTERS.split('')).slice(0, colors.length);
   wireMatch = Object.fromEntries(colors.map((color, index) => [color, letters[index]]));
   wiresPlugged = {};
+  wiresChecking = false;
   wireSvg.innerHTML = '';
 
   wireLegend.innerHTML = '';
@@ -1303,16 +1343,8 @@ function endWireDrag(event) {
     line.remove();
     return;
   }
-  if (target.dataset.letter !== wireMatch[color]) {
-    line.remove();
-    target.classList.add('wrong');
-    setTimeout(() => target.classList.remove('wrong'), WIRE_WRONG_FLASH_MS);
-    sounds.error.currentTime = 0;
-    sounds.error.play().catch(() => {}); // non-essential
-    return;
-  }
 
-  // Plugged in.
+  // Plugged in - right or wrong, it only shows once all three are.
   wiresPlugged[color] = target;
   line.dataset.color = color;
   line.classList.add('plugged');
@@ -1320,23 +1352,16 @@ function endWireDrag(event) {
   target.classList.add('plugged');
   target.style.setProperty('--wire-color', color);
   redrawPluggedWires();
-  if (Object.keys(wiresPlugged).length < WIRE_COLORS.length) return;
-
-  // This minigame is the "Câblage" task (see completeTask in server/game.js).
-  act('completeTask', { taskId: 'wires' });
-  reportAction('wires');
-  setTimeout(() => {
-    showPopup('success', texts.taskSuccess);
-    playSuccessSoundThenClose();
-  }, SUCCESS_SOUND_DELAY_MS);
+  if (Object.keys(wiresPlugged).length === WIRE_COLORS.length) checkWires();
 }
 
 wireBoard.addEventListener('pointerdown', (event) => {
   const source = event.target.closest('.wiregame-source');
-  if (!source || source.classList.contains('plugged') || wireDrag) return;
+  if (!source || wireDrag || wiresChecking) return;
   wireBoard.setPointerCapture(event.pointerId);
-  source.classList.add('dragging');
   const { color } = source.dataset;
+  unplugWire(color); // grabbing a plugged cable takes it out, to move it
+  source.classList.add('dragging');
   wireDrag = { color, source, line: wireLine(color) };
   const board = wireBoard.getBoundingClientRect();
   setWireEnds(wireDrag.line, wireAnchor(source, 'right'), { x: event.clientX - board.left, y: event.clientY - board.top });

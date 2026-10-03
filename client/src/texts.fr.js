@@ -10,6 +10,7 @@ export const texts = {
   testDishButton: 'TEST PARABOLE',
   testWiresButton: 'TEST CÂBLES',
   wiresInstruction: 'BRANCHE LES CÂBLES',
+  wiresFail: 'MAUVAIS BRANCHEMENT',
   testHandScanButton: 'TEST SCANNER',
   handScanInstruction: 'POSE TA MAIN',
   handScanWaiting: "En attente d'un autre joueur",
