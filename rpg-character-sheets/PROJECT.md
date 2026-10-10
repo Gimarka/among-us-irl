@@ -1,7 +1,7 @@
 # Les Fiches de la Compagnie: project notes
 
 > Memory of the project. Read this first in every session.
-> **Status: planning done (one question left, §9). No code yet.** Next: create the
+> **Status: planning done. No code yet.** Next: create the
 > GitHub repo `fiches-jdr` and the accounts (§8).
 >
 > Note: this file temporarily lives in the `among-us-irl` repo (the only repo attached to
@@ -33,7 +33,9 @@ when, and by whom.
 - **Skills are mostly tied to one characteristic** (for example Intimidation → Charisme).
   When they are, the app shows the final target (Charisme 45 + 15 = **60**). The link
   is optional: a skill without a characteristic just shows its modifier.
-- **PV**: current / max, shown as a **health bar**.
+- **PV**: current / max, shown as a **health bar**. Current PV never goes below 0.
+  It **can go above max** (temporary bonus): the bar then shows a clearly different
+  "bonus" part (e.g. gold, with a "+15 au-dessus du max" label).
 - **Money**: PA (pièces d'argent) and PO (pièces d'or). 1000 PA = 1 PO, but the app
   does **not** convert automatically: PA and PO are two separate amounts.
 - **Level**: just a number. It changes nothing automatically.
@@ -208,8 +210,7 @@ Each step ends with something you can open and test on a phone before the next o
 
 ## 9. Open questions
 
-1. PV limits: can current PV go **below 0** (e.g. −10 = dying) and/or **above max**
-   (temporary bonus)? The health bar needs to know how to show it.
+None for now. New questions go here.
 
 ## 10. Decision log
 
@@ -243,3 +244,4 @@ Each step ends with something you can open and test on a phone before the next o
 | 2026-10-10 | PDF is black & white. |
 | 2026-10-10 | No dead characters, so no archive feature. |
 | 2026-10-10 | Stack validated: GitHub + Supabase + Cloudflare Pages + Vite/plain JS. |
+| 2026-10-10 | PV: minimum 0; can go above max, shown clearly as a bonus on the health bar. |
