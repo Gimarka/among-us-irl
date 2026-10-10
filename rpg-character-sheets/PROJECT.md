@@ -41,16 +41,22 @@ This is what one sheet contains today (from the Word/PDF example):
 ## 3. Features (first draft)
 
 ### Player side (phone first)
-- Log in once, stay logged in on the phone.
-- See **only their own** character sheet, organised in clear sections (tabs or
-  collapsible blocks): Identité, Caractéristiques, Compétences, Équipement, Inventaire.
+- Log in with a **username only, no password** (trust basis). Stay logged in on the phone.
+- See their own character sheet, organised in clear sections (tabs or collapsible
+  blocks): Identité, Caractéristiques, Compétences, Équipement, Inventaire.
+- **Health bar** for PV (current / max), visible at the top of the sheet.
+- Can **view the other characters** of the party, read-only.
+- Can **remove an item they used** (or lower its quantity: torche ×2 → ×1). They can
+  **not edit** anything else (names, stats, PV, descriptions...). Each removal goes to
+  the history, with an optional short note.
 - Live updates: when the GM gives an item or changes PV, the phone updates without
   reloading.
-- (To decide) Simple actions: use a consumable (−1), change current PV, spend money.
-  Each action can carry a short note ("bu pendant le combat contre les gobelins").
-- (To decide) See their own history.
+- Never sees the GM's hidden notes.
 
 ### Admin side (GM)
+- Designed **for a laptop first** (wide screen, tables, keyboard). It should still work
+  on a phone in an emergency, but that is not the priority.
+- **Hidden notes**: GM-only secret notes on a character, never sent to players.
 - Manage players (accounts) and characters (create, edit, archive).
 - **Catalogue**: a library of reusable entries (items, weapons, armour, skills,
   incompetences, potions...), defined once and then given to any character.
@@ -101,10 +107,18 @@ live updates ourselves, so more code and more things that can break. Not recomme
 - `game_sessions`: optional, for grouping history ("Séance 3").
 - `history`: who, when, character, table, field, old value, new value, note, session.
 
+- `gm_notes`: hidden notes, in a separate table that players can never read.
+
 Security rules (enforced by the database, not only by the page):
-- A player can read only their own character.
-- Only the admin can read everything and edit the catalogue.
+- A player can read every character (read-only), but never the hidden notes.
+- A player can only remove / decrease items on **their own** character. Nothing else.
+- Only the admin can edit sheets and the catalogue.
 - Nobody can edit or delete history lines.
+
+Note on "username without password": anyone who knows the site address and a username
+can open that player's sheet. Accepted (trust basis, and players can only remove their
+own used items). The **admin access must still be protected by a password**, otherwise
+anyone could open the admin page and read the hidden notes.
 
 ## 6. Plan of action
 
@@ -119,11 +133,11 @@ Each step ends with something you can open and test on a phone before the next o
 3. **Admin, characters.** List characters, edit every field, create players and characters.
 4. **Admin, catalogue.** Create entries, give them to characters, quantities, custom entries.
 5. **History.** History page with filters, notes, game sessions; undo if wanted.
-6. **Player actions** (if we keep them): use a consumable, PV, money, with notes.
+6. **Player actions.** Remove a used item / lower its quantity, with optional note.
 7. **Medieval look & polish.** Theme, icons, empty states, error messages in French.
 8. **Real test** with the players at a game, then fixes.
 9. Later / optional: dice roller (d100, 1D6...), printable/PDF sheet, portraits, private
-   player notes, GM-only secret notes, offline mode.
+   player notes, offline mode.
 
 ## 7. Prerequisites (what you need to do)
 
@@ -133,30 +147,48 @@ Each step ends with something you can open and test on a phone before the next o
 | 2 | New GitHub repository for this project (e.g. `fiches-jdr`, private is fine) | Free | Then add it to Claude Code so I can work in it |
 | 3 | Supabase account (sign up with GitHub) | Free | No credit card |
 | 4 | Cloudflare account (sign up, then connect GitHub in Pages) | Free | Or Netlify, same idea |
-| 5 | Players' email addresses (or chosen usernames) | – | Depends on the login choice (§8) |
+| 5 | The players' usernames | – | No emails needed |
 | 6 | The other character sheets (Word/PDF) | – | To load the real data |
 | – | Domain name | Not needed | Free address like `fiches-jdr.pages.dev` |
 | – | Node.js on your computer | Optional | Only if you want to run the site locally; deploy previews are enough |
 
 ## 8. Open questions
 
-Rules of the game (needed for the data model):
-1. What do `p+15`, `P+5`, `p-10` mean exactly? (Bonus to a dice roll? On which
-   characteristic? Is "p" a unit?) Same question for "+10 en chance".
-2. Is it a d100 system (roll under the characteristic)? Are characteristics capped at 100?
-3. PV: do we need current PV **and** max PV? Can max PV change (with level)?
-4. Is the list of 5 characteristics the same for every character?
-5. What does "PA" mean (pièces d'argent?). Are there other currencies?
-6. Does the level change anything automatically, or is it just a number?
+Each question has a suggested default in brackets. "OK" keeps it.
 
-Usage:
-7. Can players **edit** anything themselves (use an item, PV, money), or is the sheet
-   read-only for them and only you edit?
-8. Login: email + password, or username + simple code/PIN created by you?
-9. Should players see other characters (the party), or strictly their own sheet?
-10. Do you want GM-only secret info on a sheet (hidden curses, unknown item effects)?
-11. Do you want to group history by game session?
-12. Will you use the admin page on your phone during the game, or on a laptop?
+Game rules:
+1. `p+15` = target +15. Is each skill tied to one characteristic (e.g. Intimidation
+   → Charisme), so the app can show the final target (45 + 15 = 60)? Or is the
+   characteristic chosen at the moment of the roll? [chosen at roll time: show "+15" only]
+2. Are the 5 characteristics (Physique, Mental, Social, Agilité, Charisme) the same for
+   every character? [yes, fixed list]
+3. "PA" = pièces d'argent? Any other currency (gold, copper)? [one currency, PA]
+4. Does the level do anything (e.g. raise max PV), or is it just a number you change?
+   [just a number]
+5. Who changes PV during a fight: only you, or players too? [only you]
+
+Items, catalogue, history:
+6. If you change an item in the catalogue (e.g. fix a potion's effect), should every
+   character who already has it get the change? [yes]
+7. Hidden notes: only one notes field per character, or also hidden notes on items
+   (the player sees "Amulette sacrée", you see "cursed")? [both]
+8. Can a player undo a removal they made by mistake, or do they ask you? [they ask you;
+   you can restore from the history]
+9. Group history by game session ("Séance 3 – 12/10")? [yes, you click "Start session"]
+10. Are the sheet sections fixed (Compétences, Incompétences, Vêtements/Armure, Armes,
+    Inventaire), or do you want to create your own? [fixed]
+
+Viewing others & access:
+11. When looking at another character, do players see everything (stats, inventory,
+    description) or only a summary (name, portrait, health bar)? [everything except
+    hidden notes]
+12. Add one shared table password to enter the site (players then pick their username)
+    so a stranger who finds the address can't get in? [no, address is enough]
+
+Look & extras:
+13. Character portraits (upload an image)? [yes, optional]
+14. Dark theme (candle-lit table) or light parchment? [light parchment + dark mode switch]
+15. A name for the site? [e.g. "Les Fiches de la Compagnie"]
 
 ## 9. Decision log
 
@@ -164,3 +196,10 @@ Usage:
 |---|---|
 | 2026-10-10 | Project started. No code until the plan and prerequisites are agreed. |
 | 2026-10-10 | Proposed stack (not yet validated): Supabase + Cloudflare Pages + Vite/plain JS. |
+| 2026-10-10 | Game uses a d100. `p+15` means the roll target +15. |
+| 2026-10-10 | PV shown as a health bar (current / max). |
+| 2026-10-10 | Players can remove items they used (or lower the quantity), nothing else. |
+| 2026-10-10 | Player login: username only, no password (trust basis). Admin keeps a password. |
+| 2026-10-10 | Players can view other characters, read-only. |
+| 2026-10-10 | GM hidden notes, never visible to players. |
+| 2026-10-10 | Admin page is designed for laptop first. |
