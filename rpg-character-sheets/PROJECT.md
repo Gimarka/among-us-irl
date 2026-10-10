@@ -1,8 +1,8 @@
 # Les Fiches de la Compagnie: project notes
 
 > Memory of the project. Read this first in every session.
-> **Status: planning almost done. No code yet.** Next: answer the last questions (§8)
-> and create the accounts (§7).
+> **Status: planning done (one question left, §9). No code yet.** Next: create the
+> GitHub repo `fiches-jdr` and the accounts (§8).
 >
 > Note: this file temporarily lives in the `among-us-irl` repo (the only repo attached to
 > the session where the project started). It will move to its own repository at step 0.
@@ -34,7 +34,8 @@ when, and by whom.
   When they are, the app shows the final target (Charisme 45 + 15 = **60**). The link
   is optional: a skill without a characteristic just shows its modifier.
 - **PV**: current / max, shown as a **health bar**.
-- **Money**: PA (pièces d'argent) and PO (pièces d'or). **1000 PA = 1 PO.**
+- **Money**: PA (pièces d'argent) and PO (pièces d'or). 1000 PA = 1 PO, but the app
+  does **not** convert automatically: PA and PO are two separate amounts.
 - **Level**: just a number. It changes nothing automatically.
 
 ## 3. The example sheet (CARMEN DELERANVRI)
@@ -62,7 +63,7 @@ The 5 sections (Compétences, Incompétences, Vêtements/Armure, Armes, Inventai
 - See their own character sheet, organised in clear sections (tabs or collapsible
   blocks).
 - **Health bar** for PV at the top of the sheet. The player can **change their current
-  PV** (damage, healing).
+  PV** (damage, healing). Max PV is changed by the GM only.
 - Every item and skill shows a **small icon**.
 - Can **view the other characters** of the party: everything, read-only, except the
   hidden notes.
@@ -78,7 +79,8 @@ The 5 sections (Compétences, Incompétences, Vêtements/Armure, Armes, Inventai
 - Designed **for a laptop first** (wide screen, tables, keyboard). It should still work
   on a phone in an emergency, but that is not the priority.
 - Protected by a **password** (unlike the player side).
-- Manage players (usernames) and characters (create, edit, archive).
+- Manage players (usernames) and characters (create, edit). No archive / death
+  feature: characters don't die in this campaign.
 - **Catalogue**: a library of reusable entries (skills, incompetences, armour, weapons,
   items...), each with an icon, defined once and then given to any character.
   **Editing a catalogue entry updates it on every character who has it.**
@@ -111,6 +113,7 @@ The 5 sections (Compétences, Incompétences, Vêtements/Armure, Armes, Inventai
 
 ### Single-page PDF
 - Generated **in the browser** (no server, free), with a PDF library.
+- **Black & white** (ink-saving), same fonts and icons as the site.
 - Always **one A4 page**. If a sheet has many items, the text gets smaller to fit.
 - Contains: identity, characteristics, PV, money, all 5 sections with icons,
   description. **Never** hidden notes, and not the history.
@@ -142,9 +145,8 @@ live updates ourselves, so more code and more things that can break. Not chosen 
 ## 6. Data model (draft)
 
 - `profiles`: one per user. Username, role `admin` or `player`.
-- `characters`: name, age, height, level, 5 characteristics, PV current / max, money
-  (stored as a total in PA, shown as "1 PO 440 PA"), description, owner (player),
-  archived.
+- `characters`: name, age, height, level, 5 characteristics, PV current / max, PA, PO,
+  description, owner (player).
 - `catalog_entries`: reusable library. Section (`competence`, `incompetence`,
   `armure`, `arme`, `objet`), icon, name, description, modifier, damage formula,
   linked characteristic (optional), hidden GM note.
@@ -159,7 +161,7 @@ live updates ourselves, so more code and more things that can break. Not chosen 
 Security rules (enforced by the database, not only by the page):
 - A player can read every character (read-only), but never any hidden note.
 - On **their own** character, a player can only: change current PV, remove / decrease /
-  restore items. Nothing else.
+  restore (undo, any time) items. Nothing else.
 - Only the admin can edit sheets and the catalogue.
 - Nobody can edit or delete history lines.
 
@@ -206,25 +208,14 @@ Each step ends with something you can open and test on a phone before the next o
 
 ## 9. Open questions
 
-Each question has a suggested default in brackets. "OK" keeps it.
-
-1. Money display: always convert automatically, e.g. 1440 PA shown as "1 PO 440 PA"?
-   [yes]
-2. PV: players change **current** PV only; **max** PV is changed only by the GM? [yes]
-3. Can current PV go below 0 or above max? [no, stops at 0 and at max]
-4. Undo: can players undo only their **own** removals, and only during the current
-   session? [own removals, any time]
-5. PDF look: ink-saving black & white for home printers, or coloured parchment? [black &
-   white, with the same fonts and icons]
-6. Archived characters (dead or retired): still visible to players in the party list?
-   [no, only for the GM]
+1. PV limits: can current PV go **below 0** (e.g. −10 = dying) and/or **above max**
+   (temporary bonus)? The health bar needs to know how to show it.
 
 ## 10. Decision log
 
 | Date | Decision |
 |---|---|
 | 2026-10-10 | Project started. No code until the plan and prerequisites are agreed. |
-| 2026-10-10 | Proposed stack (not yet validated): Supabase + Cloudflare Pages + Vite/plain JS. |
 | 2026-10-10 | Game uses a d100. `p+15` means the roll target +15. |
 | 2026-10-10 | PV shown as a health bar (current / max). |
 | 2026-10-10 | Players can remove items they used (or lower the quantity). |
@@ -246,3 +237,9 @@ Each question has a suggested default in brackets. "OK" keeps it.
 | 2026-10-10 | Light theme + dark mode switch. |
 | 2026-10-10 | Site name: "Les Fiches de la Compagnie". |
 | 2026-10-10 | Single-page PDF export of a sheet, for printing. |
+| 2026-10-10 | Money: PA and PO kept as two separate amounts, no automatic conversion. |
+| 2026-10-10 | Max PV changed by the GM only; players change current PV. |
+| 2026-10-10 | Players can undo their own removals at any time. |
+| 2026-10-10 | PDF is black & white. |
+| 2026-10-10 | No dead characters, so no archive feature. |
+| 2026-10-10 | Stack validated: GitHub + Supabase + Cloudflare Pages + Vite/plain JS. |
